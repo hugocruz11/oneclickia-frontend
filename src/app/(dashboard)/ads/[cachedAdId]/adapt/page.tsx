@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Spinner } from "@/components/ui/Spinner";
 import { CopyVariantPicker } from "@/components/CopyVariantPicker";
+import { SavedCopiesBrowser } from "@/components/SavedCopiesBrowser";
 import { api, ApiError } from "@/lib/api";
 import type { CachedAd, AdaptCopyResponse, Product } from "@/lib/types";
 
@@ -28,6 +29,9 @@ export default function AdaptCopyPage() {
   const [existingProductId, setExistingProductId] = useState("");
   const [savedProducts, setSavedProducts] = useState<Product[]>([]);
   const [userInstructions, setUserInstructions] = useState("");
+
+  // Source mode: new (generate) or saved (reuse)
+  const [source, setSource] = useState<"new" | "saved">("new");
 
   // Result state
   const [result, setResult] = useState<AdaptCopyResponse | null>(null);
@@ -155,6 +159,52 @@ export default function AdaptCopyPage() {
       </Card>
 
       {!result && (
+        <>
+          <Card className="mt-4">
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setSource("new")}
+                className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
+                  source === "new"
+                    ? "border-orange text-orange"
+                    : "border-sand text-muted hover:border-orange/30"
+                }`}
+              >
+                Generar nuevo
+              </button>
+              <button
+                type="button"
+                onClick={() => setSource("saved")}
+                className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
+                  source === "saved"
+                    ? "border-orange text-orange"
+                    : "border-sand text-muted hover:border-orange/30"
+                }`}
+              >
+                Usar copy guardado
+              </button>
+            </div>
+          </Card>
+
+          {source === "saved" && (
+            <Card className="mt-4">
+              <SavedCopiesBrowser
+                onUse={(res) => {
+                  setResult(res);
+                  setSelectedVariant(0);
+                  sessionStorage.setItem(
+                    `adaptation_${cachedAdId}`,
+                    JSON.stringify(res),
+                  );
+                }}
+              />
+            </Card>
+          )}
+        </>
+      )}
+
+      {!result && source === "new" && (
         <>
           {/* User instructions */}
           <Card className="mt-4">
@@ -292,9 +342,19 @@ export default function AdaptCopyPage() {
           </div>
 
           <CopyVariantPicker
+            adaptationId={result.adaptationId}
             variants={result.variants}
             selected={selectedVariant}
             onSelect={setSelectedVariant}
+            productId={result.product?.id ?? null}
+            onVariantsChange={(variants) => {
+              const updated = { ...result, variants };
+              setResult(updated);
+              sessionStorage.setItem(
+                `adaptation_${cachedAdId}`,
+                JSON.stringify(updated),
+              );
+            }}
           />
 
           <div className="flex gap-4">

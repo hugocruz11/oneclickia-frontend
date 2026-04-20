@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
+import { VariantLightbox } from "@/components/VariantLightbox";
 import { api, ApiError } from "@/lib/api";
 import type {
   AdaptCopyResponse,
@@ -54,6 +55,7 @@ export default function GenerateImagePage() {
   const [generatingVariants, setGeneratingVariants] = useState(false);
   const [imageVariants, setImageVariants] = useState<{ id: string; imageUrl: string }[]>([]);
   const [selectedVariants, setSelectedVariants] = useState<Set<number>>(new Set());
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const stored = sessionStorage.getItem(`adaptation_${cachedAdId}`);
@@ -623,38 +625,76 @@ export default function GenerateImagePage() {
 
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {imageVariants.map((v, i) => (
-                  <button
+                  <div
                     key={v.id}
-                    type="button"
-                    onClick={() => toggleVariantSelection(i)}
-                    className={`relative overflow-hidden rounded-lg border-2 transition-colors ${
+                    className={`group relative overflow-hidden rounded-lg border-2 transition-colors ${
                       selectedVariants.has(i)
                         ? "border-orange ring-2 ring-orange/30"
                         : "border-sand hover:border-orange/30"
                     }`}
                   >
-                    <img
-                      src={`${API_HOST}${v.imageUrl}`}
-                      alt={`Variante ${i + 1}`}
-                      className="w-full"
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                      <span className="text-xs font-medium text-white">
-                        Variante {i + 1}
-                      </span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toggleVariantSelection(i)}
+                      className="block w-full"
+                    >
+                      <img
+                        src={`${API_HOST}${v.imageUrl}`}
+                        alt={`Variante ${i + 1}`}
+                        className="w-full"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                        <span className="text-xs font-medium text-white">
+                          Variante {i + 1}
+                        </span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLightboxIndex(i);
+                      }}
+                      aria-label={`Ver variante ${i + 1} en grande`}
+                      className="absolute top-2 left-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100 focus:opacity-100"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        <line x1="11" y1="8" x2="11" y2="14" />
+                        <line x1="8" y1="11" x2="14" y2="11" />
+                      </svg>
+                    </button>
                     {selectedVariants.has(i) && (
-                      <div className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-orange text-xs text-white">
+                      <div className="pointer-events-none absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-orange text-xs text-white">
                         ✓
                       </div>
                     )}
-                  </button>
+                  </div>
                 ))}
               </div>
 
               <p className="text-sm text-muted">
                 {selectedVariants.size} de {imageVariants.length} seleccionadas
               </p>
+
+              {lightboxIndex !== null && imageVariants[lightboxIndex] && (
+                <VariantLightbox
+                  imageUrl={`${API_HOST}${imageVariants[lightboxIndex].imageUrl}`}
+                  label={`Variante ${lightboxIndex + 1}`}
+                  onClose={() => setLightboxIndex(null)}
+                  onPrev={
+                    lightboxIndex > 0
+                      ? () => setLightboxIndex(lightboxIndex - 1)
+                      : undefined
+                  }
+                  onNext={
+                    lightboxIndex < imageVariants.length - 1
+                      ? () => setLightboxIndex(lightboxIndex + 1)
+                      : undefined
+                  }
+                />
+              )}
             </>
           )}
 

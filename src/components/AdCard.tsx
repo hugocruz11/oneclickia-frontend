@@ -1,12 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
+import { api } from "@/lib/api";
 import type { CachedAd } from "@/lib/types";
 
 interface AdCardProps {
   ad: CachedAd;
   isTop?: boolean;
+  isFavorite?: boolean;
+  onFavoriteChange?: (adId: string, favorited: boolean) => void;
 }
 
 function formatDuration(days: number | null): string | null {
@@ -16,9 +20,35 @@ function formatDuration(days: number | null): string | null {
   return `${days} días`;
 }
 
-export function AdCard({ ad, isTop = false }: AdCardProps) {
+export function AdCard({
+  ad,
+  isTop = false,
+  isFavorite = false,
+  onFavoriteChange,
+}: AdCardProps) {
+  const [favorited, setFavorited] = useState(isFavorite);
+  const [saving, setSaving] = useState(false);
+
   function handleClick() {
     sessionStorage.setItem(`ad_${ad.id}`, JSON.stringify(ad));
+  }
+
+  async function toggleFavorite(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (saving) return;
+    setSaving(true);
+    const next = !favorited;
+    setFavorited(next);
+    try {
+      if (next) await api.post(`/ads/favorites/${ad.id}`, {});
+      else await api.delete(`/ads/favorites/${ad.id}`);
+      onFavoriteChange?.(ad.id, next);
+    } catch {
+      setFavorited(!next);
+    } finally {
+      setSaving(false);
+    }
   }
 
   const duration = formatDuration(ad.runningDurationDays);
@@ -33,6 +63,30 @@ export function AdCard({ ad, isTop = false }: AdCardProps) {
           : "border-sand hover:border-orange/50"
       }`}
     >
+      <button
+        type="button"
+        onClick={toggleFavorite}
+        aria-label={favorited ? "Quitar de favoritos" : "Guardar en favoritos"}
+        className={`absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-sm transition-colors ${
+          favorited
+            ? "bg-orange text-white hover:bg-orange/90"
+            : "bg-white/90 text-charcoal hover:bg-white"
+        }`}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill={favorited ? "currentColor" : "none"}
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+        </svg>
+      </button>
+
       {/* Top badge */}
       {isTop && (
         <div className="absolute top-3 left-3 z-10">

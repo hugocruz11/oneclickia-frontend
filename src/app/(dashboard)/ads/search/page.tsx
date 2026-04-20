@@ -74,6 +74,7 @@ export default function AdsSearchPage() {
   const [history, setHistory] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showCustomCta, setShowCustomCta] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Show custom CTA after 30 seconds on the page
@@ -84,9 +85,13 @@ export default function AdsSearchPage() {
     };
   }, []);
 
-  // Load brand and history on mount
+  // Load brand, history, and favorites on mount
   useEffect(() => {
     api.get<Brand>("/brand").then(setBrand).catch(() => {});
+    api
+      .get<string[]>("/ads/favorites/ids")
+      .then((ids) => setFavoriteIds(new Set(ids)))
+      .catch(() => {});
     setHistory(getHistory());
   }, []);
 
@@ -160,7 +165,18 @@ export default function AdsSearchPage() {
         limit,
         cursor: nextCursor,
       });
-      const allAds = [...ads, ...res.ads];
+      const existingIds = new Set(ads.map((a) => a.id));
+      const newAds = res.ads.filter((a) => !existingIds.has(a.id));
+      const allAds = [...ads, ...newAds];
+
+      if (newAds.length === 0) {
+        setError(
+          "No hay más anuncios nuevos para esta búsqueda. Prueba con otra palabra clave o cambia el orden.",
+        );
+        setNextCursor(null);
+        return;
+      }
+
       setAds(allAds);
       setNextCursor(res.nextCursor);
       saveSearch({
@@ -303,7 +319,20 @@ export default function AdsSearchPage() {
         <div className="mt-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ads.map((ad) => (
-              <AdCard key={ad.id} ad={ad} isTop={ad.id === topAdId} />
+              <AdCard
+                key={ad.id}
+                ad={ad}
+                isTop={ad.id === topAdId}
+                isFavorite={favoriteIds.has(ad.id)}
+                onFavoriteChange={(id, fav) => {
+                  setFavoriteIds((prev) => {
+                    const next = new Set(prev);
+                    if (fav) next.add(id);
+                    else next.delete(id);
+                    return next;
+                  });
+                }}
+              />
             ))}
           </div>
 

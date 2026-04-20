@@ -12,6 +12,8 @@ import { FileUpload } from "@/components/ui/FileUpload";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { CopyVariantPicker } from "@/components/CopyVariantPicker";
+import { SavedCopiesBrowser } from "@/components/SavedCopiesBrowser";
+import { VariantLightbox } from "@/components/VariantLightbox";
 import { api, ApiError } from "@/lib/api";
 import type {
   AdaptCopyResponse,
@@ -20,6 +22,7 @@ import type {
   ImageVariantsResponse,
   Product,
   ReferenceImage,
+  SavedCopy,
 } from "@/lib/types";
 
 const API_HOST = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
@@ -39,12 +42,14 @@ export default function CustomAdPage() {
   const [step, setStep] = useState<Step>("copy");
 
   // Copy generation state
+  const [copySource, setCopySource] = useState<"new" | "saved">("new");
   const [copyPrompt, setCopyPrompt] = useState("");
   const [targetLang, setTargetLang] = useState("es");
   const [copyLoading, setCopyLoading] = useState(false);
   const [copyError, setCopyError] = useState("");
   const [copyResult, setCopyResult] = useState<AdaptCopyResponse | null>(null);
   const [selectedVariant, setSelectedVariant] = useState(0);
+  const [pickedSavedCopy, setPickedSavedCopy] = useState<SavedCopy | null>(null);
 
   // Product picker
   const [savedProducts, setSavedProducts] = useState<Product[]>([]);
@@ -78,6 +83,7 @@ export default function CustomAdPage() {
   const [generatingVariants, setGeneratingVariants] = useState(false);
   const [imageVariants, setImageVariants] = useState<{ id: string; imageUrl: string }[]>([]);
   const [selectedVariants, setSelectedVariants] = useState<Set<number>>(new Set());
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   // Reference image URL (returned after copy generation for use in image gen)
   const [referenceImageUrl, setReferenceImageUrl] = useState<string | null>(null);
@@ -144,6 +150,46 @@ export default function CustomAdPage() {
     }
   }
 
+  async function handleUseSavedCopy() {
+    if (!pickedSavedCopy) return;
+
+    setCopyError("");
+    setCopyLoading(true);
+    setCopyResult(null);
+
+    try {
+      const formData = new FormData();
+
+      if (productMode === "existing" && existingProductId) {
+        formData.append("productId", existingProductId);
+      } else if (productMode === "new") {
+        if (productName.trim()) formData.append("productName", productName.trim());
+        if (productImage) formData.append("productImage", productImage);
+      }
+
+      if (refMode === "existing" && existingRefId) {
+        formData.append("referenceImageId", existingRefId);
+      } else if (refMode === "new" && referenceImage) {
+        formData.append("referenceImage", referenceImage);
+      }
+
+      const res = await api.post<AdaptCopyResponse>(
+        `/ads/saved-copies/${pickedSavedCopy.id}/use`,
+        formData,
+      );
+
+      setCopyResult(res);
+      setSelectedVariant(0);
+      if (res.referenceImageUrl) setReferenceImageUrl(res.referenceImageUrl);
+      setStep("selectVariant");
+    } catch (err) {
+      if (err instanceof ApiError) setCopyError(err.message);
+      else setCopyError("Error al cargar el copy guardado.");
+    } finally {
+      setCopyLoading(false);
+    }
+  }
+
   // ── Image generation ──
 
   function toggleFormat(key: string) {
@@ -173,7 +219,7 @@ export default function CustomAdPage() {
   }
 
   async function handleGenerateImage() {
-    if (!copyResult || !imagePrompt.trim() || formats.length === 0) return;
+    if (!copyResult || formats.length === 0) return;
 
     setImageError("");
     setImageLoading(true);
@@ -183,9 +229,9 @@ export default function CustomAdPage() {
       const body: Record<string, unknown> = {
         adaptationId: copyResult.adaptationId,
         variantIndex: selectedVariant,
-        imagePrompt: imagePrompt.trim(),
         formats,
       };
+      if (imagePrompt.trim()) body.imagePrompt = imagePrompt.trim();
       if (price.trim()) body.price = price.trim();
       if (referenceImageUrl) body.referenceImageUrl = referenceImageUrl;
 
@@ -310,9 +356,169 @@ export default function CustomAdPage() {
     router.push("/campaigns/new");
   }
 
+  // ── Shared pickers (used by both "new" and "saved" copy flows) ──
+
+  const productPickerCard = (
+    <Card>
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
+        Producto (opcional)
+      </h3>
+
+      {savedProducts.length > 0 && (
+        <div className="mt-3 flex gap-3">
+          <button
+            type="button"
+            onClick={() => setProductMode("new")}
+            className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
+              productMode === "new"
+                ? "border-orange text-orange"
+                : "border-sand text-muted hover:border-orange/30"
+            }`}
+          >
+            Nuevo producto
+          </button>
+          <button
+            type="button"
+            onClick={() => setProductMode("existing")}
+            className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
+              productMode === "existing"
+                ? "border-orange text-orange"
+                : "border-sand text-muted hover:border-orange/30"
+            }`}
+          >
+            Producto existente
+          </button>
+        </div>
+      )}
+
+      {productMode === "new" ? (
+        <div className="mt-3 flex flex-col gap-4">
+          <Input
+            label="Nombre del producto"
+            placeholder="Ej: Kit Skincare Natural"
+            value={productName}
+            onChange={(e) => setProductName(e.target.value)}
+          />
+          <FileUpload
+            label="Foto del producto"
+            onChange={setProductImage}
+            helperText="La IA usará esta imagen para generar el creativo."
+          />
+        </div>
+      ) : (
+        <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
+          {savedProducts.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setExistingProductId(p.id)}
+              className={`relative overflow-hidden rounded-lg border-2 transition-colors ${
+                existingProductId === p.id
+                  ? "border-orange ring-2 ring-orange/30"
+                  : "border-sand hover:border-orange/30"
+              }`}
+            >
+              <img
+                src={`${API_HOST}${p.imageUrl}`}
+                alt={p.name || "Producto"}
+                className="aspect-square w-full object-cover"
+              />
+              {p.name && (
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
+                  <span className="text-[10px] font-medium text-white line-clamp-1">
+                    {p.name}
+                  </span>
+                </div>
+              )}
+              {existingProductId === p.id && (
+                <div className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-orange text-[10px] text-white">
+                  ✓
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+
+  const referencePickerCard = (
+    <Card>
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
+        Imagen de referencia (opcional)
+      </h3>
+      <p className="mt-1 text-xs text-muted">
+        Sube una imagen de un anuncio que te guste como inspiración visual.
+      </p>
+
+      {savedRefImages.length > 0 && (
+        <div className="mt-3 flex gap-3">
+          <button
+            type="button"
+            onClick={() => setRefMode("new")}
+            className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
+              refMode === "new"
+                ? "border-orange text-orange"
+                : "border-sand text-muted hover:border-orange/30"
+            }`}
+          >
+            Subir nueva
+          </button>
+          <button
+            type="button"
+            onClick={() => setRefMode("existing")}
+            className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
+              refMode === "existing"
+                ? "border-orange text-orange"
+                : "border-sand text-muted hover:border-orange/30"
+            }`}
+          >
+            Usar existente
+          </button>
+        </div>
+      )}
+
+      {refMode === "new" ? (
+        <div className="mt-3">
+          <FileUpload
+            label="Imagen de referencia"
+            onChange={setReferenceImage}
+            helperText="La IA usará esta imagen como inspiración para el estilo visual."
+          />
+        </div>
+      ) : (
+        <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
+          {savedRefImages.map((ref) => (
+            <button
+              key={ref.id}
+              type="button"
+              onClick={() => setExistingRefId(ref.id)}
+              className={`relative overflow-hidden rounded-lg border-2 transition-colors ${
+                existingRefId === ref.id
+                  ? "border-orange ring-2 ring-orange/30"
+                  : "border-sand hover:border-orange/30"
+              }`}
+            >
+              <img
+                src={`${API_HOST}${ref.imageUrl}`}
+                alt={ref.name || "Referencia"}
+                className="aspect-square w-full object-cover"
+              />
+              {existingRefId === ref.id && (
+                <div className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-orange text-[10px] text-white">
+                  ✓
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+
   // ── Step indicator ──
 
-  const steps = [
+  const steps: { key: Step; label: string }[] = [
     { key: "copy", label: "1. Copy" },
     { key: "selectVariant", label: "2. Variante" },
     { key: "image", label: "3. Imagen" },
@@ -323,14 +529,34 @@ export default function CustomAdPage() {
     step === "variants" ? s.key === "iterate" : s.key === step,
   );
 
+  function goBack() {
+    if (step === "variants") {
+      setStep("iterate");
+      return;
+    }
+    const idx = steps.findIndex((s) => s.key === step);
+    if (idx <= 0) {
+      router.push("/ads/search");
+    } else {
+      setStep(steps[idx - 1].key);
+    }
+  }
+
+  function jumpToStep(target: Step) {
+    const targetIdx = steps.findIndex((s) => s.key === target);
+    if (targetIdx === -1 || targetIdx > currentStepIndex) return;
+    setStep(target);
+  }
+
   return (
     <div className="max-w-3xl">
-      <Link
-        href="/ads/search"
+      <button
+        type="button"
+        onClick={goBack}
         className="text-sm text-muted hover:text-ink transition-colors"
       >
-        ← Volver a buscar ads
-      </Link>
+        {step === "copy" ? "← Volver a buscar ads" : "← Paso anterior"}
+      </button>
 
       <h1 className="mt-4 text-2xl font-semibold text-ink">
         Crear anuncio personalizado
@@ -342,23 +568,112 @@ export default function CustomAdPage() {
 
       {/* Step indicator */}
       <div className="mt-6 flex gap-2">
-        {steps.map((s, i) => (
-          <div
-            key={s.key}
-            className={`flex-1 rounded-full py-1.5 text-center text-xs font-medium transition-colors ${
-              i <= currentStepIndex
-                ? "bg-orange text-white"
-                : "bg-sand-light text-muted"
-            }`}
-          >
-            {s.label}
-          </div>
-        ))}
+        {steps.map((s, i) => {
+          const isVisited = i <= currentStepIndex;
+          const isClickable = i < currentStepIndex;
+          return (
+            <button
+              type="button"
+              key={s.key}
+              onClick={() => jumpToStep(s.key)}
+              disabled={!isClickable}
+              className={`flex-1 rounded-full py-1.5 text-center text-xs font-medium transition-colors ${
+                isVisited
+                  ? "bg-orange text-white"
+                  : "bg-sand-light text-muted"
+              } ${isClickable ? "cursor-pointer hover:opacity-90" : "cursor-default"}`}
+            >
+              {s.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* ── STEP 1: Generate copy ── */}
       {step === "copy" && (
-        <form onSubmit={handleGenerateCopy} className="mt-6 flex flex-col gap-4">
+        <>
+          <Card className="mt-6">
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setCopySource("new")}
+                className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
+                  copySource === "new"
+                    ? "border-orange text-orange"
+                    : "border-sand text-muted hover:border-orange/30"
+                }`}
+              >
+                Generar nuevo
+              </button>
+              <button
+                type="button"
+                onClick={() => setCopySource("saved")}
+                className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
+                  copySource === "saved"
+                    ? "border-orange text-orange"
+                    : "border-sand text-muted hover:border-orange/30"
+                }`}
+              >
+                Usar copy guardado
+              </button>
+            </div>
+          </Card>
+
+          {copySource === "saved" && (
+            <div className="mt-4 flex flex-col gap-4">
+              <Card>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
+                  Elige un copy guardado
+                </h3>
+                <p className="mt-1 text-xs text-muted">
+                  Selecciona el copy que quieres reutilizar, luego configura el
+                  producto y la imagen de referencia antes de continuar.
+                </p>
+                <div className="mt-3">
+                  <SavedCopiesBrowser
+                    onPick={setPickedSavedCopy}
+                    pickedId={pickedSavedCopy?.id ?? null}
+                  />
+                </div>
+              </Card>
+
+              {pickedSavedCopy && (
+                <>
+                  {productPickerCard}
+
+                  {referencePickerCard}
+
+                  {copyError && (
+                    <div className="rounded-md border border-error/20 bg-error/10 p-3">
+                      <p className="text-sm text-error">{copyError}</p>
+                    </div>
+                  )}
+
+                  <Button
+                    type="button"
+                    onClick={handleUseSavedCopy}
+                    loading={copyLoading}
+                    size="lg"
+                    className="w-full"
+                  >
+                    Usar este copy
+                  </Button>
+
+                  {copyLoading && (
+                    <div className="flex flex-col items-center gap-3 py-4">
+                      <Spinner size="lg" />
+                      <p className="text-sm text-muted">Cargando copy guardado...</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {step === "copy" && copySource === "new" && (
+        <form onSubmit={handleGenerateCopy} className="mt-4 flex flex-col gap-4">
           <Card>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
               Describe tu anuncio
@@ -377,161 +692,9 @@ export default function CustomAdPage() {
             />
           </Card>
 
-          <Card>
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Producto (opcional)
-            </h3>
+          {productPickerCard}
 
-            {savedProducts.length > 0 && (
-              <div className="mt-3 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setProductMode("new")}
-                  className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
-                    productMode === "new"
-                      ? "border-orange text-orange"
-                      : "border-sand text-muted hover:border-orange/30"
-                  }`}
-                >
-                  Nuevo producto
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setProductMode("existing")}
-                  className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
-                    productMode === "existing"
-                      ? "border-orange text-orange"
-                      : "border-sand text-muted hover:border-orange/30"
-                  }`}
-                >
-                  Producto existente
-                </button>
-              </div>
-            )}
-
-            {productMode === "new" ? (
-              <div className="mt-3 flex flex-col gap-4">
-                <Input
-                  label="Nombre del producto"
-                  placeholder="Ej: Kit Skincare Natural"
-                  value={productName}
-                  onChange={(e) => setProductName(e.target.value)}
-                />
-                <FileUpload
-                  label="Foto del producto"
-                  onChange={setProductImage}
-                  helperText="La IA usará esta imagen para generar el creativo."
-                />
-              </div>
-            ) : (
-              <div className="mt-3 flex flex-col gap-3">
-                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                  {savedProducts.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setExistingProductId(p.id)}
-                      className={`relative overflow-hidden rounded-lg border-2 transition-colors ${
-                        existingProductId === p.id
-                          ? "border-orange ring-2 ring-orange/30"
-                          : "border-sand hover:border-orange/30"
-                      }`}
-                    >
-                      <img
-                        src={`${API_HOST}${p.imageUrl}`}
-                        alt={p.name || "Producto"}
-                        className="aspect-square w-full object-cover"
-                      />
-                      {p.name && (
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
-                          <span className="text-[10px] font-medium text-white line-clamp-1">
-                            {p.name}
-                          </span>
-                        </div>
-                      )}
-                      {existingProductId === p.id && (
-                        <div className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-orange text-[10px] text-white">
-                          ✓
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </Card>
-
-          <Card>
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Imagen de referencia (opcional)
-            </h3>
-            <p className="mt-1 text-xs text-muted">
-              Sube una imagen de un anuncio que te guste como inspiración visual.
-            </p>
-
-            {savedRefImages.length > 0 && (
-              <div className="mt-3 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRefMode("new")}
-                  className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
-                    refMode === "new"
-                      ? "border-orange text-orange"
-                      : "border-sand text-muted hover:border-orange/30"
-                  }`}
-                >
-                  Subir nueva
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRefMode("existing")}
-                  className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
-                    refMode === "existing"
-                      ? "border-orange text-orange"
-                      : "border-sand text-muted hover:border-orange/30"
-                  }`}
-                >
-                  Usar existente
-                </button>
-              </div>
-            )}
-
-            {refMode === "new" ? (
-              <div className="mt-3">
-                <FileUpload
-                  label="Imagen de referencia"
-                  onChange={setReferenceImage}
-                  helperText="La IA usará esta imagen como inspiración para el estilo visual."
-                />
-              </div>
-            ) : (
-              <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
-                {savedRefImages.map((ref) => (
-                  <button
-                    key={ref.id}
-                    type="button"
-                    onClick={() => setExistingRefId(ref.id)}
-                    className={`relative overflow-hidden rounded-lg border-2 transition-colors ${
-                      existingRefId === ref.id
-                        ? "border-orange ring-2 ring-orange/30"
-                        : "border-sand hover:border-orange/30"
-                    }`}
-                  >
-                    <img
-                      src={`${API_HOST}${ref.imageUrl}`}
-                      alt={ref.name || "Referencia"}
-                      className="aspect-square w-full object-cover"
-                    />
-                    {existingRefId === ref.id && (
-                      <div className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-orange text-[10px] text-white">
-                        ✓
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </Card>
+          {referencePickerCard}
 
           <Card>
             <Select
@@ -586,9 +749,14 @@ export default function CustomAdPage() {
           </div>
 
           <CopyVariantPicker
+            adaptationId={copyResult.adaptationId}
             variants={copyResult.variants}
             selected={selectedVariant}
             onSelect={setSelectedVariant}
+            productId={copyResult.product?.id ?? null}
+            onVariantsChange={(variants) =>
+              setCopyResult({ ...copyResult, variants })
+            }
           />
 
           <div className="flex gap-4">
@@ -668,10 +836,10 @@ export default function CustomAdPage() {
 
           <Card>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Dirección creativa de la imagen
+              Dirección creativa de la imagen (opcional)
             </h3>
             <p className="mt-1 text-xs text-muted">
-              Describe cómo quieres que se vea tu anuncio.
+              Describe cómo quieres que se vea tu anuncio. Si lo dejas vacío, la IA usará un estilo limpio y acorde a tu marca.
             </p>
             <Textarea
               className="mt-3"
@@ -679,7 +847,6 @@ export default function CustomAdPage() {
               placeholder="Ej: Fondo blanco minimalista con el producto centrado. Luces tipo estudio profesional. Estilo limpio y moderno."
               value={imagePrompt}
               onChange={(e) => setImagePrompt(e.target.value)}
-              required
             />
           </Card>
 
@@ -734,7 +901,7 @@ export default function CustomAdPage() {
               onClick={handleGenerateImage}
               loading={imageLoading}
               size="lg"
-              disabled={!imagePrompt.trim() || formats.length === 0}
+              disabled={formats.length === 0}
               className="flex-1"
             >
               Generar imágenes
@@ -969,38 +1136,76 @@ export default function CustomAdPage() {
 
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {imageVariants.map((v, i) => (
-                  <button
+                  <div
                     key={v.id}
-                    type="button"
-                    onClick={() => toggleVariantSelection(i)}
-                    className={`relative overflow-hidden rounded-lg border-2 transition-colors ${
+                    className={`group relative overflow-hidden rounded-lg border-2 transition-colors ${
                       selectedVariants.has(i)
                         ? "border-orange ring-2 ring-orange/30"
                         : "border-sand hover:border-orange/30"
                     }`}
                   >
-                    <img
-                      src={`${API_HOST}${v.imageUrl}`}
-                      alt={`Variante ${i + 1}`}
-                      className="w-full"
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                      <span className="text-xs font-medium text-white">
-                        Variante {i + 1}
-                      </span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toggleVariantSelection(i)}
+                      className="block w-full"
+                    >
+                      <img
+                        src={`${API_HOST}${v.imageUrl}`}
+                        alt={`Variante ${i + 1}`}
+                        className="w-full"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                        <span className="text-xs font-medium text-white">
+                          Variante {i + 1}
+                        </span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLightboxIndex(i);
+                      }}
+                      aria-label={`Ver variante ${i + 1} en grande`}
+                      className="absolute top-2 left-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100 focus:opacity-100"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        <line x1="11" y1="8" x2="11" y2="14" />
+                        <line x1="8" y1="11" x2="14" y2="11" />
+                      </svg>
+                    </button>
                     {selectedVariants.has(i) && (
-                      <div className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-orange text-xs text-white">
+                      <div className="pointer-events-none absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-orange text-xs text-white">
                         ✓
                       </div>
                     )}
-                  </button>
+                  </div>
                 ))}
               </div>
 
               <p className="text-sm text-muted">
                 {selectedVariants.size} de {imageVariants.length} seleccionadas
               </p>
+
+              {lightboxIndex !== null && imageVariants[lightboxIndex] && (
+                <VariantLightbox
+                  imageUrl={`${API_HOST}${imageVariants[lightboxIndex].imageUrl}`}
+                  label={`Variante ${lightboxIndex + 1}`}
+                  onClose={() => setLightboxIndex(null)}
+                  onPrev={
+                    lightboxIndex > 0
+                      ? () => setLightboxIndex(lightboxIndex - 1)
+                      : undefined
+                  }
+                  onNext={
+                    lightboxIndex < imageVariants.length - 1
+                      ? () => setLightboxIndex(lightboxIndex + 1)
+                      : undefined
+                  }
+                />
+              )}
             </>
           )}
 

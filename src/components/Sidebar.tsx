@@ -5,10 +5,12 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { href: "/ads/search", label: "Buscar Ads", icon: "🔍" },
+  { href: "/ads/favorites", label: "Favoritos", icon: "❤️" },
   { href: "/campaigns", label: "Campañas", icon: "📢" },
   { href: "/analytics", label: "Analytics", icon: "📊" },
   { href: "/brand", label: "Mi Marca", icon: "🏷️" },
   { href: "/meta", label: "Meta Ads", icon: "📱" },
+  { href: "/meta/audiences", label: "Públicos", icon: "🎯" },
 ];
 
 export function Sidebar() {
@@ -24,8 +26,13 @@ export function Sidebar() {
 
       <nav className="flex flex-1 flex-col gap-1 p-3">
         {navItems.map((item) => {
-          const isActive =
-            pathname === item.href || pathname.startsWith(item.href + "/");
+          const hasNested = navItems.some(
+            (other) =>
+              other.href !== item.href && other.href.startsWith(item.href + "/"),
+          );
+          const isActive = hasNested
+            ? pathname === item.href
+            : pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link
               key={item.href}

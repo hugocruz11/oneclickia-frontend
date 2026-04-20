@@ -347,6 +347,16 @@ export default function CampaignDetailPage() {
               </div>
             </div>
           )}
+          {campaign.customAudienceIds && campaign.customAudienceIds.length > 0 && (
+            <div>
+              <p className="text-xs text-muted">Públicos personalizados</p>
+              <div className="mt-1 flex flex-wrap gap-1 font-mono text-xs">
+                {campaign.customAudienceIds.map((id) => (
+                  <Badge key={id} variant="muted">{id}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </Card>
 

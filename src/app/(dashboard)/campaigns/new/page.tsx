@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { InterestAutocomplete } from "@/components/InterestAutocomplete";
 import { CountryPicker } from "@/components/CountryPicker";
+import { CustomAudiencePicker } from "@/components/CustomAudiencePicker";
 import { api, ApiError } from "@/lib/api";
 import type {
   CampaignDefaults,
@@ -25,6 +26,24 @@ const OBJECTIVES = [
   { value: "OUTCOME_LEADS", label: "Clientes potenciales" },
   { value: "OUTCOME_SALES", label: "Ventas" },
   { value: "OUTCOME_AWARENESS", label: "Reconocimiento" },
+];
+
+const CTA_OPTIONS = [
+  { value: "LEARN_MORE", label: "Más información" },
+  { value: "SHOP_NOW", label: "Comprar ahora" },
+  { value: "BUY_NOW", label: "Comprar" },
+  { value: "SIGN_UP", label: "Registrarse" },
+  { value: "SUBSCRIBE", label: "Suscribirse" },
+  { value: "DOWNLOAD", label: "Descargar" },
+  { value: "ORDER_NOW", label: "Pedir ahora" },
+  { value: "BOOK_NOW", label: "Reservar ahora" },
+  { value: "CONTACT_US", label: "Contáctanos" },
+  { value: "GET_OFFER", label: "Obtener oferta" },
+  { value: "GET_QUOTE", label: "Obtener cotización" },
+  { value: "APPLY_NOW", label: "Aplicar ahora" },
+  { value: "SEND_MESSAGE", label: "Enviar mensaje" },
+  { value: "WATCH_MORE", label: "Ver más" },
+  { value: "SEE_MENU", label: "Ver menú" },
 ];
 
 export default function NewCampaignPage() {
@@ -57,11 +76,13 @@ export default function NewCampaignPage() {
   const [interests, setInterests] = useState<{ id: string; name: string }[]>(
     [],
   );
+  const [customAudienceIds, setCustomAudienceIds] = useState<string[]>([]);
 
   // Names for Meta objects
   const [campaignName, setCampaignName] = useState("");
   const [adSetName, setAdSetName] = useState("");
   const [adName, setAdName] = useState("");
+  const [ctaType, setCtaType] = useState("LEARN_MORE");
 
   // Existing campaign/adset selection
   const [campaignMode, setCampaignMode] = useState<"new" | "existing">("new");
@@ -144,6 +165,8 @@ export default function NewCampaignPage() {
         if (defaults.ageMax) setAgeMax(defaults.ageMax);
         if (defaults.genders?.length) setGenders(defaults.genders);
         if (defaults.interests?.length) setInterests(defaults.interests);
+        if (defaults.customAudienceIds?.length)
+          setCustomAudienceIds(defaults.customAudienceIds);
       })
       .catch(() => {})
       .finally(() => setLoadingDefaults(false));
@@ -229,9 +252,11 @@ export default function NewCampaignPage() {
       if (endDate) body.endDate = endDate;
       if (destinationUrl.trim()) body.destinationUrl = destinationUrl.trim();
       if (interests.length > 0) body.interests = interests;
+      if (customAudienceIds.length > 0) body.customAudienceIds = customAudienceIds;
       if (campaignName.trim()) body.campaignName = campaignName.trim();
       if (adSetName.trim()) body.adSetName = adSetName.trim();
       if (adName.trim()) body.adName = adName.trim();
+      if (ctaType) body.ctaType = ctaType;
       if (additionalImageIds.length > 0) body.additionalImageIds = additionalImageIds;
       if (campaignMode === "existing" && selectedMetaCampaignId) {
         body.existingMetaCampaignId = selectedMetaCampaignId;
@@ -502,13 +527,20 @@ export default function NewCampaignPage() {
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
             Anuncio
           </h3>
-          <div className="mt-4">
+          <div className="mt-4 flex flex-col gap-4">
             <Input
               label="Nombre del anuncio"
               placeholder="Ej: Variante A - Imagen principal"
               value={adName}
               onChange={(e) => setAdName(e.target.value)}
               helperText="Si lo dejas vacío se generará automáticamente."
+            />
+            <Select
+              label="Llamado a la acción"
+              value={ctaType}
+              onChange={(e) => setCtaType(e.target.value)}
+              options={CTA_OPTIONS}
+              required
             />
           </div>
         </Card>
@@ -636,6 +668,12 @@ export default function NewCampaignPage() {
             <InterestAutocomplete
               selected={interests}
               onChange={setInterests}
+            />
+
+            <CustomAudiencePicker
+              adAccountId={adAccountId}
+              selected={customAudienceIds}
+              onChange={setCustomAudienceIds}
             />
           </div>
         </Card>

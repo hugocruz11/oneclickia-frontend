@@ -57,6 +57,28 @@ export interface MetaPage {
   category: string;
 }
 
+export interface MetaCustomAudience {
+  id: string;
+  name: string;
+  description?: string;
+  subtype: string;
+  approximate_count_lower_bound?: number;
+  approximate_count_upper_bound?: number;
+  delivery_status?: { code: number; description: string };
+  operation_status?: { code: number; description: string };
+  customer_file_source?: string;
+  time_created?: number;
+  time_updated?: number;
+}
+
+export interface AudienceUploadResult {
+  total: number;
+  uploaded: number;
+  invalid: number;
+  duplicates: number;
+  sessionId: number;
+}
+
 export interface MetaInterest {
   id: string;
   name: string;
@@ -140,6 +162,20 @@ export interface AdaptCopyResponse {
   cached: boolean;
 }
 
+export interface SavedCopy {
+  id: string;
+  userId: string;
+  headline: string;
+  description: string;
+  ctaTitle: string;
+  rationale: string | null;
+  label: string | null;
+  sourceAdaptationId: string | null;
+  productId: string | null;
+  product?: Product | null;
+  createdAt: string;
+}
+
 // ── Image Generation ──
 
 export interface GenerateImageResponse {
@@ -188,6 +224,7 @@ export interface Campaign {
   ageMax: number;
   genders: number[];
   interests: { id: string; name: string }[];
+  customAudienceIds: string[];
   headline: string;
   description: string;
   ctaType: string;
@@ -232,4 +269,5 @@ export interface CampaignDefaults {
   ageMax: number;
   genders: number[];
   interests: { id: string; name: string }[];
+  customAudienceIds: string[];
 }
