@@ -147,7 +147,7 @@ export default function MetaPage() {
             ¿Por qué conectar Meta?
           </h3>
           <ul className="mt-2 flex flex-col gap-2 text-sm text-charcoal">
-            <li>Publica campañas directamente desde Movity</li>
+            <li>Publica campañas directamente desde OneClickIA</li>
             <li>Gestiona tus anuncios sin salir de la plataforma</li>
             <li>Activa y pausa campañas con un solo clic</li>
           </ul>

@@ -29,7 +29,7 @@ function VerifyContent() {
         );
 
         // 2. Store JWT in localStorage
-        localStorage.setItem("movity_token", auth.accessToken);
+        localStorage.setItem("oneclickia_token", auth.accessToken);
 
         // 3. Set httpOnly cookie for proxy (await to ensure cookie is set)
         await fetch("/api/auth/set-cookie", {

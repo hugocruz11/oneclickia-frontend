@@ -84,7 +84,7 @@ export default function CampaignsPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMeta, setLoadingMeta] = useState(true);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"movity" | "meta">("movity");
+  const [tab, setTab] = useState<"oneclickia" | "meta">("oneclickia");
 
   // Meta drill-down state
   const [selectedCampaign, setSelectedCampaign] = useState<MetaCampaign | null>(null);
@@ -207,14 +207,14 @@ export default function CampaignsPage() {
       <div className="mt-6 flex gap-1 border-b border-sand">
         <button
           type="button"
-          onClick={() => { setTab("movity"); goBackToCampaigns(); }}
+          onClick={() => { setTab("oneclickia"); goBackToCampaigns(); }}
           className={`px-4 py-2 text-sm font-medium transition-colors ${
-            tab === "movity"
+            tab === "oneclickia"
               ? "border-b-2 border-orange text-orange"
               : "text-muted hover:text-ink"
           }`}
         >
-          Movity ({campaigns.length})
+          OneClickIA ({campaigns.length})
         </button>
         <button
           type="button"
@@ -229,14 +229,14 @@ export default function CampaignsPage() {
         </button>
       </div>
 
-      {/* ── Movity campaigns ── */}
-      {tab === "movity" && (
+      {/* ── OneClickIA campaigns ── */}
+      {tab === "oneclickia" && (
         <>
           {campaigns.length === 0 && (
             <div className="mt-12 text-center">
               <p className="text-3xl">📢</p>
               <p className="mt-2 text-sm text-muted">
-                Aún no tienes campañas creadas desde Movity.
+                Aún no tienes campañas creadas desde OneClickIA.
               </p>
               <Link href="/ads/search" className="mt-4 inline-block">
                 <Button variant="ghost" size="sm">Buscar Ads</Button>

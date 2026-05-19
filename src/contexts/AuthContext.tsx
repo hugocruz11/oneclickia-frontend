@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem("movity_token");
+    const stored = localStorage.getItem("oneclickia_token");
     if (!stored) {
       setIsLoading(false);
       return;
@@ -43,14 +43,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .get<User>("/auth/me")
       .then((u) => setUser(u))
       .catch(() => {
-        localStorage.removeItem("movity_token");
+        localStorage.removeItem("oneclickia_token");
         setToken(null);
       })
       .finally(() => setIsLoading(false));
   }, []);
 
   const logout = useCallback(async () => {
-    localStorage.removeItem("movity_token");
+    localStorage.removeItem("oneclickia_token");
     setToken(null);
     setUser(null);
     await fetch("/api/auth/set-cookie", { method: "DELETE" });

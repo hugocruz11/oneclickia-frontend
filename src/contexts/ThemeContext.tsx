@@ -18,7 +18,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
-    const saved = localStorage.getItem("movity_theme") as Theme | null;
+    const saved = localStorage.getItem("oneclickia_theme") as Theme | null;
     if (saved === "dark" || saved === "light") {
       setTheme(saved);
       document.documentElement.classList.toggle("dark", saved === "dark");
@@ -28,7 +28,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   function toggle() {
     const next = theme === "light" ? "dark" : "light";
     setTheme(next);
-    localStorage.setItem("movity_theme", next);
+    localStorage.setItem("oneclickia_theme", next);
     document.documentElement.classList.toggle("dark", next === "dark");
   }
 

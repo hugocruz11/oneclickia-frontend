@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Movity — Campañas de ads en minutos",
+  title: "OneClickIA — Campañas de ads en minutos",
   description:
     "Crea campañas publicitarias en Meta Ads de forma automática con inteligencia artificial.",
 };
@@ -30,7 +30,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                var t = localStorage.getItem('movity_theme');
+                var t = localStorage.getItem('oneclickia_theme');
                 if (t === 'dark') document.documentElement.classList.add('dark');
               })();
             `,

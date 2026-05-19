@@ -13,7 +13,7 @@ export class ApiError extends Error {
 class ApiClient {
   private getToken(): string | null {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("movity_token");
+      return localStorage.getItem("oneclickia_token");
     }
     return null;
   }
@@ -43,7 +43,7 @@ class ApiClient {
 
     if (res.status === 401) {
       if (typeof window !== "undefined") {
-        localStorage.removeItem("movity_token");
+        localStorage.removeItem("oneclickia_token");
         window.location.href = "/login";
       }
       throw new ApiError(401, "No autorizado");

@@ -22,7 +22,7 @@ export function Sidebar() {
     <aside className="flex w-60 flex-col border-r border-sand bg-cream">
       <div className="flex h-14 items-center border-b border-sand px-4">
         <Link href="/" className="text-lg font-semibold text-ink">
-          Movity
+          OneClickIA
         </Link>
       </div>
 

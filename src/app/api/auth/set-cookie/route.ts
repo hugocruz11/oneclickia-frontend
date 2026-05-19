@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   }
 
   const response = NextResponse.json({ success: true });
-  response.cookies.set("movity_token", token, {
+  response.cookies.set("oneclickia_token", token, {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   const response = NextResponse.json({ success: true });
-  response.cookies.set("movity_token", "", {
+  response.cookies.set("oneclickia_token", "", {
     httpOnly: true,
     sameSite: "lax",
     path: "/",

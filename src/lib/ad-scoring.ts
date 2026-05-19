@@ -67,7 +67,7 @@ export function scoreAds(ads: CachedAd[], brand: Brand | null): ScoredAd[] {
     }
 
     // 3. Market alignment (0-10 points)
-    if (ad.marketTarget === "b2c") score += 5; // Most Movity users are B2C
+    if (ad.marketTarget === "b2c") score += 5; // Most OneClickIA users are B2C
     if (ad.languages && ad.languages.includes("es")) score += 5;
 
     // 4. Live status (0-10 points)

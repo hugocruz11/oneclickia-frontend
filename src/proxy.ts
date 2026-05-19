@@ -5,7 +5,7 @@ const PUBLIC_PATHS = ["/login", "/verify", "/check-email"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = request.cookies.get("movity_token")?.value;
+  const token = request.cookies.get("oneclickia_token")?.value;
 
   // Allow API routes and static files
   if (
