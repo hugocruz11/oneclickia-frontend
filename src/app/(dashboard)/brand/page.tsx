@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
@@ -14,6 +14,20 @@ import type { Brand } from "@/lib/types";
 const API_HOST = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export default function BrandPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center py-12">
+          <Spinner size="lg" />
+        </div>
+      }
+    >
+      <BrandPageContent />
+    </Suspense>
+  );
+}
+
+function BrandPageContent() {
   const searchParams = useSearchParams();
   const fromOnboarding = searchParams.get("from") === "onboarding";
 
