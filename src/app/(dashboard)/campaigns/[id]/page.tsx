@@ -25,6 +25,11 @@ const FORMAT_LABELS: Record<string, string> = {
   INSTAGRAM_STORY: "Instagram Story",
 };
 
+// Seconds in PUBLISHING after which we surface a manual "Reintentar"
+// button. Most Meta publishes finish in 30-60s; past this it's likely
+// stuck and the user should be able to recover.
+const PUBLISHING_STUCK_THRESHOLD_SECS = 60;
+
 export default function CampaignDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -35,6 +40,10 @@ export default function CampaignDetailPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState("");
   const [error, setError] = useState("");
+  // Tracks when the current PUBLISHING state was first observed by the
+  // browser, so we know when to surface the "stuck" recovery option.
+  const [publishingSince, setPublishingSince] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     api
@@ -46,6 +55,30 @@ export default function CampaignDetailPage() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  // While in PUBLISHING, poll the campaign every 5s until status changes,
+  // and tick a clock every second so the "stuck" UI appears on time.
+  useEffect(() => {
+    if (campaign?.status !== "PUBLISHING") {
+      setPublishingSince(null);
+      return;
+    }
+    if (publishingSince === null) setPublishingSince(Date.now());
+
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    const poll = setInterval(async () => {
+      try {
+        const fresh = await api.get<Campaign>(`/campaigns/${id}`);
+        setCampaign(fresh);
+      } catch {
+        // ignore transient failures; we'll try again
+      }
+    }, 5000);
+    return () => {
+      clearInterval(tick);
+      clearInterval(poll);
+    };
+  }, [campaign?.status, id, publishingSince]);
 
   async function loadPreviews() {
     setLoadingPreviews(true);
@@ -432,12 +465,42 @@ export default function CampaignDetailPage() {
           </Button>
         )}
 
-        {campaign.status === "PUBLISHING" && (
-          <div className="flex items-center gap-3 text-sm text-muted">
-            <Spinner size="sm" />
-            Publicando en Meta...
-          </div>
-        )}
+        {campaign.status === "PUBLISHING" && (() => {
+          const elapsedSecs = publishingSince
+            ? Math.floor((now - publishingSince) / 1000)
+            : 0;
+          const isStuck = elapsedSecs >= PUBLISHING_STUCK_THRESHOLD_SECS;
+          return (
+            <div className="flex flex-1 flex-col gap-3">
+              <div className="flex items-center gap-3 text-sm text-muted">
+                <Spinner size="sm" />
+                <span>
+                  Publicando en Meta... ({elapsedSecs}s)
+                </span>
+              </div>
+              {isStuck && (
+                <div className="rounded-md border border-warning/20 bg-warning/10 p-3">
+                  <p className="text-sm font-medium text-warning">
+                    La publicación está tardando más de lo normal.
+                  </p>
+                  <p className="mt-1 text-xs text-charcoal">
+                    Puede ser un timeout de red. La publicación es
+                    idempotente — reintentar continuará desde el paso
+                    donde se quedó, sin duplicar nada en Meta.
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={() => handleAction("publish")}
+                    loading={actionLoading === "publish"}
+                    className="mt-3"
+                  >
+                    Reintentar publicación
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

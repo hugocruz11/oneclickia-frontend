@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { href: "/ads/search", label: "Buscar Ads", icon: "🔍" },
+  { href: "/ads/videos", label: "Buscar Videos", icon: "🎬" },
+  { href: "/ads/videos/saved", label: "Videos guardados", icon: "💾" },
   { href: "/ads/favorites", label: "Favoritos", icon: "❤️" },
   { href: "/campaigns", label: "Campañas", icon: "📢" },
   { href: "/analytics", label: "Analytics", icon: "📊" },
