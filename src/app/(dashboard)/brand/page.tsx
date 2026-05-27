@@ -1,17 +1,34 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { api, ApiError } from "@/lib/api";
-import type { Brand } from "@/lib/types";
+import type { Brand, PricePositioning } from "@/lib/types";
 
 const API_HOST = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
+const PRICE_POSITIONING_LABELS: Record<PricePositioning, string> = {
+  VALUE: "Value (económico)",
+  MID_MARKET: "Mid-market (medio)",
+  PREMIUM_ACCESSIBLE: "Premium accesible",
+  PREMIUM: "Premium",
+  ULTRA_PREMIUM: "Ultra premium",
+};
+
+const PRICE_POSITIONING_OPTIONS: { value: PricePositioning | ""; label: string }[] = [
+  { value: "", label: "Sin definir" },
+  ...(Object.keys(PRICE_POSITIONING_LABELS) as PricePositioning[]).map((v) => ({
+    value: v,
+    label: PRICE_POSITIONING_LABELS[v],
+  })),
+];
 
 export default function BrandPage() {
   return (
@@ -38,7 +55,7 @@ function BrandPageContent() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Editable fields
+  // Editable fields (basics)
   const [name, setName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [instagramUrl, setInstagramUrl] = useState("");
@@ -46,6 +63,22 @@ function BrandPageContent() {
   const [instagramSummary, setInstagramSummary] = useState("");
   const [logoAnalysis, setLogoAnalysis] = useState("");
   const [primaryColors, setPrimaryColors] = useState<string[]>([]);
+
+  // Editable fields (LA MARCA 12 questions)
+  const [identityContext, setIdentityContext] = useState("");
+  const [markets, setMarkets] = useState("");
+  const [mission, setMission] = useState("");
+  const [brandPersona, setBrandPersona] = useState("");
+  const [toneOfVoice, setToneOfVoice] = useState("");
+  const [communicationProhibitions, setCommunicationProhibitions] = useState("");
+  const [admiredBrands, setAdmiredBrands] = useState("");
+  const [coreBelief, setCoreBelief] = useState("");
+  const [visualIdentity, setVisualIdentity] = useState("");
+  const [pricePositioning, setPricePositioning] = useState<PricePositioning | "">("");
+  const [positioningStatement, setPositioningStatement] = useState("");
+  const [competitors, setCompetitors] = useState("");
+  const [competitiveEdge, setCompetitiveEdge] = useState("");
+  const [marketGap, setMarketGap] = useState("");
 
   useEffect(() => {
     api
@@ -66,6 +99,20 @@ function BrandPageContent() {
     setInstagramSummary(b.instagramSummary || "");
     setLogoAnalysis(b.logoAnalysis || "");
     setPrimaryColors(b.primaryColors || []);
+    setIdentityContext(b.identityContext || "");
+    setMarkets(b.markets || "");
+    setMission(b.mission || "");
+    setBrandPersona(b.brandPersona || "");
+    setToneOfVoice(b.toneOfVoice || "");
+    setCommunicationProhibitions(b.communicationProhibitions || "");
+    setAdmiredBrands(b.admiredBrands || "");
+    setCoreBelief(b.coreBelief || "");
+    setVisualIdentity(b.visualIdentity || "");
+    setPricePositioning(b.pricePositioning ?? "");
+    setPositioningStatement(b.positioningStatement || "");
+    setCompetitors(b.competitors || "");
+    setCompetitiveEdge(b.competitiveEdge || "");
+    setMarketGap(b.marketGap || "");
   }
 
   function handleCancel() {
@@ -87,6 +134,20 @@ function BrandPageContent() {
         instagramSummary: instagramSummary.trim() || undefined,
         logoAnalysis: logoAnalysis.trim() || undefined,
         primaryColors: primaryColors.filter((c) => /^#[0-9a-fA-F]{6}$/.test(c)),
+        identityContext: identityContext.trim() || undefined,
+        markets: markets.trim() || undefined,
+        mission: mission.trim() || undefined,
+        brandPersona: brandPersona.trim() || undefined,
+        toneOfVoice: toneOfVoice.trim() || undefined,
+        communicationProhibitions: communicationProhibitions.trim() || undefined,
+        admiredBrands: admiredBrands.trim() || undefined,
+        coreBelief: coreBelief.trim() || undefined,
+        visualIdentity: visualIdentity.trim() || undefined,
+        pricePositioning: pricePositioning || undefined,
+        positioningStatement: positioningStatement.trim() || undefined,
+        competitors: competitors.trim() || undefined,
+        competitiveEdge: competitiveEdge.trim() || undefined,
+        marketGap: marketGap.trim() || undefined,
       });
       setBrand(updated.brand);
       setEditing(false);
@@ -117,18 +178,17 @@ function BrandPageContent() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-3xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-ink">Mi Marca</h1>
           <p className="mt-1 text-sm text-muted">
-            Información extraída de tu sitio web y logo.
+            Información completa de tu marca: identidad básica, las 12 preguntas del diagnóstico
+            y los análisis automáticos del sitio web y logo.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {saved && (
-            <span className="text-sm text-success">Guardado</span>
-          )}
+          {saved && <span className="text-sm text-success">Guardado</span>}
           {editing ? (
             <>
               <Button variant="ghost" size="sm" onClick={handleCancel}>
@@ -152,17 +212,15 @@ function BrandPageContent() {
             Revisa la información de tu marca
           </p>
           <p className="mt-1 text-sm text-muted">
-            Extrajimos estos datos de tu sitio web y logo. Si algo no es correcto,
-            puedes editarlo antes de empezar a crear campañas.
+            Esto es lo que captamos del onboarding. Si algo no está bien, puedes editarlo
+            antes de empezar a crear campañas.
           </p>
           <div className="mt-3 flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
               Editar información
             </Button>
             <Link href="/ads/search">
-              <Button size="sm">
-                Todo bien, continuar
-              </Button>
+              <Button size="sm">Todo bien, continuar</Button>
             </Link>
           </div>
         </div>
@@ -179,6 +237,7 @@ function BrandPageContent() {
         <Card>
           <div className="flex items-start gap-4">
             {brand.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={`${API_HOST}${brand.logoUrl}`}
                 alt="Logo"
@@ -223,7 +282,162 @@ function BrandPageContent() {
           </div>
         </Card>
 
-        {/* Web Summary */}
+        {/* ── BLOQUE 1: Identidad básica (Q1-3) ── */}
+        <SectionHeader title="Identidad de la marca" />
+
+        <FieldCard
+          title="1. Nombre, año, país y canal de venta"
+          value={brand.identityContext}
+          editing={editing}
+          rows={4}
+          inputValue={identityContext}
+          onChange={setIdentityContext}
+        />
+        <FieldCard
+          title="2. Mercados actuales y mercados meta"
+          value={brand.markets}
+          editing={editing}
+          rows={4}
+          inputValue={markets}
+          onChange={setMarkets}
+        />
+        <FieldCard
+          title="3. Misión: por qué existe tu marca"
+          value={brand.mission}
+          editing={editing}
+          rows={4}
+          inputValue={mission}
+          onChange={setMission}
+        />
+
+        {/* ── BLOQUE 2: Personalidad y tono (Q4-7) ── */}
+        <SectionHeader title="Personalidad y tono" />
+
+        <FieldCard
+          title="4. Persona de marca"
+          value={brand.brandPersona}
+          editing={editing}
+          rows={5}
+          inputValue={brandPersona}
+          onChange={setBrandPersona}
+        />
+        <FieldCard
+          title="5. Tono de voz"
+          value={brand.toneOfVoice}
+          editing={editing}
+          rows={5}
+          inputValue={toneOfVoice}
+          onChange={setToneOfVoice}
+        />
+        <FieldCard
+          title="6. Prohibiciones de comunicación"
+          value={brand.communicationProhibitions}
+          editing={editing}
+          rows={5}
+          inputValue={communicationProhibitions}
+          onChange={setCommunicationProhibitions}
+        />
+        <FieldCard
+          title="7. Marcas que admira y qué replicaría"
+          value={brand.admiredBrands}
+          editing={editing}
+          rows={4}
+          inputValue={admiredBrands}
+          onChange={setAdmiredBrands}
+        />
+
+        {/* ── BLOQUE 3: Filosofía (Q8) ── */}
+        <SectionHeader title="Filosofía" />
+
+        <FieldCard
+          title="8. Creencia central / anti-narrativa"
+          value={brand.coreBelief}
+          editing={editing}
+          rows={5}
+          inputValue={coreBelief}
+          onChange={setCoreBelief}
+        />
+
+        {/* ── BLOQUE 4: Identidad visual (Q9) ── */}
+        <SectionHeader title="Identidad visual" />
+
+        <FieldCard
+          title="9. Colores, tipografías, estética, referencias"
+          value={brand.visualIdentity}
+          editing={editing}
+          rows={6}
+          inputValue={visualIdentity}
+          onChange={setVisualIdentity}
+        />
+
+        {/* ── BLOQUE 5: Posicionamiento competitivo (Q10-12) ── */}
+        <SectionHeader title="Posicionamiento competitivo" />
+
+        <Card>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
+            10. Rango de precio y percepción
+          </h3>
+          {editing ? (
+            <div className="mt-2 flex flex-col gap-3">
+              <Select
+                label="Tier"
+                value={pricePositioning}
+                onChange={(e) =>
+                  setPricePositioning(e.target.value as PricePositioning | "")
+                }
+                options={PRICE_POSITIONING_OPTIONS}
+              />
+              <Textarea
+                rows={4}
+                placeholder="Qué comunica ese posicionamiento..."
+                value={positioningStatement}
+                onChange={(e) => setPositioningStatement(e.target.value)}
+              />
+            </div>
+          ) : (
+            <div className="mt-2 flex flex-col gap-2">
+              {brand.pricePositioning ? (
+                <span className="inline-flex w-fit items-center rounded-sm border border-orange/20 bg-orange/10 px-2 py-0.5 text-xs font-semibold text-orange">
+                  {PRICE_POSITIONING_LABELS[brand.pricePositioning]}
+                </span>
+              ) : (
+                <p className="text-sm text-muted">Sin definir el tier.</p>
+              )}
+              <p className="text-sm text-charcoal">
+                {brand.positioningStatement || "Sin descripción del posicionamiento."}
+              </p>
+            </div>
+          )}
+        </Card>
+
+        <FieldCard
+          title="11. Competidores directos y diferenciación"
+          value={brand.competitors}
+          editing={editing}
+          rows={6}
+          inputValue={competitors}
+          onChange={setCompetitors}
+        />
+        <FieldCard
+          title="12a. En qué es mejor tu marca"
+          value={brand.competitiveEdge}
+          editing={editing}
+          rows={4}
+          inputValue={competitiveEdge}
+          onChange={setCompetitiveEdge}
+        />
+        <FieldCard
+          title="12b. Hueco de mercado que ocupa"
+          value={brand.marketGap}
+          editing={editing}
+          rows={4}
+          inputValue={marketGap}
+          onChange={setMarketGap}
+        />
+
+        {/* ── Análisis automáticos + visuales ── */}
+        <SectionHeader title="Análisis automáticos (extraídos con IA)" />
+
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
             Resumen del sitio web
@@ -236,13 +450,12 @@ function BrandPageContent() {
               onChange={(e) => setWebSummary(e.target.value)}
             />
           ) : (
-            <p className="mt-2 text-sm text-charcoal">
+            <p className="mt-2 whitespace-pre-line text-sm text-charcoal">
               {brand.webSummary || "Sin resumen."}
             </p>
           )}
         </Card>
 
-        {/* Logo Analysis */}
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
             Análisis del logo
@@ -255,13 +468,12 @@ function BrandPageContent() {
               onChange={(e) => setLogoAnalysis(e.target.value)}
             />
           ) : (
-            <p className="mt-2 text-sm text-charcoal">
+            <p className="mt-2 whitespace-pre-line text-sm text-charcoal">
               {brand.logoAnalysis || "Sin análisis."}
             </p>
           )}
         </Card>
 
-        {/* Instagram Summary */}
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
             Resumen de Instagram
@@ -274,13 +486,12 @@ function BrandPageContent() {
               onChange={(e) => setInstagramSummary(e.target.value)}
             />
           ) : (
-            <p className="mt-2 text-sm text-charcoal">
+            <p className="mt-2 whitespace-pre-line text-sm text-charcoal">
               {brand.instagramSummary || "Sin resumen."}
             </p>
           )}
         </Card>
 
-        {/* Colors */}
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
             Colores de la marca
@@ -331,7 +542,7 @@ function BrandPageContent() {
               </button>
             </div>
           ) : (
-            <div className="mt-2 flex gap-2">
+            <div className="mt-2 flex flex-wrap gap-2">
               {(brand.primaryColors || []).length > 0 ? (
                 brand.primaryColors.map((color, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -349,11 +560,15 @@ function BrandPageContent() {
           )}
         </Card>
 
-        {/* Sources */}
+        {/* Sources (debug-ish footer) */}
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
             Fuentes de datos
           </h3>
+          <p className="mt-1 text-xs text-muted">
+            Indica si cada campo provino del onboarding (form), del análisis automático
+            de la web (web) o del logo (manual).
+          </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {Object.entries(brand.sources || {}).map(([key, value]) => (
               <span
@@ -367,5 +582,51 @@ function BrandPageContent() {
         </Card>
       </div>
     </div>
+  );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────
+
+function SectionHeader({ title }: { title: string }): ReactNode {
+  return (
+    <h2 className="mt-4 text-xs font-semibold uppercase tracking-wider text-orange">
+      {title}
+    </h2>
+  );
+}
+
+function FieldCard({
+  title,
+  value,
+  editing,
+  rows,
+  inputValue,
+  onChange,
+}: {
+  title: string;
+  value: string | null;
+  editing: boolean;
+  rows: number;
+  inputValue: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <Card>
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
+        {title}
+      </h3>
+      {editing ? (
+        <Textarea
+          className="mt-2"
+          rows={rows}
+          value={inputValue}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      ) : (
+        <p className="mt-2 whitespace-pre-line text-sm text-charcoal">
+          {value || "Sin responder."}
+        </p>
+      )}
+    </Card>
   );
 }
