@@ -12,6 +12,11 @@ export const metadata: Metadata = {
   title: "OneClickIA — Campañas de ads en minutos",
   description:
     "Crea campañas publicitarias en Meta Ads de forma automática con inteligencia artificial.",
+  verification: {
+    other: {
+      "facebook-domain-verification": "xcogjp2kbwhkb3uoiai260bxi02wj9",
+    },
+  },
 };
 
 export default function RootLayout({
