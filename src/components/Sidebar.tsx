@@ -14,6 +14,7 @@ const navItems = [
   { href: "/products", label: "Mis Productos", icon: "📦" },
   { href: "/meta", label: "Meta Ads", icon: "📱" },
   { href: "/meta/audiences", label: "Públicos", icon: "🎯" },
+  { href: "/plans", label: "Planes y créditos", icon: "💳" },
 ];
 
 export function Sidebar() {

@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { api, ApiError } from "@/lib/api";
 import type { AuthResponse } from "@/lib/types";
+import type { PlanTier } from "@/lib/billing";
+
+const PAID_TIERS: PlanTier[] = ["STARTER", "PRO", "BUSINESS"];
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -43,7 +46,19 @@ export default function RegisterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: auth.accessToken }),
       });
-      // New users always go to onboarding
+
+      // Subscribe-before-register funnel: if the landing sent a paid plan
+      // (?plan=PRO), send the new user to the plans page with that plan
+      // preselected so the card form opens for it. Subscribing needs the
+      // ePayco card-tokenization form, so it lives on /plans (not a redirect
+      // to a hosted page). Otherwise go straight to onboarding.
+      const plan = new URLSearchParams(window.location.search).get(
+        "plan",
+      ) as PlanTier | null;
+      if (plan && PAID_TIERS.includes(plan)) {
+        window.location.href = `/plans?plan=${plan}`;
+        return;
+      }
       window.location.href = "/onboarding";
     } catch (err) {
       if (err instanceof ApiError) {
