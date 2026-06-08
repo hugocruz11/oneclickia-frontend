@@ -51,6 +51,16 @@ class ApiClient {
         ? rawMessage.join(". ")
         : String(rawMessage);
 
+      // 402 Payment Required = the user ran out of credits. Broadcast a
+      // global event so the CreditsProvider can pop the "out of credits"
+      // modal, without a hard redirect that would lose in-progress work.
+      // The ApiError still bubbles up so the calling page can react too.
+      if (res.status === 402 && typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("oneclickia:insufficient-credits", { detail: error }),
+        );
+      }
+
       // 401 on a non-auth endpoint = session expired. Clear the token
       // and bounce to /login so the user can re-authenticate. For auth
       // endpoints (login/register) we let the error bubble up so the
@@ -61,6 +71,12 @@ class ApiClient {
         typeof window !== "undefined"
       ) {
         localStorage.removeItem("oneclickia_token");
+        // Also clear the httpOnly cookie the proxy reads. Otherwise the
+        // proxy still thinks we're logged in and bounces us between the
+        // app and /login with a stale session.
+        await fetch("/api/auth/set-cookie", { method: "DELETE" }).catch(
+          () => {},
+        );
         window.location.href = "/login";
       }
 
