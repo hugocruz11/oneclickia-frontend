@@ -8,12 +8,14 @@ const navItems = [
   { href: "/ads/videos", label: "Buscar Videos", icon: "🎬" },
   { href: "/ads/videos/saved", label: "Videos guardados", icon: "💾" },
   { href: "/ads/favorites", label: "Favoritos", icon: "❤️" },
+  { href: "/landings", label: "Landing pages", icon: "🧲" },
   { href: "/campaigns", label: "Campañas", icon: "📢" },
   { href: "/analytics", label: "Analytics", icon: "📊" },
   { href: "/brand", label: "Mi Marca", icon: "🏷️" },
   { href: "/products", label: "Mis Productos", icon: "📦" },
   { href: "/meta", label: "Meta Ads", icon: "📱" },
   { href: "/meta/audiences", label: "Públicos", icon: "🎯" },
+  { href: "/shopify", label: "Tienda Shopify", icon: "🛍️" },
   { href: "/plans", label: "Planes y créditos", icon: "💳" },
 ];
 

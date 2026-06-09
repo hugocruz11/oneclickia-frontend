@@ -12,6 +12,7 @@ import { InterestAutocomplete } from "@/components/InterestAutocomplete";
 import { CountryPicker } from "@/components/CountryPicker";
 import { CustomAudiencePicker } from "@/components/CustomAudiencePicker";
 import { api, ApiError } from "@/lib/api";
+import { landingsApi } from "@/lib/landings";
 import type {
   CampaignDefaults,
   Campaign,
@@ -69,6 +70,36 @@ export default function NewCampaignPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [destinationUrl, setDestinationUrl] = useState("");
+  const [landingOptions, setLandingOptions] = useState<
+    { url: string; label: string }[]
+  >([]);
+
+  // Offer the user's published landings as ad destinations (Grüns-style
+  // ad↔landing matching). Best-effort — needs a connected Shopify store.
+  useEffect(() => {
+    (async () => {
+      try {
+        const [list, status] = await Promise.all([
+          landingsApi.list(),
+          api.get<{ connected: boolean; shop?: string }>(
+            "/connections/shopify/status",
+          ),
+        ]);
+        const shop = status.connected ? status.shop : null;
+        if (!shop) return;
+        setLandingOptions(
+          list
+            .filter((l) => l.status === "PUBLISHED")
+            .map((l) => ({
+              url: `https://${shop}/apps/ofertas/${l.slug}`,
+              label: l.title || l.slug,
+            })),
+        );
+      } catch {
+        /* best-effort: no landing picker if it fails */
+      }
+    })();
+  }, []);
   const [targetCountries, setTargetCountries] = useState<string[]>([]);
   const [ageMin, setAgeMin] = useState(18);
   const [ageMax, setAgeMax] = useState(65);
@@ -582,13 +613,34 @@ export default function NewCampaignPage() {
                 />
               </div>
             </div>
+            {landingOptions.length > 0 && (
+              <div className="mb-3">
+                <label className="mb-1 block text-sm font-medium text-charcoal">
+                  Usar una landing (opcional)
+                </label>
+                <select
+                  className="w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-ink focus:border-orange focus:outline-none"
+                  value=""
+                  onChange={(e) =>
+                    e.target.value && setDestinationUrl(e.target.value)
+                  }
+                >
+                  <option value="">— Elegir landing publicada —</option>
+                  {landingOptions.map((o) => (
+                    <option key={o.url} value={o.url}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <Input
               label="URL de destino"
               type="url"
               placeholder="https://tu-sitio.com"
               value={destinationUrl}
               onChange={(e) => setDestinationUrl(e.target.value)}
-              helperText="Deja vacío para usar la URL de tu marca."
+              helperText="Elige una landing arriba o pega tu URL. Vacío = URL de tu marca."
             />
           </div>
         </Card>
