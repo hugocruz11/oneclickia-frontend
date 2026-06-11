@@ -42,7 +42,7 @@ const pairsToArr = (s: string) =>
 export default function LandingEditorPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { refresh } = useCredits();
+  const { refresh, enabled: creditsEnabled } = useCredits();
 
   const [landing, setLanding] = useState<Landing | null>(null);
   const [content, setContent] = useState<LandingContent | null>(null);
@@ -291,7 +291,7 @@ export default function LandingEditorPage() {
         <h2 className="text-sm font-semibold text-ink">Generar con IA</h2>
         <p className="mt-1 text-xs text-muted">
           Describe el avatar/ángulo y la IA <strong>diseña toda la landing</strong>{" "}
-          con la identidad de tu marca. (15 créditos)
+          con la identidad de tu marca.{creditsEnabled ? " (15 créditos)" : ""}
         </p>
         <div className="mt-3 grid gap-3">
           <div>

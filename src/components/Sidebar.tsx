@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CREDITS_ENABLED } from "@/contexts/CreditsContext";
 
-const navItems = [
+const allNavItems = [
   { href: "/ads/search", label: "Buscar Ads", icon: "🔍" },
   { href: "/ads/videos", label: "Buscar Videos", icon: "🎬" },
   { href: "/ads/videos/saved", label: "Videos guardados", icon: "💾" },
@@ -18,6 +19,11 @@ const navItems = [
   { href: "/shopify", label: "Tienda Shopify", icon: "🛍️" },
   { href: "/plans", label: "Planes y créditos", icon: "💳" },
 ];
+
+// Oculta "Planes y créditos" cuando el sistema de créditos está apagado.
+const navItems = allNavItems.filter(
+  (item) => CREDITS_ENABLED || item.href !== "/plans",
+);
 
 export function Sidebar() {
   const pathname = usePathname();

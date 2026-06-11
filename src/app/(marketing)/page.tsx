@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { billingApi, formatUsd, type Plan } from "@/lib/billing";
+import { CREDITS_ENABLED } from "@/contexts/CreditsContext";
 
 const FEATURES = [
   {
@@ -27,7 +28,7 @@ const FEATURES = [
   {
     icon: "📢",
     title: "Publica en Meta gratis",
-    body: "Crea la campaña lista para publicar. Solo gastas créditos en la generación con IA.",
+    body: "Crea la campaña lista para publicar directamente en Meta.",
   },
 ];
 
@@ -43,7 +44,9 @@ export default function LandingPage() {
       return;
     }
     setCheckingAuth(false);
-    billingApi.plans().then(setPlans).catch(() => setPlans([]));
+    if (CREDITS_ENABLED) {
+      billingApi.plans().then(setPlans).catch(() => setPlans([]));
+    }
   }, [router]);
 
   if (checkingAuth) return null;
@@ -80,11 +83,13 @@ export default function LandingPage() {
           <Link href="/register">
             <Button size="lg">Empezar gratis</Button>
           </Link>
-          <Link href="#planes">
-            <Button variant="ghost" size="lg">
-              Ver planes
-            </Button>
-          </Link>
+          {CREDITS_ENABLED && (
+            <Link href="#planes">
+              <Button variant="ghost" size="lg">
+                Ver planes
+              </Button>
+            </Link>
+          )}
         </div>
       </section>
 
@@ -99,7 +104,8 @@ export default function LandingPage() {
         ))}
       </section>
 
-      {/* Pricing */}
+      {/* Pricing — oculto cuando el sistema de créditos está apagado */}
+      {CREDITS_ENABLED && (
       <section id="planes" className="mx-auto max-w-5xl px-6 pb-20">
         <h2 className="text-center text-2xl font-semibold text-ink">
           Planes para cada etapa
@@ -152,6 +158,7 @@ export default function LandingPage() {
           })}
         </div>
       </section>
+      )}
 
       <footer className="mt-auto border-t border-sand px-6 py-6 text-center text-sm text-muted">
         <div className="flex justify-center gap-4">

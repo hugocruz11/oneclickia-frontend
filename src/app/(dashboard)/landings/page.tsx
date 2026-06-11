@@ -22,7 +22,7 @@ const inputClass =
 
 export default function LandingsPage() {
   const router = useRouter();
-  const { refresh } = useCredits();
+  const { refresh, enabled: creditsEnabled } = useCredits();
   const [landings, setLandings] = useState<Landing[]>([]);
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
   const [appProducts, setAppProducts] = useState<
@@ -201,8 +201,8 @@ export default function LandingsPage() {
             {creating ? "Creando y generando…" : "✨ Crear y generar con IA"}
           </Button>
           <p className="mt-2 text-xs text-muted">
-            La IA diseña la landing completa con la identidad de tu marca (15
-            créditos).
+            La IA diseña la landing completa con la identidad de tu marca
+            {creditsEnabled ? " (15 créditos)" : ""}.
             {products.length === 0 &&
               " Conecta tu tienda en “Tienda Shopify” para elegir un producto."}
           </p>

@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { SubscribeModal } from "@/components/SubscribeModal";
-import { useCredits } from "@/contexts/CreditsContext";
+import { useCredits, CREDITS_ENABLED } from "@/contexts/CreditsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
 import {
@@ -38,7 +39,14 @@ export default function PlansPage() {
     null,
   );
 
+  const router = useRouter();
+
   useEffect(() => {
+    // Créditos desactivados → esta página no aplica; volvemos al dashboard.
+    if (!CREDITS_ENABLED) {
+      router.replace("/ads/search");
+      return;
+    }
     Promise.all([billingApi.plans(), billingApi.packs(), billingApi.config()])
       .then(([p, k, c]) => {
         setPlans(p);
@@ -61,7 +69,7 @@ export default function PlansPage() {
       setBanner(status);
       if (status === "success") void refresh();
     }
-  }, [refresh]);
+  }, [refresh, router]);
 
   async function buyPack(pack: CreditPack) {
     if (!config || !user) {
@@ -118,6 +126,9 @@ export default function PlansPage() {
     setBanner("subscribed");
     void refresh();
   }
+
+  // Créditos desactivados → no renderizamos la página (ya redirigimos arriba).
+  if (!CREDITS_ENABLED) return null;
 
   if (loading) {
     return (
