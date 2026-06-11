@@ -18,7 +18,15 @@ import {
   INSUFFICIENT_CREDITS_EVENT,
 } from "@/lib/billing";
 
+// Feature flag global del sistema de créditos en el frontend. Cuando
+// NEXT_PUBLIC_CREDITS_ENABLED='false' se oculta TODA la UI de créditos
+// y planes (lanzamiento sin paywall). Habilitado por defecto.
+export const CREDITS_ENABLED =
+  process.env.NEXT_PUBLIC_CREDITS_ENABLED !== "false";
+
 interface CreditsState {
+  /** Si el sistema de créditos está activo (controla toda la UI). */
+  enabled: boolean;
   summary: BillingSummary | null;
   isLoading: boolean;
   /** Re-fetch the balance + plan (e.g. after a paid action or checkout). */
@@ -26,6 +34,7 @@ interface CreditsState {
 }
 
 const CreditsContext = createContext<CreditsState>({
+  enabled: CREDITS_ENABLED,
   summary: null,
   isLoading: true,
   refresh: async () => {},
@@ -38,6 +47,11 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
     useState<InsufficientCreditsDetail | null>(null);
 
   const refresh = useCallback(async () => {
+    // Créditos desactivados → no cargamos nada.
+    if (!CREDITS_ENABLED) {
+      setIsLoading(false);
+      return;
+    }
     // No token yet → nothing to load (the API client would 401).
     if (
       typeof window !== "undefined" &&
@@ -58,6 +72,11 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Créditos desactivados → no escuchamos el evento ni refrescamos.
+    if (!CREDITS_ENABLED) {
+      setIsLoading(false);
+      return;
+    }
     void refresh();
 
     const onInsufficient = (e: Event) => {
@@ -78,9 +97,11 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   return (
-    <CreditsContext.Provider value={{ summary, isLoading, refresh }}>
+    <CreditsContext.Provider
+      value={{ enabled: CREDITS_ENABLED, summary, isLoading, refresh }}
+    >
       {children}
-      {outOfCredits && (
+      {CREDITS_ENABLED && outOfCredits && (
         <OutOfCreditsModal
           detail={outOfCredits}
           onClose={() => setOutOfCredits(null)}
