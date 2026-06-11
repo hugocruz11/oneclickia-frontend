@@ -30,17 +30,21 @@ export function proxy(request: NextRequest) {
   const isPublicLegal = PUBLIC_LEGAL_PATHS.some(
     (p) => pathname === p || pathname.startsWith(p + "/"),
   );
-  const isPublicPath = isAuthPath || isPublicLegal;
+  // The marketing landing lives at "/" and must be visible to logged-out
+  // visitors (the public pricing page / entry point).
+  const isLanding = pathname === "/";
+  const isPublicPath = isAuthPath || isPublicLegal || isLanding;
 
   // No token + protected route → redirect to login
   if (!token && !isPublicPath) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Has token + trying to access an auth page → redirect to dashboard.
-  // Legal pages stay accessible even when authenticated.
-  if (token && isAuthPath) {
-    return NextResponse.redirect(new URL("/", request.url));
+  // Has token + on an auth page or the public landing → send them
+  // straight to the app (they don't need login/register or the
+  // marketing page). Legal pages stay accessible when authenticated.
+  if (token && (isAuthPath || isLanding)) {
+    return NextResponse.redirect(new URL("/ads/search", request.url));
   }
 
   return NextResponse.next();
