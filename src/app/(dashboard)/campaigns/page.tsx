@@ -8,7 +8,20 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { CampaignStatusBadge } from "@/components/CampaignStatusBadge";
 import { api, ApiError } from "@/lib/api";
+import {
+  Pagination,
+  StatusFilter,
+  SearchInput,
+  DateRangePicker,
+  DEFAULT_RANGE,
+  rangeToQueryParams,
+  type StatusValue,
+  type DateRange,
+} from "@/components/ListControls";
 import type { Campaign } from "@/lib/types";
+
+// Cuántas campañas por página en la lista de Meta Ads.
+const META_PAGE_SIZE = 25;
 
 /* ── Types ── */
 
@@ -17,17 +30,32 @@ interface MetaCampaign {
   name: string;
   objective: string;
   status: string;
-  daily_budget?: string;
-  lifetime_budget?: string;
-  start_time?: string;
-  stop_time?: string;
-  created_time: string;
+  // Estado real considerando los padres (ej. CAMPAIGN_PAUSED). El
+  // service lo devuelve en camelCase; status es el interruptor propio.
+  effectiveStatus?: string | null;
+  // El service devuelve estos campos en camelCase (no los nombres crudos
+  // de Meta), así que aquí deben coincidir o salen vacíos.
+  dailyBudget?: string | null;
+  lifetimeBudget?: string | null;
+  startTime?: string | null;
+  stopTime?: string | null;
+  createdTime: string;
+  // Métricas del rango de fechas seleccionado (0 si no hubo entrega).
+  spend?: number;
+  impressions?: number;
+  reach?: number;
+  clicks?: number;
+  ctr?: number;
+  cpc?: number;
+  cpm?: number;
+  frequency?: number;
 }
 
 interface MetaAdSet {
   id: string;
   name: string;
   status: string;
+  effective_status?: string;
   daily_budget?: string;
   lifetime_budget?: string;
   optimization_goal?: string;
@@ -37,6 +65,7 @@ interface MetaAd {
   id: string;
   name: string;
   status: string;
+  effective_status?: string;
 }
 
 const META_STATUS_MAP: Record<
@@ -49,6 +78,14 @@ const META_STATUS_MAP: Record<
   ARCHIVED: { label: "Archivada", variant: "muted" },
   IN_PROCESS: { label: "En proceso", variant: "warning" },
   WITH_ISSUES: { label: "Con problemas", variant: "error" },
+  // Estados efectivos (effective_status): el objeto está encendido pero
+  // un padre lo frena, así que en realidad no se entrega.
+  CAMPAIGN_PAUSED: { label: "Campaña pausada", variant: "muted" },
+  ADSET_PAUSED: { label: "Grupo pausado", variant: "muted" },
+  PENDING_REVIEW: { label: "En revisión", variant: "warning" },
+  PENDING_BILLING_INFO: { label: "Falta facturación", variant: "warning" },
+  PREAPPROVED: { label: "Preaprobado", variant: "warning" },
+  DISAPPROVED: { label: "Rechazado", variant: "error" },
 };
 
 const FORMAT_LABELS: Record<string, string> = {
@@ -63,9 +100,46 @@ function statusBadge(status: string) {
   return <Badge variant={info.variant}>{info.label}</Badge>;
 }
 
+// Estado real de la entidad: preferimos effective_status (considera a
+// los padres) y caemos a status (interruptor propio) si no viene. El
+// campo llega en camelCase para campañas y snake_case para grupos/ads.
+type WithStatus = {
+  status: string;
+  effective_status?: string;
+  effectiveStatus?: string | null;
+};
+function effStatus(e: WithStatus): string {
+  return e.effectiveStatus ?? e.effective_status ?? e.status;
+}
+
+// Ordena cualquier lista de Meta (campañas, grupos, anuncios) dejando
+// las realmente activas de primeras (por effective_status, no solo el
+// interruptor propio). sort() es estable, así que dentro de cada grupo
+// se conserva el orden en que las devuelve Meta.
+function sortByActiveFirst<T extends WithStatus>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const aActive = effStatus(a) === "ACTIVE" ? 0 : 1;
+    const bActive = effStatus(b) === "ACTIVE" ? 0 : 1;
+    return aActive - bActive;
+  });
+}
+
 function formatMetaBudget(cents: string | null | undefined) {
   if (!cents) return "—";
   return `$${(Number(cents) / 100).toLocaleString("es")}`;
+}
+
+// Métricas: números/montos compactos para no romper la tarjeta con
+// cifras largas en pesos.
+function fmtNum(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return n.toLocaleString("es");
+}
+function fmtMoneyShort(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 10_000) return `$${(n / 1_000).toFixed(1)}K`;
+  return `$${n.toLocaleString("es", { maximumFractionDigits: 0 })}`;
 }
 
 function formatDate(dateStr: string) {
@@ -95,6 +169,13 @@ export default function CampaignsPage() {
   const [ads, setAds] = useState<MetaAd[]>([]);
   const [loadingAds, setLoadingAds] = useState(false);
 
+  // Controles de la lista de campañas Meta: filtro, búsqueda, página, fecha.
+  const [metaStatusFilter, setMetaStatusFilter] = useState<StatusValue>("all");
+  const [metaQuery, setMetaQuery] = useState("");
+  const [metaPage, setMetaPage] = useState(0);
+  const [range, setRange] = useState<DateRange>(DEFAULT_RANGE);
+
+  // Campañas propias de OneClickIA: una sola vez.
   useEffect(() => {
     api
       .get<Campaign[]>("/campaigns")
@@ -104,13 +185,19 @@ export default function CampaignsPage() {
         else setError("Error al cargar campañas.");
       })
       .finally(() => setLoading(false));
+  }, []);
 
+  // Campañas Meta + sus métricas: se recargan al cambiar el rango.
+  useEffect(() => {
+    setLoadingMeta(true);
     api
-      .get<{ campaigns: MetaCampaign[] }>("/connections/meta/campaigns")
-      .then((res) => setMetaCampaigns(res.campaigns))
+      .get<{ campaigns: MetaCampaign[] }>(
+        `/connections/meta/campaigns?${rangeToQueryParams(range)}`,
+      )
+      .then((res) => setMetaCampaigns(sortByActiveFirst(res.campaigns)))
       .catch(() => {})
       .finally(() => setLoadingMeta(false));
-  }, []);
+  }, [range]);
 
   async function handleDeleteDraft(id: string) {
     if (!confirm("¿Estás seguro de eliminar esta campaña?")) return;
@@ -132,7 +219,7 @@ export default function CampaignsPage() {
       const res = await api.get<{ adSets: MetaAdSet[] }>(
         `/connections/meta/campaigns/${campaign.id}/adsets`,
       );
-      setAdSets(res.adSets);
+      setAdSets(sortByActiveFirst(res.adSets));
     } catch {
       setAdSets([]);
     } finally {
@@ -147,7 +234,7 @@ export default function CampaignsPage() {
       const res = await api.get<{ ads: MetaAd[] }>(
         `/connections/meta/adsets/${adSet.id}/ads`,
       );
-      setAds(res.ads);
+      setAds(sortByActiveFirst(res.ads));
     } catch {
       setAds([]);
     } finally {
@@ -182,6 +269,30 @@ export default function CampaignsPage() {
       </div>
     );
   }
+
+  // Lista de campañas Meta filtrada por estado (real) + búsqueda, y
+  // luego paginada. metaCampaigns ya viene ordenada (activas primero).
+  const metaQ = metaQuery.trim().toLowerCase();
+  const metaStatusCounts = {
+    all: metaCampaigns.length,
+    active: metaCampaigns.filter((c) => effStatus(c) === "ACTIVE").length,
+    paused: metaCampaigns.filter((c) => effStatus(c) !== "ACTIVE").length,
+  };
+  const filteredMeta = metaCampaigns
+    .filter((c) =>
+      metaStatusFilter === "all"
+        ? true
+        : metaStatusFilter === "active"
+          ? effStatus(c) === "ACTIVE"
+          : effStatus(c) !== "ACTIVE",
+    )
+    .filter((c) => (metaQ ? c.name.toLowerCase().includes(metaQ) : true));
+  const metaTotalPages = Math.max(1, Math.ceil(filteredMeta.length / META_PAGE_SIZE));
+  const metaCurrentPage = Math.min(metaPage, metaTotalPages - 1);
+  const pagedMeta = filteredMeta.slice(
+    metaCurrentPage * META_PAGE_SIZE,
+    metaCurrentPage * META_PAGE_SIZE + META_PAGE_SIZE,
+  );
 
   return (
     <div className="max-w-4xl">
@@ -288,6 +399,20 @@ export default function CampaignsPage() {
       {/* ── Meta Ads — hierarchical drill-down ── */}
       {tab === "meta" && (
         <>
+          {/* Selector de fechas: controla las métricas de cada campaña.
+              Visible en el nivel 1 aunque esté cargando. */}
+          {!selectedCampaign && (
+            <div className="mt-6">
+              <DateRangePicker
+                value={range}
+                onChange={(r) => {
+                  setRange(r);
+                  setMetaPage(0);
+                }}
+              />
+            </div>
+          )}
+
           {loadingMeta && (
             <div className="flex justify-center py-12">
               <Spinner size="lg" />
@@ -307,8 +432,35 @@ export default function CampaignsPage() {
               )}
 
               {metaCampaigns.length > 0 && (
+                <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <StatusFilter
+                    value={metaStatusFilter}
+                    onChange={(v) => {
+                      setMetaStatusFilter(v);
+                      setMetaPage(0);
+                    }}
+                    counts={metaStatusCounts}
+                  />
+                  <SearchInput
+                    value={metaQuery}
+                    onChange={(v) => {
+                      setMetaQuery(v);
+                      setMetaPage(0);
+                    }}
+                    placeholder="Buscar campaña…"
+                  />
+                </div>
+              )}
+
+              {metaCampaigns.length > 0 && filteredMeta.length === 0 && (
+                <p className="mt-8 text-center text-sm text-muted">
+                  No hay campañas que coincidan con el filtro.
+                </p>
+              )}
+
+              {filteredMeta.length > 0 && (
                 <div className="mt-4 flex flex-col gap-3">
-                  {metaCampaigns.map((mc) => (
+                  {pagedMeta.map((mc) => (
                     <button
                       key={mc.id}
                       type="button"
@@ -322,18 +474,45 @@ export default function CampaignsPage() {
                               <h3 className="text-sm font-semibold text-ink line-clamp-1">
                                 {mc.name}
                               </h3>
-                              {statusBadge(mc.status)}
+                              {statusBadge(effStatus(mc))}
                             </div>
                             <div className="mt-2 flex items-center gap-4 text-xs text-muted">
                               <span>{mc.objective}</span>
                               <span>
-                                {mc.daily_budget
-                                  ? `${formatMetaBudget(mc.daily_budget)} / día`
-                                  : mc.lifetime_budget
-                                    ? `${formatMetaBudget(mc.lifetime_budget)} total`
+                                {mc.dailyBudget
+                                  ? `${formatMetaBudget(mc.dailyBudget)} / día`
+                                  : mc.lifetimeBudget
+                                    ? `${formatMetaBudget(mc.lifetimeBudget)} total`
                                     : "Sin presupuesto"}
                               </span>
-                              <span>{formatDate(mc.created_time)}</span>
+                              <span>{formatDate(mc.createdTime)}</span>
+                            </div>
+                            {/* Métricas del rango de fechas seleccionado */}
+                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                              <span>
+                                <span className="text-muted">Gasto </span>
+                                <span className="font-semibold text-ink">
+                                  {fmtMoneyShort(mc.spend ?? 0)}
+                                </span>
+                              </span>
+                              <span>
+                                <span className="text-muted">Impr. </span>
+                                <span className="font-medium text-charcoal">
+                                  {fmtNum(mc.impressions ?? 0)}
+                                </span>
+                              </span>
+                              <span>
+                                <span className="text-muted">Clics </span>
+                                <span className="font-medium text-charcoal">
+                                  {fmtNum(mc.clicks ?? 0)}
+                                </span>
+                              </span>
+                              <span>
+                                <span className="text-muted">CTR </span>
+                                <span className="font-medium text-charcoal">
+                                  {(mc.ctr ?? 0).toFixed(2)}%
+                                </span>
+                              </span>
                             </div>
                           </div>
                           <span className="text-muted text-sm">→</span>
@@ -342,6 +521,15 @@ export default function CampaignsPage() {
                     </button>
                   ))}
                 </div>
+              )}
+
+              {filteredMeta.length > 0 && (
+                <Pagination
+                  page={metaCurrentPage}
+                  totalItems={filteredMeta.length}
+                  pageSize={META_PAGE_SIZE}
+                  onPageChange={setMetaPage}
+                />
               )}
             </>
           )}
@@ -361,7 +549,7 @@ export default function CampaignsPage() {
                   <h2 className="text-lg font-semibold text-ink">
                     {selectedCampaign.name}
                   </h2>
-                  {statusBadge(selectedCampaign.status)}
+                  {statusBadge(effStatus(selectedCampaign))}
                 </div>
                 <p className="text-sm text-muted">Grupos de anuncios</p>
               </div>
@@ -396,7 +584,7 @@ export default function CampaignsPage() {
                               <h3 className="text-sm font-semibold text-ink line-clamp-1">
                                 {adSet.name}
                               </h3>
-                              {statusBadge(adSet.status)}
+                              {statusBadge(effStatus(adSet))}
                             </div>
                             <div className="mt-2 flex items-center gap-4 text-xs text-muted">
                               {adSet.optimization_goal && (
@@ -436,7 +624,7 @@ export default function CampaignsPage() {
                   <h2 className="text-lg font-semibold text-ink">
                     {selectedAdSet.name}
                   </h2>
-                  {statusBadge(selectedAdSet.status)}
+                  {statusBadge(effStatus(selectedAdSet))}
                 </div>
                 <p className="text-sm text-muted">Anuncios</p>
               </div>
@@ -499,7 +687,7 @@ function AdWithPreview({ ad }: { ad: MetaAd }) {
           <h3 className="text-sm font-semibold text-ink line-clamp-1">
             {ad.name}
           </h3>
-          {statusBadge(ad.status)}
+          {statusBadge(effStatus(ad))}
         </div>
         <Button
           variant="ghost"

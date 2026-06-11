@@ -6,6 +6,16 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { api } from "@/lib/api";
+import {
+  Pagination,
+  StatusFilter,
+  SearchInput,
+  DateRangePicker,
+  DEFAULT_RANGE,
+  rangeToQueryParams,
+  type StatusValue,
+  type DateRange,
+} from "@/components/ListControls";
 
 interface CampaignInsight {
   campaignId: string;
@@ -170,6 +180,15 @@ function formatMoney(n: number): string {
   return `$${n.toLocaleString("es", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+// Versión compacta para las tarjetas de resumen, donde los montos en
+// pesos (COP) son tan largos que se desbordan del recuadro. La tabla
+// sigue usando formatMoney() con el detalle completo.
+function formatMoneyCompact(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 10_000) return `$${(n / 1_000).toFixed(1)}K`;
+  return formatMoney(n);
+}
+
 const LEVEL_LABELS: Record<EntityLevel, { entity: string; pause: string; activate: string }> = {
   campaign: { entity: "la campaña", pause: "Pausar campaña", activate: "Reactivar campaña" },
   adset: { entity: "el grupo de anuncios", pause: "Pausar grupo", activate: "Reactivar grupo" },
@@ -313,6 +332,81 @@ function adToEntity(ad: AdInsight): EntityMetrics {
   };
 }
 
+// Cuántas filas por página en la tabla de campañas.
+const PAGE_SIZE = 25;
+
+// Columnas por las que se puede ordenar. "default" = activas primero,
+// luego mayor gasto (el orden inicial).
+type SortKey =
+  | "default"
+  | "name"
+  | "spend"
+  | "impressions"
+  | "clicks"
+  | "ctr"
+  | "cpc"
+  | "cpm"
+  | "frequency"
+  | "cpa"
+  | "roas";
+
+function compareCampaigns(
+  a: CampaignInsight,
+  b: CampaignInsight,
+  key: SortKey,
+  dir: "asc" | "desc",
+): number {
+  if (key === "default") {
+    const aActive = a.status === "ACTIVE" ? 0 : 1;
+    const bActive = b.status === "ACTIVE" ? 0 : 1;
+    if (aActive !== bActive) return aActive - bActive;
+    return b.spend - a.spend;
+  }
+  let cmp: number;
+  if (key === "name") {
+    cmp = a.campaignName.localeCompare(b.campaignName, "es");
+  } else {
+    // cpa/roas pueden ser null → los tratamos como 0 para ordenar.
+    const av = (a[key] as number | null) ?? 0;
+    const bv = (b[key] as number | null) ?? 0;
+    cmp = av - bv;
+  }
+  return dir === "asc" ? cmp : -cmp;
+}
+
+/* Encabezado de tabla clicable para ordenar por esa columna. */
+function SortableTh({
+  label,
+  colKey,
+  activeKey,
+  dir,
+  onSort,
+  align = "right",
+}: {
+  label: string;
+  colKey: SortKey;
+  activeKey: SortKey;
+  dir: "asc" | "desc";
+  onSort: (key: SortKey) => void;
+  align?: "left" | "right";
+}) {
+  const isActive = activeKey === colKey;
+  return (
+    <th className={`pb-3 pr-4 ${align === "right" ? "text-right" : ""}`}>
+      <button
+        type="button"
+        onClick={() => onSort(colKey)}
+        className={`inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-ink ${
+          isActive ? "text-ink" : ""
+        }`}
+      >
+        {label}
+        <span className="text-orange">{isActive ? (dir === "asc" ? "↑" : "↓") : ""}</span>
+      </button>
+    </th>
+  );
+}
+
 export default function AnalyticsPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -331,6 +425,27 @@ export default function AnalyticsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
 
+  // Controles de la tabla de campañas: filtro, búsqueda, orden, página.
+  const [statusFilter, setStatusFilter] = useState<StatusValue>("all");
+  const [query, setQuery] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("default");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(0);
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+    setPage(0);
+  }
+
+  // Rango de fechas que controla TODAS las métricas (dashboard + drill-down).
+  const [range, setRange] = useState<DateRange>(DEFAULT_RANGE);
+  const withRange = (path: string) => `${path}?${rangeToQueryParams(range)}`;
+
   const LEVEL_PATH: Record<EntityLevel, string> = {
     campaign: "campaigns",
     adset: "adsets",
@@ -339,18 +454,24 @@ export default function AnalyticsPage() {
 
   async function refreshData() {
     try {
-      const res = await api.get<DashboardData>("/connections/meta/insights/dashboard");
+      const res = await api.get<DashboardData>(
+        withRange("/connections/meta/insights/dashboard"),
+      );
       setData(res);
       // Refresh drill-down too if applicable
       if (selectedCampaign) {
         const adSetsRes = await api.get<{ adSets: AdSetInsight[] }>(
-          `/connections/meta/campaigns/${selectedCampaign.campaignId}/adsets/insights`,
+          withRange(
+            `/connections/meta/campaigns/${selectedCampaign.campaignId}/adsets/insights`,
+          ),
         );
         setAdSets(adSetsRes.adSets);
       }
       if (selectedAdSet) {
         const adsRes = await api.get<{ ads: AdInsight[] }>(
-          `/connections/meta/adsets/${selectedAdSet.adSetId}/ads/insights`,
+          withRange(
+            `/connections/meta/adsets/${selectedAdSet.adSetId}/ads/insights`,
+          ),
         );
         setAds(adsRes.ads);
       }
@@ -405,12 +526,17 @@ export default function AnalyticsPage() {
   }
 
   useEffect(() => {
+    setLoading(true);
     api
-      .get<DashboardData>("/connections/meta/insights/dashboard")
+      .get<DashboardData>(
+        `/connections/meta/insights/dashboard?${rangeToQueryParams(range)}`,
+      )
       .then(setData)
       .catch((err) => setError(err.message || "Error al cargar analytics."))
       .finally(() => setLoading(false));
-  }, []);
+    // Re-fetch cuando cambia el rango de fechas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range]);
 
   async function handleCampaignClick(campaign: CampaignInsight) {
     setSelectedCampaign(campaign);
@@ -422,7 +548,9 @@ export default function AnalyticsPage() {
 
     try {
       const res = await api.get<{ adSets: AdSetInsight[] }>(
-        `/connections/meta/campaigns/${campaign.campaignId}/adsets/insights`,
+        withRange(
+          `/connections/meta/campaigns/${campaign.campaignId}/adsets/insights`,
+        ),
       );
       setAdSets(res.adSets);
     } catch {
@@ -440,7 +568,7 @@ export default function AnalyticsPage() {
 
     try {
       const res = await api.get<{ ads: AdInsight[] }>(
-        `/connections/meta/adsets/${adSet.adSetId}/ads/insights`,
+        withRange(`/connections/meta/adsets/${adSet.adSetId}/ads/insights`),
       );
       setAds(res.ads);
     } catch {
@@ -464,7 +592,9 @@ export default function AnalyticsPage() {
     setAds([]);
   }
 
-  if (loading) {
+  // Spinner de pantalla completa solo en la carga inicial. Al cambiar el
+  // rango de fechas mantenemos la vista anterior mientras refresca.
+  if (loading && !data) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-16">
         <Spinner size="lg" />
@@ -499,15 +629,63 @@ export default function AnalyticsPage() {
     );
   }
 
-  const { campaigns, totals } = data;
-  const avgCtr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
-  const avgCpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0;
+  const { campaigns } = data;
+
+  // Conteos por estado para las pills del filtro.
+  const statusCounts = {
+    all: campaigns.length,
+    active: campaigns.filter((c) => c.status === "ACTIVE").length,
+    paused: campaigns.filter((c) => c.status !== "ACTIVE").length,
+  };
+
+  // Filtro por estado + búsqueda por nombre, luego orden (por defecto
+  // activas primero y mayor gasto), y finalmente paginado.
+  const q = query.trim().toLowerCase();
+  const filteredCampaigns = campaigns
+    .filter((c) =>
+      statusFilter === "all"
+        ? true
+        : statusFilter === "active"
+          ? c.status === "ACTIVE"
+          : c.status !== "ACTIVE",
+    )
+    .filter((c) => (q ? c.campaignName.toLowerCase().includes(q) : true))
+    .sort((a, b) => compareCampaigns(a, b, sortKey, sortDir));
+
+  const totalPages = Math.max(1, Math.ceil(filteredCampaigns.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages - 1);
+  const pagedCampaigns = filteredCampaigns.slice(
+    currentPage * PAGE_SIZE,
+    currentPage * PAGE_SIZE + PAGE_SIZE,
+  );
+
+  // Las tarjetas de resumen reflejan el conjunto FILTRADO (todas las que
+  // pasan el filtro/búsqueda, no solo la página visible), para que
+  // coincidan con lo que se está viendo en la tabla.
+  const isFiltered = statusFilter !== "all" || q.length > 0;
+  const viewTotals = filteredCampaigns.reduce(
+    (acc, c) => {
+      acc.spend += c.spend;
+      acc.impressions += c.impressions;
+      acc.reach += c.reach;
+      acc.clicks += c.clicks;
+      acc.conversions += c.conversions;
+      return acc;
+    },
+    { spend: 0, impressions: 0, reach: 0, clicks: 0, conversions: 0 },
+  );
+
+  const avgCtr =
+    viewTotals.impressions > 0
+      ? (viewTotals.clicks / viewTotals.impressions) * 100
+      : 0;
+  const avgCpc = viewTotals.clicks > 0 ? viewTotals.spend / viewTotals.clicks : 0;
   const overallCpa =
-    totals.conversions > 0 ? totals.spend / totals.conversions : null;
+    viewTotals.conversions > 0 ? viewTotals.spend / viewTotals.conversions : null;
   // ROAS global = ingreso atribuido / gasto atribuido. Ingreso por
-  // campaña = roas * spend; sólo sumamos campañas que reportaron ROAS
-  // para no diluir el promedio con campañas sin conversiones.
-  const roasContributors = campaigns.filter(
+  // campaña = roas * spend; sólo sumamos campañas (del conjunto filtrado)
+  // que reportaron ROAS para no diluir el promedio.
+  const roasContributors = filteredCampaigns.filter(
     (c): c is typeof c & { roas: number } => c.roas != null,
   );
   const roasSpend = roasContributors.reduce((s, c) => s + c.spend, 0);
@@ -518,16 +696,26 @@ export default function AnalyticsPage() {
 
   return (
     <div className="max-w-6xl">
-      <h1 className="text-2xl font-semibold text-ink">Analytics</h1>
-      <p className="mt-1 text-sm text-muted">
-        Rendimiento de tus campañas en Meta Ads.
-      </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink">Analytics</h1>
+          <p className="mt-1 text-sm text-muted">
+            Rendimiento de tus campañas en Meta Ads.
+          </p>
+        </div>
+        <div className="flex flex-col gap-1 sm:items-end">
+          <DateRangePicker value={range} onChange={setRange} />
+          {loading && (
+            <span className="text-xs text-muted">Actualizando…</span>
+          )}
+        </div>
+      </div>
 
       {/* Summary cards */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-        <SummaryCard label="Gasto total" value={formatMoney(totals.spend)} />
-        <SummaryCard label="Impresiones" value={formatNum(totals.impressions)} />
-        <SummaryCard label="Alcance" value={formatNum(totals.reach)} />
+        <SummaryCard label="Gasto total" value={formatMoneyCompact(viewTotals.spend)} />
+        <SummaryCard label="Impresiones" value={formatNum(viewTotals.impressions)} />
+        <SummaryCard label="Alcance" value={formatNum(viewTotals.reach)} />
         <SummaryCard
           label="CTR promedio"
           value={`${avgCtr.toFixed(2)}%`}
@@ -535,12 +723,12 @@ export default function AnalyticsPage() {
         />
         <SummaryCard
           label="CPC promedio"
-          value={formatMoney(avgCpc)}
+          value={formatMoneyCompact(avgCpc)}
           health={cpcHealth(avgCpc)}
         />
         <SummaryCard
           label="CPA promedio"
-          value={fmtCpa(overallCpa)}
+          value={overallCpa != null ? formatMoneyCompact(overallCpa) : "—"}
           health={overallCpa != null ? cpaHealth(overallCpa) : undefined}
         />
         <SummaryCard
@@ -549,6 +737,14 @@ export default function AnalyticsPage() {
           health={overallRoas != null ? roasHealth(overallRoas) : undefined}
         />
       </div>
+
+      {isFiltered && (
+        <p className="mt-2 text-xs text-muted">
+          Totales de {filteredCampaigns.length} campaña
+          {filteredCampaigns.length === 1 ? "" : "s"} filtrada
+          {filteredCampaigns.length === 1 ? "" : "s"}.
+        </p>
+      )}
 
       {/* Breadcrumb navigation */}
       <div className="mt-6 flex items-center gap-2 text-sm">
@@ -593,9 +789,29 @@ export default function AnalyticsPage() {
       {/* Drill-down tables */}
       {drillLevel === "campaigns" && (
         <Card className="mt-4 overflow-x-auto">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Detalle por campaña
-          </h3>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Detalle por campaña
+            </h3>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <StatusFilter
+                value={statusFilter}
+                onChange={(v) => {
+                  setStatusFilter(v);
+                  setPage(0);
+                }}
+                counts={statusCounts}
+              />
+              <SearchInput
+                value={query}
+                onChange={(v) => {
+                  setQuery(v);
+                  setPage(0);
+                }}
+                placeholder="Buscar campaña…"
+              />
+            </div>
+          </div>
 
           {actionError && (
             <div className="mt-3 rounded-md border border-error/20 bg-error/10 p-3">
@@ -606,22 +822,22 @@ export default function AnalyticsPage() {
           <table className="mt-4 w-full text-left text-sm">
             <thead>
               <tr className="border-b border-sand text-xs font-semibold uppercase tracking-wide text-muted">
-                <th className="pb-3 pr-4">Campaña</th>
-                <th className="pb-3 pr-4 text-right">Gasto</th>
-                <th className="pb-3 pr-4 text-right">Impresiones</th>
-                <th className="pb-3 pr-4 text-right">Clics</th>
-                <th className="pb-3 pr-4 text-right">CTR</th>
-                <th className="pb-3 pr-4 text-right">CPC</th>
-                <th className="pb-3 pr-4 text-right">CPM</th>
-                <th className="pb-3 pr-4 text-right">Freq.</th>
-                <th className="pb-3 pr-4 text-right">CPA</th>
-                <th className="pb-3 pr-4 text-right">ROAS</th>
+                <SortableTh label="Campaña" colKey="name" activeKey={sortKey} dir={sortDir} onSort={handleSort} align="left" />
+                <SortableTh label="Gasto" colKey="spend" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="Impresiones" colKey="impressions" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="Clics" colKey="clicks" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="CTR" colKey="ctr" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="CPC" colKey="cpc" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="CPM" colKey="cpm" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="Freq." colKey="frequency" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="CPA" colKey="cpa" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="ROAS" colKey="roas" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
                 <th className="pb-3 pr-4 text-right">Veredicto</th>
                 <th className="pb-3 text-right">Sugerencias</th>
               </tr>
             </thead>
             <tbody>
-              {campaigns.map((c) => {
+              {pagedCampaigns.map((c) => {
                 const statusInfo = STATUS_MAP[c.status] || { label: c.status, variant: "default" as const };
                 const verdict = getVerdict(c);
                 const entity = campaignToEntity(c);
@@ -684,7 +900,7 @@ export default function AnalyticsPage() {
                             {verdict.icon} {verdict.label}
                           </span>
                         ) : (
-                          <Badge variant="muted">Sin datos</Badge>
+                          <Badge variant="muted">Sin gasto</Badge>
                         )}
                       </td>
                       <td className="py-3 text-right">
@@ -716,6 +932,19 @@ export default function AnalyticsPage() {
               })}
             </tbody>
           </table>
+
+          {filteredCampaigns.length === 0 && (
+            <p className="mt-6 text-center text-sm text-muted">
+              No hay campañas que coincidan con el filtro.
+            </p>
+          )}
+
+          <Pagination
+            page={currentPage}
+            totalItems={filteredCampaigns.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         </Card>
       )}
 
