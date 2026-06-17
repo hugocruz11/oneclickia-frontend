@@ -11,14 +11,26 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { VariantLightbox } from "@/components/VariantLightbox";
+import { AdPreviewCard } from "@/components/AdPreviewCard";
 import { api, ApiError } from "@/lib/api";
 import type {
   AdaptCopyResponse,
+  Brand,
   CachedAd,
   GenerateImageResponse,
   EditImageResponse,
   ImageVariantsResponse,
 } from "@/lib/types";
+
+/** "https://www.mumucol.com/x" → "mumucol.com" (best-effort). */
+function domainFromUrl(url?: string | null): string | undefined {
+  if (!url) return undefined;
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return undefined;
+  }
+}
 
 const API_HOST = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -35,6 +47,7 @@ export default function GenerateImagePage() {
 
   const [adaptation, setAdaptation] = useState<AdaptCopyResponse | null>(null);
   const [ad, setAd] = useState<CachedAd | null>(null);
+  const [brand, setBrand] = useState<Brand | null>(null);
   const [variantIndex, setVariantIndex] = useState(0);
   const [formats, setFormats] = useState<string[]>(["feed"]);
   const [price, setPrice] = useState("");
@@ -67,6 +80,14 @@ export default function GenerateImagePage() {
     const variant = sessionStorage.getItem(`selectedVariant_${cachedAdId}`);
     if (variant) setVariantIndex(Number(variant));
   }, [cachedAdId]);
+
+  // Brand header for the ad previews (name + logo).
+  useEffect(() => {
+    api
+      .get<{ brand: Brand }>("/brand")
+      .then((r) => setBrand(r.brand))
+      .catch(() => {});
+  }, []);
 
   function toggleFormat(key: string) {
     setFormats((prev) =>
@@ -619,64 +640,51 @@ export default function GenerateImagePage() {
                   Variantes generadas
                 </h2>
                 <p className="text-sm text-muted">
-                  Selecciona las que quieres usar en tu campaña.
+                  Selecciona las que quieres usar. Cada imagen seleccionada se
+                  convierte en un anuncio independiente dentro de tu campaña.
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {imageVariants.map((v, i) => (
-                  <div
+                  <AdPreviewCard
                     key={v.id}
-                    className={`group relative overflow-hidden rounded-lg border-2 transition-colors ${
-                      selectedVariants.has(i)
-                        ? "border-orange ring-2 ring-orange/30"
-                        : "border-sand hover:border-orange/30"
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleVariantSelection(i)}
-                      className="block w-full"
-                    >
-                      <img
-                        src={`${API_HOST}${v.imageUrl}`}
-                        alt={`Variante ${i + 1}`}
-                        className="w-full"
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                        <span className="text-xs font-medium text-white">
-                          Variante {i + 1}
-                        </span>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setLightboxIndex(i);
-                      }}
-                      aria-label={`Ver variante ${i + 1} en grande`}
-                      className="absolute top-2 left-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100 focus:opacity-100"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="11" cy="11" r="8" />
-                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                        <line x1="11" y1="8" x2="11" y2="14" />
-                        <line x1="8" y1="11" x2="14" y2="11" />
-                      </svg>
-                    </button>
-                    {selectedVariants.has(i) && (
-                      <div className="pointer-events-none absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-orange text-xs text-white">
-                        ✓
-                      </div>
-                    )}
-                  </div>
+                    imageUrl={`${API_HOST}${v.imageUrl}`}
+                    brandName={brand?.name || "Tu marca"}
+                    brandLogoUrl={
+                      brand?.logoUrl ? `${API_HOST}${brand.logoUrl}` : null
+                    }
+                    primaryText={selectedCopyVariant.description}
+                    headline={selectedCopyVariant.headline}
+                    ctaLabel={selectedCopyVariant.ctaTitle}
+                    domain={domainFromUrl(brand?.websiteUrl)}
+                    label={`Variante ${i + 1}`}
+                    selected={selectedVariants.has(i)}
+                    onToggle={() => toggleVariantSelection(i)}
+                    onZoom={() => setLightboxIndex(i)}
+                  />
                 ))}
               </div>
 
-              <p className="text-sm text-muted">
-                {selectedVariants.size} de {imageVariants.length} seleccionadas
-              </p>
+              <div className="rounded-lg border border-orange/20 bg-orange/5 p-3">
+                <p className="text-sm text-charcoal">
+                  {selectedVariants.size > 0 ? (
+                    <>
+                      <span className="font-semibold text-ink">
+                        Se crearán {selectedVariants.size} anuncio
+                        {selectedVariants.size === 1 ? "" : "s"}
+                      </span>{" "}
+                      — uno por cada imagen seleccionada ({selectedVariants.size}{" "}
+                      de {imageVariants.length}).
+                    </>
+                  ) : (
+                    <>
+                      Selecciona al menos una imagen. Se creará un anuncio por
+                      cada una.
+                    </>
+                  )}
+                </p>
+              </div>
 
               {lightboxIndex !== null && imageVariants[lightboxIndex] && (
                 <VariantLightbox
@@ -729,7 +737,11 @@ export default function GenerateImagePage() {
                 className="w-full"
                 disabled={imageVariants.length > 0 && selectedVariants.size === 0}
               >
-                Crear campaña
+                {selectedVariants.size > 0
+                  ? `Crear campaña (${selectedVariants.size} anuncio${
+                      selectedVariants.size === 1 ? "" : "s"
+                    })`
+                  : "Crear campaña"}
               </Button>
             </Link>
           </div>

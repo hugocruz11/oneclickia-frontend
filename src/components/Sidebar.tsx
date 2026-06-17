@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CREDITS_ENABLED } from "@/contexts/CreditsContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const allNavItems = [
   { href: "/ads/search", label: "Buscar Ads", icon: "🔍" },
@@ -25,8 +26,17 @@ const navItems = allNavItems.filter(
   (item) => CREDITS_ENABLED || item.href !== "/plans",
 );
 
+// Admin-only items. Rendered only when the logged-in user has role ADMIN.
+// The backend also enforces this (403), so hiding the link is just UX.
+const adminNavItems = [
+  { href: "/admin/costs", label: "Costos IA", icon: "💸" },
+];
+
 export function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const items =
+    user?.role === "ADMIN" ? [...navItems, ...adminNavItems] : navItems;
 
   return (
     <aside className="flex w-60 flex-col border-r border-sand bg-cream">
@@ -37,8 +47,8 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 p-3">
-        {navItems.map((item) => {
-          const hasNested = navItems.some(
+        {items.map((item) => {
+          const hasNested = items.some(
             (other) =>
               other.href !== item.href && other.href.startsWith(item.href + "/"),
           );
