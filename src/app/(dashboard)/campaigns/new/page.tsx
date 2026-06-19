@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { InterestAutocomplete } from "@/components/InterestAutocomplete";
 import { CountryPicker } from "@/components/CountryPicker";
+import { CityAutocomplete } from "@/components/CityAutocomplete";
 import { CustomAudiencePicker } from "@/components/CustomAudiencePicker";
 import { api, ApiError } from "@/lib/api";
 import { landingsApi } from "@/lib/landings";
@@ -22,12 +23,62 @@ import type {
 } from "@/lib/types";
 
 const OBJECTIVES = [
+  { value: "OUTCOME_AWARENESS", label: "Reconocimiento" },
   { value: "OUTCOME_TRAFFIC", label: "Tráfico" },
   { value: "OUTCOME_ENGAGEMENT", label: "Interacción" },
   { value: "OUTCOME_LEADS", label: "Clientes potenciales" },
+  { value: "OUTCOME_APP_PROMOTION", label: "Promoción de la app" },
   { value: "OUTCOME_SALES", label: "Ventas" },
-  { value: "OUTCOME_AWARENESS", label: "Reconocimiento" },
 ];
+
+// Spanish labels for each Meta performance goal (optimization_goal).
+const PERFORMANCE_GOAL_LABELS: Record<string, string> = {
+  LANDING_PAGE_VIEWS: "Maximizar el número de visitas a la página de destino",
+  LINK_CLICKS: "Maximizar el número de clics en el enlace",
+  IMPRESSIONS: "Maximizar el número de impresiones",
+  REACH: "Maximizar el alcance único diario",
+  OFFSITE_CONVERSIONS: "Maximizar el número de conversiones",
+  VALUE: "Maximizar el valor de las conversiones",
+  POST_ENGAGEMENT: "Maximizar el número de interacciones con la publicación",
+  THRUPLAY: "Maximizar las reproducciones de ThruPlay",
+  AD_RECALL_LIFT: "Maximizar el recuerdo del anuncio",
+  APP_INSTALLS: "Maximizar el número de instalaciones de la app",
+};
+
+// Ordered performance goals per objective; first entry is Meta's
+// recommended default that gets pre-selected (mirrors Ads Manager).
+const GOALS_BY_OBJECTIVE: Record<string, string[]> = {
+  OUTCOME_AWARENESS: ["REACH", "IMPRESSIONS", "AD_RECALL_LIFT", "THRUPLAY"],
+  OUTCOME_TRAFFIC: ["LANDING_PAGE_VIEWS", "LINK_CLICKS", "IMPRESSIONS", "REACH"],
+  OUTCOME_ENGAGEMENT: [
+    "POST_ENGAGEMENT",
+    "LANDING_PAGE_VIEWS",
+    "LINK_CLICKS",
+    "IMPRESSIONS",
+    "REACH",
+  ],
+  OUTCOME_LEADS: [
+    "OFFSITE_CONVERSIONS",
+    "LANDING_PAGE_VIEWS",
+    "LINK_CLICKS",
+    "IMPRESSIONS",
+  ],
+  OUTCOME_SALES: [
+    "OFFSITE_CONVERSIONS",
+    "VALUE",
+    "LANDING_PAGE_VIEWS",
+    "LINK_CLICKS",
+  ],
+  OUTCOME_APP_PROMOTION: ["APP_INSTALLS"],
+};
+
+function goalsForObjective(objective: string): string[] {
+  return GOALS_BY_OBJECTIVE[objective] ?? ["IMPRESSIONS"];
+}
+
+function recommendedGoalForObjective(objective: string): string {
+  return goalsForObjective(objective)[0];
+}
 
 const CTA_OPTIONS = [
   { value: "LEARN_MORE", label: "Más información" },
@@ -65,6 +116,9 @@ export default function NewCampaignPage() {
   const [adAccountId, setAdAccountId] = useState("");
   const [pageId, setPageId] = useState("");
   const [objective, setObjective] = useState("OUTCOME_TRAFFIC");
+  const [performanceGoal, setPerformanceGoal] = useState(
+    recommendedGoalForObjective("OUTCOME_TRAFFIC"),
+  );
   const [budgetType, setBudgetType] = useState("DAILY");
   const [budgetAmount, setBudgetAmount] = useState("5000");
   const [startDate, setStartDate] = useState("");
@@ -101,6 +155,9 @@ export default function NewCampaignPage() {
     })();
   }, []);
   const [targetCountries, setTargetCountries] = useState<string[]>([]);
+  const [targetCities, setTargetCities] = useState<
+    { key: string; name: string }[]
+  >([]);
   const [ageMin, setAgeMin] = useState(18);
   const [ageMax, setAgeMax] = useState(65);
   const [genders, setGenders] = useState<number[]>([0]);
@@ -185,13 +242,24 @@ export default function NewCampaignPage() {
         if (defaults.adAccountId) setAdAccountId(defaults.adAccountId);
         if (defaults.pageId) setPageId(defaults.pageId);
         if (defaults.objective) setObjective(defaults.objective);
+        if (defaults.objective || defaults.performanceGoal)
+          setPerformanceGoal(
+            defaults.performanceGoal ||
+              recommendedGoalForObjective(
+                defaults.objective || "OUTCOME_TRAFFIC",
+              ),
+          );
         if (defaults.budgetType) setBudgetType(defaults.budgetType);
         if (defaults.budgetAmount)
-          setBudgetAmount(String(defaults.budgetAmount / 100));
+          setBudgetAmount(String(defaults.budgetAmount));
         if (defaults.destinationUrl)
           setDestinationUrl(defaults.destinationUrl);
         if (defaults.targetCountries?.length)
           setTargetCountries(defaults.targetCountries);
+        if (defaults.targetCities?.length)
+          setTargetCities(
+            defaults.targetCities.filter((c) => c && typeof c.key === "string"),
+          );
         if (defaults.ageMin) setAgeMin(defaults.ageMin);
         if (defaults.ageMax) setAgeMax(defaults.ageMax);
         if (defaults.genders?.length) setGenders(defaults.genders);
@@ -233,6 +301,13 @@ export default function NewCampaignPage() {
       .catch(() => {});
   }, []);
 
+  // Changing the campaign objective pre-selects Meta's recommended
+  // performance goal for that objective (the user can still change it).
+  function handleObjectiveChange(value: string) {
+    setObjective(value);
+    setPerformanceGoal(recommendedGoalForObjective(value));
+  }
+
   // Load ad sets when a Meta campaign is selected
   async function handleSelectMetaCampaign(campaignId: string) {
     setSelectedMetaCampaignId(campaignId);
@@ -271,8 +346,9 @@ export default function NewCampaignPage() {
         adAccountId,
         pageId,
         objective,
+        performanceGoal,
         budgetType,
-        budgetAmount: Math.round(Number(budgetAmount) * 100),
+        budgetAmount: Math.round(Number(budgetAmount)),
         startDate,
         targetCountries,
         ageMin,
@@ -280,6 +356,10 @@ export default function NewCampaignPage() {
         genders,
       };
 
+      const validCities = targetCities.filter(
+        (c) => c && typeof c.key === "string" && c.key.length > 0,
+      );
+      if (validCities.length > 0) body.targetCities = validCities;
       if (endDate) body.endDate = endDate;
       if (destinationUrl.trim()) body.destinationUrl = destinationUrl.trim();
       if (interests.length > 0) body.interests = interests;
@@ -354,7 +434,7 @@ export default function NewCampaignPage() {
           Necesitas conectar tu cuenta de Meta y tener al menos una cuenta
           publicitaria y una página para crear campañas.
         </p>
-        <Link href="/meta" className="mt-4 inline-block">
+        <Link href="/connections?tab=meta" className="mt-4 inline-block">
           <Button variant="ghost" size="sm">
             Conectar Meta
           </Button>
@@ -585,9 +665,27 @@ export default function NewCampaignPage() {
             <Select
               label="Objetivo"
               value={objective}
-              onChange={(e) => setObjective(e.target.value)}
+              onChange={(e) => handleObjectiveChange(e.target.value)}
               options={OBJECTIVES}
             />
+            <div>
+              <Select
+                label="Objetivo de rendimiento"
+                value={performanceGoal}
+                onChange={(e) => setPerformanceGoal(e.target.value)}
+                options={goalsForObjective(objective).map((g) => ({
+                  value: g,
+                  label:
+                    g === recommendedGoalForObjective(objective)
+                      ? `${PERFORMANCE_GOAL_LABELS[g]} (recomendado)`
+                      : PERFORMANCE_GOAL_LABELS[g],
+                }))}
+              />
+              <p className="mt-1.5 text-xs text-muted">
+                Cómo mides el éxito de tus anuncios. Se recomienda según el
+                objetivo de la campaña.
+              </p>
+            </div>
             <div className="flex gap-4">
               <div className="w-40">
                 <Select
@@ -682,6 +780,8 @@ export default function NewCampaignPage() {
               selected={targetCountries}
               onChange={setTargetCountries}
             />
+
+            <CityAutocomplete selected={targetCities} onChange={setTargetCities} />
 
             <div className="flex gap-4">
               <div className="flex-1">

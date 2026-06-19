@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
+import { Icon } from "@/components/ui/Icon";
 import type { CachedAd } from "@/lib/types";
 
 function formatDuration(days: number | null): string | null {
@@ -75,7 +76,7 @@ export default function AdDetailPage() {
             />
           ) : (
             <div className="flex aspect-square w-full items-center justify-center rounded-lg border border-sand bg-sand-light">
-              <span className="text-5xl text-muted">📷</span>
+              <Icon name="camera" size={56} className="text-muted" />
             </div>
           )}
         </div>

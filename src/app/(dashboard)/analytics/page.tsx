@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
 import { api } from "@/lib/api";
 import {
   Pagination,
@@ -620,7 +621,7 @@ export default function AnalyticsPage() {
         <h1 className="text-2xl font-semibold text-ink">Analytics</h1>
         <p className="mt-1 text-sm text-muted">Métricas de tus campañas publicitarias.</p>
         <div className="mt-12 text-center">
-          <p className="text-3xl">📊</p>
+          <Icon name="chart" size={36} className="mx-auto text-blue-500" />
           <p className="mt-2 text-sm text-muted">
             Aún no hay datos. Publica una campaña para ver métricas.
           </p>
@@ -1287,7 +1288,8 @@ function SuggestionsBadgeCell({
       onClick={onToggle}
       className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold transition-colors ${HEALTH_BG[severity]} hover:opacity-80`}
     >
-      💡 {suggestions.length} {isExpanded ? "▴" : "▾"}
+      <Icon name="lightbulb" size={13} className="text-amber-500" />
+      {suggestions.length} {isExpanded ? "▴" : "▾"}
     </button>
   );
 }

@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Button } from "@/components/ui/Button";
 import { api, ApiError } from "@/lib/api";
 import type { AuthResponse } from "@/lib/types";
@@ -53,9 +54,8 @@ export default function LoginPage() {
           required
           autoComplete="email"
         />
-        <Input
+        <PasswordInput
           label="Contraseña"
-          type="password"
           placeholder="••••••••"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -63,7 +63,7 @@ export default function LoginPage() {
           autoComplete="current-password"
         />
         {error && (
-          <div className="rounded-md border border-error/20 bg-error/10 p-3">
+          <div role="alert" className="rounded-md border border-error/20 bg-error/10 p-3">
             <p className="text-sm text-error">{error}</p>
           </div>
         )}

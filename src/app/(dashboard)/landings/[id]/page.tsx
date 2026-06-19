@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
+import { Icon } from "@/components/ui/Icon";
 import { useCredits } from "@/contexts/CreditsContext";
 import { api, ApiError } from "@/lib/api";
 import {
@@ -315,7 +316,8 @@ export default function LandingEditorPage() {
           </div>
           <div>
             <Button onClick={handleGenerate} loading={generating}>
-              ✨ {hasHtml ? "Regenerar landing" : "Generar landing"}
+              <Icon name="sparkles" size={16} className="mr-1.5" />
+              {hasHtml ? "Regenerar landing" : "Generar landing"}
             </Button>
           </div>
         </div>

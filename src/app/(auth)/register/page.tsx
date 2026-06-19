@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Button } from "@/components/ui/Button";
 import { api, ApiError } from "@/lib/api";
 import type { AuthResponse } from "@/lib/types";
@@ -96,27 +97,35 @@ export default function RegisterPage() {
           required
           autoComplete="email"
         />
-        <Input
+        <PasswordInput
           label="Contraseña *"
-          type="password"
           placeholder="Mínimo 8 caracteres"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
           autoComplete="new-password"
+          error={
+            password.length > 0 && password.length < 8
+              ? "La contraseña debe tener al menos 8 caracteres."
+              : undefined
+          }
           helperText="Mínimo 8 caracteres."
         />
-        <Input
+        <PasswordInput
           label="Confirmar contraseña *"
-          type="password"
           placeholder="••••••••"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
           autoComplete="new-password"
+          error={
+            confirmPassword.length > 0 && confirmPassword !== password
+              ? "Las contraseñas no coinciden."
+              : undefined
+          }
         />
         {error && (
-          <div className="rounded-md border border-error/20 bg-error/10 p-3">
+          <div role="alert" className="rounded-md border border-error/20 bg-error/10 p-3">
             <p className="text-sm text-error">{error}</p>
           </div>
         )}

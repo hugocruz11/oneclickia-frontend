@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
+import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
 import type { Product } from "@/lib/types";
 
@@ -72,7 +73,7 @@ export default function ProductsListPage() {
       {products.length === 0 ? (
         <Card padding="lg">
           <div className="flex flex-col items-center gap-4 py-8 text-center">
-            <span className="text-4xl">📦</span>
+            <Icon name="box" size={44} className="text-amber-700" />
             <div>
               <h2 className="text-lg font-semibold text-ink">
                 Todavía no tienes productos

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
+import { Icon } from "@/components/ui/Icon";
 import { api } from "@/lib/api";
 import type { CachedAd } from "@/lib/types";
 
@@ -115,7 +116,7 @@ export function AdCard({
         </div>
       ) : (
         <div className="flex aspect-square w-full items-center justify-center bg-sand-light">
-          <span className="text-3xl text-muted">📷</span>
+          <Icon name="camera" size={36} className="text-muted" />
         </div>
       )}
 

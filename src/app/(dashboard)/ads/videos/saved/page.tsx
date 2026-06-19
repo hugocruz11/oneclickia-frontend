@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
-import { Badge } from "@/components/ui/Badge";
+import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
 
 type Lang = "es" | "en" | "pt";
@@ -94,7 +94,7 @@ export default function SavedVideosPage() {
 
       {!error && items.length === 0 && (
         <div className="mt-12 text-center">
-          <p className="text-3xl">💾</p>
+          <Icon name="bookmark" size={36} className="mx-auto text-indigo-500" />
           <p className="mt-2 text-sm text-muted">
             Aún no tienes blueprints guardados.{" "}
             <Link href="/ads/videos" className="text-orange hover:text-orange/80">
@@ -146,8 +146,8 @@ function SavedBlueprintCard({
               className="h-full w-full object-cover transition-transform group-hover:scale-105"
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-4xl text-white/40">
-              🎬
+            <div className="flex h-full items-center justify-center text-white/40">
+              <Icon name="video" size={40} />
             </div>
           )}
           <div className="absolute bottom-2 left-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
