@@ -18,7 +18,7 @@ function CallbackHandler() {
     const errorDesc = searchParams.get("error_description");
 
     if (success === "true") {
-      router.push("/meta");
+      router.push("/connections?tab=meta");
       return;
     }
 
@@ -36,9 +36,9 @@ function CallbackHandler() {
           Error de conexión
         </h2>
         <p className="mt-2 text-sm text-error">{error}</p>
-        <Link href="/meta" className="mt-4 inline-block">
+        <Link href="/connections?tab=meta" className="mt-4 inline-block">
           <Button variant="ghost" size="sm">
-            Volver a Meta
+            Volver a Conexiones
           </Button>
         </Link>
       </Card>

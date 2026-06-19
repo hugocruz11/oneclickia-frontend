@@ -1,7 +1,6 @@
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CreditsProvider } from "@/contexts/CreditsContext";
-import { Sidebar } from "@/components/Sidebar";
-import { TopBar } from "@/components/TopBar";
+import { DashboardShell } from "@/components/DashboardShell";
 
 export default function DashboardLayout({
   children,
@@ -11,13 +10,7 @@ export default function DashboardLayout({
   return (
     <AuthProvider>
       <CreditsProvider>
-        <div className="flex min-h-screen">
-          <Sidebar />
-          <div className="flex flex-1 flex-col">
-            <TopBar />
-            <main className="flex-1 p-6">{children}</main>
-          </div>
-        </div>
+        <DashboardShell>{children}</DashboardShell>
       </CreditsProvider>
     </AuthProvider>
   );

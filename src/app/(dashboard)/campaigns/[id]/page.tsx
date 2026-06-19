@@ -9,6 +9,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { CampaignStatusBadge } from "@/components/CampaignStatusBadge";
 import { api, ApiError } from "@/lib/api";
+import { objectiveLabel, countryName, performanceGoalLabel } from "@/lib/labels";
 import type { Campaign } from "@/lib/types";
 
 const API_HOST = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
@@ -125,11 +126,12 @@ export default function CampaignDetailPage() {
   }
 
   function formatBudget(amount: number, currency: string) {
+    // amount is stored in whole currency units (not cents).
     return new Intl.NumberFormat("es", {
       style: "currency",
       currency,
       minimumFractionDigits: 0,
-    }).format(amount / 100);
+    }).format(amount);
   }
 
   function formatDate(dateStr: string) {
@@ -173,6 +175,18 @@ export default function CampaignDetailPage() {
       <div className="mt-4 flex items-center gap-3">
         <h1 className="text-2xl font-semibold text-ink">Campaña</h1>
         <CampaignStatusBadge status={campaign.status} />
+        {campaign.status !== "PUBLISHING" && (
+          <div className="ml-auto flex items-center gap-2">
+            {(campaign.status === "ACTIVE" || campaign.status === "PAUSED") && (
+              <Link href={`/ads/custom?refresh=${id}`}>
+                <Button variant="ghost" size="sm">Refrescar creativo</Button>
+              </Link>
+            )}
+            <Link href={`/campaigns/${id}/edit`}>
+              <Button variant="ghost" size="sm">Editar</Button>
+            </Link>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -322,7 +336,13 @@ export default function CampaignDetailPage() {
           <div>
             <p className="text-xs text-muted">Objetivo</p>
             <p className="text-sm font-semibold text-ink">
-              {campaign.objective.replace("OUTCOME_", "")}
+              {objectiveLabel(campaign.objective)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted">Meta del grupo</p>
+            <p className="text-sm font-semibold text-ink">
+              {performanceGoalLabel(campaign.performanceGoal)}
             </p>
           </div>
           <div>
@@ -350,10 +370,20 @@ export default function CampaignDetailPage() {
             <p className="text-xs text-muted">Países</p>
             <div className="mt-1 flex flex-wrap gap-1">
               {campaign.targetCountries.map((c) => (
-                <Badge key={c} variant="default">{c}</Badge>
+                <Badge key={c} variant="default">{countryName(c)}</Badge>
               ))}
             </div>
           </div>
+          {campaign.targetCities && campaign.targetCities.length > 0 && (
+            <div>
+              <p className="text-xs text-muted">Ciudades</p>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {campaign.targetCities.map((city) => (
+                  <Badge key={city.key} variant="default">{city.name}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex gap-6">
             <div>
               <p className="text-xs text-muted">Edad</p>
@@ -393,20 +423,41 @@ export default function CampaignDetailPage() {
         </div>
       </Card>
 
-      {/* Meta IDs */}
-      {campaign.metaCampaignId && (
-        <Card className="mt-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-            IDs de Meta
-          </h3>
-          <div className="mt-2 flex flex-col gap-1 text-xs text-charcoal font-mono">
-            <p>Campaign: {campaign.metaCampaignId}</p>
-            <p>Ad Set: {campaign.metaAdSetId}</p>
-            <p>Creative: {campaign.metaCreativeId}</p>
-            <p>Ad: {campaign.metaAdId}</p>
+      {/* Estructura en Meta — nombres + IDs por nivel */}
+      <Card className="mt-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+          Estructura en Meta
+        </h3>
+        <div className="mt-3 flex flex-col gap-3">
+          <div>
+            <p className="text-xs text-muted">Campaña</p>
+            <p className="text-sm font-medium text-ink">
+              {campaign.campaignName || `OneClickIA — ${campaign.headline}`}
+            </p>
+            {campaign.metaCampaignId && (
+              <p className="text-xs text-muted font-mono">{campaign.metaCampaignId}</p>
+            )}
           </div>
-        </Card>
-      )}
+          <div>
+            <p className="text-xs text-muted">Grupo de anuncios</p>
+            <p className="text-sm font-medium text-ink">
+              {campaign.adSetName || `OneClickIA AdSet — ${campaign.headline}`}
+            </p>
+            {campaign.metaAdSetId && (
+              <p className="text-xs text-muted font-mono">{campaign.metaAdSetId}</p>
+            )}
+          </div>
+          <div>
+            <p className="text-xs text-muted">Anuncio</p>
+            <p className="text-sm font-medium text-ink">
+              {campaign.adName || `OneClickIA Ad — ${campaign.headline}`}
+            </p>
+            {campaign.metaAdId && (
+              <p className="text-xs text-muted font-mono">{campaign.metaAdId}</p>
+            )}
+          </div>
+        </div>
+      </Card>
 
       {/* Actions */}
       <div className="mt-6 flex gap-3">

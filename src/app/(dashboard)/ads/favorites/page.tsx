@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
+import { Icon } from "@/components/ui/Icon";
 import { AdCard } from "@/components/AdCard";
 import { api } from "@/lib/api";
 import type { CachedAd } from "@/lib/types";
@@ -87,12 +88,22 @@ export default function FavoritesPage() {
         />
         <FilterTab
           active={filter === "images"}
-          label={`🖼️ Imágenes (${ads.length})`}
+          label={
+            <>
+              <Icon name="image" size={15} className="text-indigo-500" />
+              Imágenes ({ads.length})
+            </>
+          }
           onClick={() => setFilter("images")}
         />
         <FilterTab
           active={filter === "videos"}
-          label={`🎬 Videos (${videos.length})`}
+          label={
+            <>
+              <Icon name="video" size={15} className="text-rose-500" />
+              Videos ({videos.length})
+            </>
+          }
           onClick={() => setFilter("videos")}
         />
       </div>
@@ -111,7 +122,7 @@ export default function FavoritesPage() {
 
       {!loading && totalShown === 0 && !error && (
         <Card className="mt-6 text-center">
-          <p className="text-3xl">❤️</p>
+          <Icon name="heart" size={36} fill="currentColor" className="mx-auto text-red-500" />
           <p className="mt-2 text-sm font-medium text-ink">
             Aún no tienes favoritos en esta categoría.
           </p>
@@ -134,8 +145,9 @@ export default function FavoritesPage() {
       {!loading && showImages && ads.length > 0 && (
         <div className="mt-6">
           {filter === "all" && (
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
-              🖼️ Imágenes
+            <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-muted">
+              <Icon name="image" size={15} className="text-indigo-500" />
+              Imágenes
             </h2>
           )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -156,8 +168,9 @@ export default function FavoritesPage() {
       {!loading && showVideos && videos.length > 0 && (
         <div className="mt-6">
           {filter === "all" && (
-            <h2 className="mb-3 mt-6 text-sm font-semibold uppercase tracking-wide text-muted">
-              🎬 Videos
+            <h2 className="mb-3 mt-6 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-muted">
+              <Icon name="video" size={15} className="text-rose-500" />
+              Videos
             </h2>
           )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -181,14 +194,14 @@ function FilterTab({
   onClick,
 }: {
   active: boolean;
-  label: string;
+  label: React.ReactNode;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+      className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
         active
           ? "border-orange bg-orange/10 text-orange"
           : "border-sand text-muted hover:border-orange/30 hover:text-orange"
@@ -217,8 +230,8 @@ function FavoriteVideoCard({
               className="h-full w-full object-cover transition-transform group-hover:scale-105"
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-4xl text-white/40">
-              🎬
+            <div className="flex h-full items-center justify-center text-white/40">
+              <Icon name="video" size={40} />
             </div>
           )}
           <div className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
@@ -259,9 +272,9 @@ function FavoriteVideoCard({
         }}
         aria-label="Quitar de favoritos"
         title="Quitar de favoritos"
-        className="absolute top-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-lg backdrop-blur transition-colors hover:bg-black/70"
+        className="absolute top-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 backdrop-blur transition-colors hover:bg-black/70"
       >
-        ❤️
+        <Icon name="heart" size={18} fill="currentColor" className="text-red-500" />
       </button>
     </div>
   );

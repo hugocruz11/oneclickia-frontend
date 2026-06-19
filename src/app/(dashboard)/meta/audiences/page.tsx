@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
+import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
 import type {
   MetaAdAccount,
@@ -281,7 +282,7 @@ export default function AudiencesPage() {
         </div>
       ) : sortedAudiences.length === 0 ? (
         <Card className="mt-6 text-center">
-          <p className="text-3xl">🎯</p>
+          <Icon name="target" size={36} className="mx-auto text-red-600" />
           <p className="mt-2 text-sm font-medium text-ink">
             Aún no hay públicos en esta cuenta.
           </p>

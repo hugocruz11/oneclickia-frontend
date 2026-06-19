@@ -6,27 +6,32 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Icon, type IconName } from "@/components/ui/Icon";
 import { billingApi, formatUsd, type Plan } from "@/lib/billing";
 import { CREDITS_ENABLED } from "@/contexts/CreditsContext";
 
-const FEATURES = [
+const FEATURES: { icon: IconName; color: string; title: string; body: string }[] = [
   {
-    icon: "🔍",
+    icon: "search",
+    color: "text-sky-500",
     title: "Encuentra anuncios ganadores",
     body: "Busca los creativos que ya están funcionando en tu nicho y úsalos como base.",
   },
   {
-    icon: "✨",
+    icon: "sparkles",
+    color: "text-orange-500",
     title: "Copys e imágenes con IA",
     body: "Genera variantes de texto e imágenes para Meta adaptadas a tu marca en minutos.",
   },
   {
-    icon: "🎬",
+    icon: "video",
+    color: "text-rose-500",
     title: "Analiza videos ganadores",
     body: "Desglosa con IA la estructura de los videos que mejor funcionan (hook, ángulos, CTA) y conviértela en un guion listo para replicar.",
   },
   {
-    icon: "📢",
+    icon: "megaphone",
+    color: "text-orange-500",
     title: "Publica en Meta gratis",
     body: "Crea la campaña lista para publicar directamente en Meta.",
   },
@@ -97,7 +102,7 @@ export default function LandingPage() {
       <section className="mx-auto grid max-w-5xl gap-4 px-6 pb-16 sm:grid-cols-2 lg:grid-cols-4">
         {FEATURES.map((f) => (
           <Card key={f.title}>
-            <div className="text-2xl">{f.icon}</div>
+            <Icon name={f.icon} size={28} className={f.color} />
             <h3 className="mt-3 font-semibold text-ink">{f.title}</h3>
             <p className="mt-1 text-sm text-muted">{f.body}</p>
           </Card>

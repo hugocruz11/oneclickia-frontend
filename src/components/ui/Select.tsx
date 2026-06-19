@@ -15,6 +15,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
     ref,
   ) => {
     const selectId = id || label?.toLowerCase().replace(/\s+/g, "-");
+    const describedById = error ? `${selectId}-error` : undefined;
 
     return (
       <div className="flex flex-col gap-1.5">
@@ -29,6 +30,8 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
         <select
           ref={ref}
           id={selectId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedById}
           className={`w-full rounded-md border bg-cream px-3 py-2 text-ink transition-colors focus:border-orange focus:outline-none ${
             error ? "border-error" : "border-sand"
           } ${className}`}
@@ -45,7 +48,11 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             </option>
           ))}
         </select>
-        {error && <p className="text-sm text-error">{error}</p>}
+        {error && (
+          <p id={`${selectId}-error`} className="text-sm text-error">
+            {error}
+          </p>
+        )}
       </div>
     );
   },

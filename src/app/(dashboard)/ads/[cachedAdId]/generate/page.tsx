@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
-import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { VariantLightbox } from "@/components/VariantLightbox";
 import { AdPreviewCard } from "@/components/AdPreviewCard";
+import { AiProgress } from "@/components/AiProgress";
 import { api, ApiError } from "@/lib/api";
 import type {
   AdaptCopyResponse,
@@ -419,12 +419,10 @@ export default function GenerateImagePage() {
       )}
 
       {loading && (
-        <div className="mt-8 flex flex-col items-center gap-3 py-8">
-          <Spinner size="lg" />
-          <p className="text-sm text-muted">
-            Generando creativos con IA... esto puede tardar un momento.
-          </p>
-        </div>
+        <AiProgress
+          message="Generando creativos con IA…"
+          estimateSeconds={45}
+        />
       )}
 
       {error && (
@@ -624,12 +622,10 @@ export default function GenerateImagePage() {
           )}
 
           {generatingVariants && (
-            <div className="flex flex-col items-center gap-3 py-8">
-              <Spinner size="lg" />
-              <p className="text-sm text-muted">
-                Generando {variantCount} variantes... esto puede tardar.
-              </p>
-            </div>
+            <AiProgress
+              message={`Generando ${variantCount} variantes…`}
+              estimateSeconds={60}
+            />
           )}
 
           {/* Variant grid */}
