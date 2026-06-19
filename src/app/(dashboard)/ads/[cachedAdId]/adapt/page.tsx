@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Spinner } from "@/components/ui/Spinner";
+import { AiProgress } from "@/components/AiProgress";
+import { Icon } from "@/components/ui/Icon";
 import { CopyVariantPicker } from "@/components/CopyVariantPicker";
 import { SavedCopiesBrowser } from "@/components/SavedCopiesBrowser";
 import { api, ApiError } from "@/lib/api";
@@ -41,16 +43,15 @@ export default function AdaptCopyPage() {
       .get<{ products: Product[] }>("/products?onlyComplete=true")
       .then(({ products }) => {
         setProducts(products);
-        // If user has no usable products, redirect them to create one.
-        if (products.length === 0) {
-          router.replace("/products/new");
-          return;
+        // Si no hay productos completos mostramos un estado guía (abajo) en
+        // vez de redirigir en silencio, que desorienta al usuario.
+        if (products.length > 0) {
+          // Auto-select first product for convenience.
+          setSelectedProductId(products[0].id);
         }
-        // Auto-select first product for convenience.
-        setSelectedProductId(products[0].id);
       })
       .catch(() => setProducts([]));
-  }, [cachedAdId, router]);
+  }, [cachedAdId]);
 
   async function handleAdapt(e: FormEvent) {
     e.preventDefault();
@@ -112,6 +113,34 @@ export default function AdaptCopyPage() {
     return (
       <div className="flex justify-center py-12">
         <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  // Sin productos completos no se puede adaptar el copy: explicamos por qué
+  // y enviamos a crear uno (en vez de redirigir sin aviso).
+  if (products.length === 0) {
+    return (
+      <div className="max-w-3xl">
+        <Link
+          href={`/ads/${cachedAdId}`}
+          className="text-sm text-muted hover:text-ink transition-colors"
+        >
+          ← Volver al anuncio
+        </Link>
+        <Card className="mt-6 text-center">
+          <Icon name="box" size={36} className="mx-auto text-amber-700" />
+          <h2 className="mt-2 text-lg font-semibold text-ink">
+            Primero necesitas un producto
+          </h2>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+            Para adaptar el copy a tu marca necesitamos al menos un producto con
+            su información completa. Crea uno y vuelve a este paso.
+          </p>
+          <Link href="/products/new" className="mt-4 inline-block">
+            <Button>Crear mi primer producto</Button>
+          </Link>
+        </Card>
       </div>
     );
   }
@@ -255,12 +284,10 @@ export default function AdaptCopyPage() {
       )}
 
       {loading && (
-        <div className="mt-8 flex flex-col items-center gap-3 py-8">
-          <Spinner size="lg" />
-          <p className="text-sm text-muted">
-            Gemini está adaptando el copy a tu marca...
-          </p>
-        </div>
+        <AiProgress
+          message="Adaptando el copy a tu marca…"
+          estimateSeconds={20}
+        />
       )}
 
       {error && (

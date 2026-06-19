@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
+import { Icon } from "@/components/ui/Icon";
 import { useCredits } from "@/contexts/CreditsContext";
 import { api, ApiError } from "@/lib/api";
 import { landingsApi, type Landing } from "@/lib/landings";
@@ -198,7 +199,14 @@ export default function LandingsPage() {
         </div>
         <div className="mt-3">
           <Button onClick={handleCreate} loading={creating}>
-            {creating ? "Creando y generando…" : "✨ Crear y generar con IA"}
+            {creating ? (
+              "Creando y generando…"
+            ) : (
+              <>
+                <Icon name="sparkles" size={16} className="mr-1.5" />
+                Crear y generar con IA
+              </>
+            )}
           </Button>
           <p className="mt-2 text-xs text-muted">
             La IA diseña la landing completa con la identidad de tu marca
@@ -228,8 +236,11 @@ export default function LandingsPage() {
                   /apps/ofertas/{l.slug}
                   {l.avatar ? ` · ${l.avatar}` : ""}
                 </p>
-                <p className="mt-1 text-xs text-muted">
-                  👁 {l.views.toLocaleString("es")} vistas · 🖱 {l.clicks.toLocaleString("es")} clics
+                <p className="mt-1 flex flex-wrap items-center gap-x-1 text-xs text-muted">
+                  <Icon name="eye" size={13} className="text-slate-500" />
+                  {l.views.toLocaleString("es")} vistas ·
+                  <Icon name="mouse-pointer" size={13} className="text-slate-500" />
+                  {l.clicks.toLocaleString("es")} clics
                   {l.views > 0 && ` · ${((l.clicks / l.views) * 100).toFixed(1)}% CTR`}
                 </p>
               </div>

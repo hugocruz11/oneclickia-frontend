@@ -113,6 +113,11 @@ export interface MetaInterest {
   audience_size: number;
 }
 
+export interface MetaGeoLocation {
+  key: string;
+  name: string;
+}
+
 // ── Ads (Foreplay) ──
 
 export interface CachedAd {
@@ -257,12 +262,14 @@ export interface Campaign {
   adAccountId: string;
   pageId: string;
   objective: string;
+  performanceGoal: string | null;
   budgetType: "DAILY" | "LIFETIME";
   budgetAmount: number;
   currency: string;
   startDate: string;
   endDate: string | null;
   targetCountries: string[];
+  targetCities: { key: string; name: string }[];
   ageMin: number;
   ageMax: number;
   genders: number[];
@@ -272,6 +279,9 @@ export interface Campaign {
   description: string;
   ctaType: string;
   destinationUrl: string;
+  campaignName: string | null;
+  adSetName: string | null;
+  adName: string | null;
   status: CampaignStatus;
   metaCampaignId: string | null;
   metaAdSetId: string | null;
@@ -305,9 +315,11 @@ export interface CampaignDefaults {
   pageId: string;
   pageName: string;
   objective: string;
+  performanceGoal: string;
   budgetType: string;
   budgetAmount: number;
   targetCountries: string[];
+  targetCities: { key: string; name: string }[];
   ageMin: number;
   ageMax: number;
   genders: number[];

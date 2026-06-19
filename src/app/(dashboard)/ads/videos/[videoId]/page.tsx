@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
+import { Icon } from "@/components/ui/Icon";
 import { VideoTemplateView } from "@/components/VideoTemplateView";
 import { api, ApiError } from "@/lib/api";
 
@@ -206,9 +207,14 @@ export default function VideoBlueprintPage() {
                   title={
                     isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"
                   }
-                  className="shrink-0 text-xl transition-transform hover:scale-110"
+                  className="shrink-0 transition-transform hover:scale-110"
                 >
-                  {isFavorite ? "❤️" : "🤍"}
+                  <Icon
+                    name="heart"
+                    size={22}
+                    fill={isFavorite ? "currentColor" : "none"}
+                    className={isFavorite ? "text-red-500" : "text-muted"}
+                  />
                 </button>
               </div>
               {video.description && (
@@ -286,7 +292,8 @@ export default function VideoBlueprintPage() {
                     Regenerar
                   </Button>
                   <Button size="sm" onClick={handleSave}>
-                    💾 Guardar
+                    <Icon name="bookmark" size={15} className="mr-1.5" />
+                    Guardar
                   </Button>
                 </>
               }

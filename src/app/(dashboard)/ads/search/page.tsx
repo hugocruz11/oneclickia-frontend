@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
+import { Icon } from "@/components/ui/Icon";
 import { AdCard } from "@/components/AdCard";
 import { api, ApiError } from "@/lib/api";
 import { scoreAds } from "@/lib/ad-scoring";
@@ -227,7 +228,7 @@ export default function AdsSearchPage() {
                         }}
                         className="flex flex-1 items-center gap-2 px-3 py-2 text-left text-sm text-ink hover:bg-sand-light"
                       >
-                        <span className="text-muted">🕐</span>
+                        <Icon name="clock" size={14} className="shrink-0 text-muted" />
                         {h}
                       </button>
                       <button
@@ -251,8 +252,8 @@ export default function AdsSearchPage() {
             </Button>
           </div>
 
-          <div className="flex gap-4">
-            <div className="w-48">
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="w-full sm:w-48">
               <Select
                 label="Ordenar por"
                 value={order}
@@ -265,7 +266,7 @@ export default function AdsSearchPage() {
                 ]}
               />
             </div>
-            <div className="w-32">
+            <div className="w-full sm:w-32">
               <Select
                 label="Resultados"
                 value={String(limit)}
@@ -284,7 +285,7 @@ export default function AdsSearchPage() {
       {/* CTA: show after 30s */}
       {showCustomCta && !loading && (
         <Card className="mt-4 border-orange/30 bg-orange/5">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div>
               <p className="text-sm font-semibold text-ink">
                 ¿Prefieres crear tu propio anuncio?
@@ -352,7 +353,7 @@ export default function AdsSearchPage() {
 
       {!loading && searched && ads.length === 0 && (
         <div className="mt-12 text-center">
-          <p className="text-3xl">🔍</p>
+          <Icon name="search" size={36} className="mx-auto text-sky-500" />
           <p className="mt-2 text-sm text-muted">
             No se encontraron anuncios para esa búsqueda.
           </p>

@@ -15,6 +15,8 @@ import { CopyVariantPicker } from "@/components/CopyVariantPicker";
 import { SavedCopiesBrowser } from "@/components/SavedCopiesBrowser";
 import { VariantLightbox } from "@/components/VariantLightbox";
 import { AdPreviewCard } from "@/components/AdPreviewCard";
+import { AiProgress } from "@/components/AiProgress";
+import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
 import type {
   AdaptCopyResponse,
@@ -52,6 +54,19 @@ export default function CustomAdPage() {
 
   // Step tracking
   const [step, setStep] = useState<Step>("copy");
+
+  // Modo "refrescar creativo": cuando se llega con ?refresh=<campaignId>, el
+  // anuncio generado se publica como anuncio NUEVO en el ad set de esa campaña
+  // (en vez de ir al flujo de crear campaña).
+  const [refreshCampaignId, setRefreshCampaignId] = useState<string | null>(null);
+  const [pauseOld, setPauseOld] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState("");
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("refresh");
+    if (id) setRefreshCampaignId(id);
+  }, []);
 
   // Copy generation state
   const [copySource, setCopySource] = useState<"new" | "saved">("new");
@@ -117,15 +132,15 @@ export default function CustomAdPage() {
       .get<{ products: Product[] }>("/products?onlyComplete=true")
       .then(({ products }) => {
         setSavedProducts(products);
-        if (products.length === 0) {
-          router.replace("/products/new");
-          return;
+        // Sin productos completos mostramos un estado guía (abajo) en vez de
+        // redirigir en silencio.
+        if (products.length > 0) {
+          setExistingProductId(products[0].id);
         }
-        setExistingProductId(products[0].id);
       })
       .catch(() => setSavedProducts([]));
     api.get<ReferenceImage[]>("/ads/reference-images").then(setSavedRefImages).catch(() => {});
-  }, [router]);
+  }, []);
 
   // ── Copy generation ──
 
@@ -396,6 +411,27 @@ export default function CustomAdPage() {
     });
   }
 
+  // Publica el creativo generado como anuncio nuevo en el ad set de la
+  // campaña a refrescar, y opcionalmente pausa el anterior.
+  async function handleRefresh() {
+    if (!refreshCampaignId || !imageResult) return;
+    setRefreshError("");
+    setRefreshing(true);
+    try {
+      await api.post(`/campaigns/${refreshCampaignId}/refresh-creative`, {
+        generatedImageId: imageResult.generatedImageId,
+        variantIndex: selectedVariant,
+        pauseOld,
+      });
+      router.push(`/campaigns/${refreshCampaignId}`);
+    } catch (err) {
+      setRefreshError(
+        err instanceof ApiError ? err.message : "Error al refrescar el creativo.",
+      );
+      setRefreshing(false);
+    }
+  }
+
   function handleContinueToCampaign() {
     if (imageResult) {
       sessionStorage.setItem(
@@ -579,6 +615,34 @@ export default function CustomAdPage() {
     );
   }
 
+  // Sin productos completos no se puede generar el anuncio: explicamos por qué
+  // y enviamos a crear uno (en vez de redirigir sin aviso).
+  if (savedProducts.length === 0) {
+    return (
+      <div className="max-w-3xl">
+        <Link
+          href="/ads/search"
+          className="text-sm text-muted hover:text-ink transition-colors"
+        >
+          ← Volver a buscar ads
+        </Link>
+        <Card className="mt-6 text-center">
+          <Icon name="box" size={36} className="mx-auto text-amber-700" />
+          <h2 className="mt-2 text-lg font-semibold text-ink">
+            Primero necesitas un producto
+          </h2>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+            Para crear un anuncio personalizado necesitamos al menos un producto
+            con su información completa. Crea uno y vuelve a este paso.
+          </p>
+          <Link href="/products/new" className="mt-4 inline-block">
+            <Button>Crear mi primer producto</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl">
       <button
@@ -590,17 +654,22 @@ export default function CustomAdPage() {
       </button>
 
       <h1 className="mt-4 text-2xl font-semibold text-ink">
-        Crear anuncio personalizado
+        {refreshCampaignId ? "Refrescar creativo" : "Crear anuncio personalizado"}
       </h1>
       <p className="mt-1 text-sm text-muted">
-        Describe lo que necesitas y la IA generará el copy e imágenes para tu
-        campaña.
+        {refreshCampaignId
+          ? "Genera un creativo nuevo y publícalo como anuncio fresco en el grupo de tu campaña."
+          : "Describe lo que necesitas y la IA generará el copy e imágenes para tu campaña."}
       </p>
 
       {/* Step indicator */}
-      <div className="mt-6 flex gap-2">
+      <p className="mt-6 text-xs font-semibold uppercase tracking-wide text-muted">
+        Paso {currentStepIndex + 1} de {steps.length}: {steps[currentStepIndex]?.label}
+      </p>
+      <div className="mt-2 flex gap-2">
         {steps.map((s, i) => {
-          const isVisited = i <= currentStepIndex;
+          const isCurrent = i === currentStepIndex;
+          const isDone = i < currentStepIndex;
           const isClickable = i < currentStepIndex;
           return (
             <button
@@ -608,13 +677,28 @@ export default function CustomAdPage() {
               key={s.key}
               onClick={() => jumpToStep(s.key)}
               disabled={!isClickable}
-              className={`flex-1 rounded-full py-1.5 text-center text-xs font-medium transition-colors ${
-                isVisited
-                  ? "bg-orange text-white"
-                  : "bg-sand-light text-muted"
+              aria-current={isCurrent ? "step" : undefined}
+              title={s.label}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-1.5 text-center text-xs font-medium transition-colors ${
+                isCurrent
+                  ? "bg-orange text-white ring-2 ring-orange/30"
+                  : isDone
+                    ? "bg-orange/15 text-orange"
+                    : "bg-sand-light text-muted"
               } ${isClickable ? "cursor-pointer hover:opacity-90" : "cursor-default"}`}
             >
-              {s.label}
+              <span
+                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                  isCurrent
+                    ? "bg-white text-orange"
+                    : isDone
+                      ? "bg-orange text-white"
+                      : "bg-sand text-muted"
+                }`}
+              >
+                {isDone ? "✓" : i + 1}
+              </span>
+              <span className="hidden sm:inline">{s.label}</span>
             </button>
           );
         })}
@@ -759,12 +843,7 @@ export default function CustomAdPage() {
           </Button>
 
           {copyLoading && (
-            <div className="flex flex-col items-center gap-3 py-4">
-              <Spinner size="lg" />
-              <p className="text-sm text-muted">
-                Generando copy con IA...
-              </p>
-            </div>
+            <AiProgress message="Generando copy con IA…" estimateSeconds={20} />
           )}
         </form>
       )}
@@ -942,12 +1021,10 @@ export default function CustomAdPage() {
           </div>
 
           {imageLoading && (
-            <div className="flex flex-col items-center gap-3 py-4">
-              <Spinner size="lg" />
-              <p className="text-sm text-muted">
-                Generando creativos con IA... esto puede tardar un momento.
-              </p>
-            </div>
+            <AiProgress
+              message="Generando creativos con IA…"
+              estimateSeconds={45}
+            />
           )}
         </div>
       )}
@@ -1048,34 +1125,78 @@ export default function CustomAdPage() {
               <p className="text-sm text-error">{imageError}</p>
             </div>
           )}
+          {refreshError && (
+            <div role="alert" className="rounded-md border border-error/20 bg-error/10 p-3">
+              <p className="text-sm text-error">{refreshError}</p>
+            </div>
+          )}
 
-          {/* Actions */}
-          <div className="flex gap-4">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setImageResult(null);
-                setStep("image");
-              }}
-              className="flex-1"
-            >
-              Regenerar desde cero
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setStep("variants")}
-              className="flex-1"
-            >
-              Generar variantes
-            </Button>
-            <Button
-              onClick={handleContinueToCampaign}
-              size="lg"
-              className="flex-1"
-            >
-              Crear campaña
-            </Button>
-          </div>
+          {/* Modo refrescar creativo: publica como anuncio nuevo en el ad set */}
+          {refreshCampaignId ? (
+            <>
+              <label className="flex items-center gap-2 text-sm text-charcoal">
+                <input
+                  type="checkbox"
+                  checked={pauseOld}
+                  onChange={(e) => setPauseOld(e.target.checked)}
+                  className="h-4 w-4 accent-orange"
+                />
+                Pausar el anuncio anterior
+              </label>
+              <p className="-mt-2 text-xs text-muted">
+                Se publicará como anuncio nuevo en el mismo grupo. Si lo dejas sin
+                pausar, ambos correrán para comparar (A/B).
+              </p>
+              <div className="flex gap-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setImageResult(null);
+                    setStep("image");
+                  }}
+                  className="flex-1"
+                >
+                  Regenerar desde cero
+                </Button>
+                <Button
+                  onClick={handleRefresh}
+                  loading={refreshing}
+                  size="lg"
+                  className="flex-1"
+                >
+                  Refrescar creativo
+                </Button>
+              </div>
+            </>
+          ) : (
+            /* Actions */
+            <div className="flex gap-4">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setImageResult(null);
+                  setStep("image");
+                }}
+                className="flex-1"
+              >
+                Regenerar desde cero
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setStep("variants")}
+                className="flex-1"
+              >
+                Generar variantes
+              </Button>
+              <Button
+                onClick={handleContinueToCampaign}
+                size="lg"
+                className="flex-1"
+              >
+                Crear campaña
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -1170,9 +1291,10 @@ export default function CustomAdPage() {
               )}
             </div>
             {generatingVariants && (
-              <p className="mt-3 text-xs text-muted">
-                Generando {Array.from(generatingFormats).join(", ")}... esto puede tardar.
-              </p>
+              <AiProgress
+                message={`Generando ${Array.from(generatingFormats).join(", ")}…`}
+                estimateSeconds={45}
+              />
             )}
           </Card>
 

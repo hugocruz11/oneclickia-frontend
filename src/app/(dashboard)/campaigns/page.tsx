@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { CampaignStatusBadge } from "@/components/CampaignStatusBadge";
+import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
+import { objectiveLabel, locationSummary } from "@/lib/labels";
+import { fromMinorUnits } from "@/lib/currency";
 import {
   Pagination,
   StatusFilter,
@@ -39,6 +42,7 @@ interface MetaCampaign {
   lifetimeBudget?: string | null;
   startTime?: string | null;
   stopTime?: string | null;
+  currency?: string | null;
   createdTime: string;
   // Métricas del rango de fechas seleccionado (0 si no hubo entrega).
   spend?: number;
@@ -124,9 +128,12 @@ function sortByActiveFirst<T extends WithStatus>(items: T[]): T[] {
   });
 }
 
-function formatMetaBudget(cents: string | null | undefined) {
-  if (!cents) return "—";
-  return `$${(Number(cents) / 100).toLocaleString("es")}`;
+function formatMetaBudget(
+  minorUnits: string | null | undefined,
+  currency?: string | null,
+) {
+  if (!minorUnits) return "—";
+  return `$${fromMinorUnits(Number(minorUnits), currency).toLocaleString("es")}`;
 }
 
 // Métricas: números/montos compactos para no romper la tarjeta con
@@ -255,11 +262,12 @@ export default function CampaignsPage() {
   }
 
   function formatBudget(amount: number, currency: string) {
+    // amount is stored in whole currency units (not cents).
     return new Intl.NumberFormat("es", {
       style: "currency",
       currency,
       minimumFractionDigits: 0,
-    }).format(amount / 100);
+    }).format(amount);
   }
 
   if (loading) {
@@ -303,9 +311,14 @@ export default function CampaignsPage() {
             Gestiona tus campañas de Meta Ads.
           </p>
         </div>
-        <Link href="/ads/search">
-          <Button>Nueva campaña</Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/ads/search">
+            <Button variant="ghost">Buscar Ads</Button>
+          </Link>
+          <Link href="/ads/custom">
+            <Button>Nueva campaña</Button>
+          </Link>
+        </div>
       </div>
 
       {error && (
@@ -345,7 +358,7 @@ export default function CampaignsPage() {
         <>
           {campaigns.length === 0 && (
             <div className="mt-12 text-center">
-              <p className="text-3xl">📢</p>
+              <Icon name="megaphone" size={36} className="mx-auto text-orange-500" />
               <p className="mt-2 text-sm text-muted">
                 Aún no tienes campañas creadas desde OneClickIA.
               </p>
@@ -370,12 +383,18 @@ export default function CampaignsPage() {
                       <p className="mt-1 text-xs text-charcoal line-clamp-1">
                         {campaign.description}
                       </p>
-                      <div className="mt-2 flex items-center gap-4 text-xs text-muted">
+                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
                         <span>
                           {formatBudget(campaign.budgetAmount, campaign.currency)}{" "}
                           {campaign.budgetType === "DAILY" ? "/ día" : "total"}
                         </span>
-                        <span>{campaign.objective.replace("OUTCOME_", "")}</span>
+                        <span>{objectiveLabel(campaign.objective)}</span>
+                        {locationSummary(campaign.targetCountries, campaign.targetCities) && (
+                          <span className="inline-flex items-center gap-1">
+                            <Icon name="map-pin" size={13} className="text-rose-500" />
+                            {locationSummary(campaign.targetCountries, campaign.targetCities)}
+                          </span>
+                        )}
                         <span>{formatDate(campaign.createdAt)}</span>
                       </div>
                     </Link>
@@ -424,7 +443,7 @@ export default function CampaignsPage() {
             <>
               {metaCampaigns.length === 0 && (
                 <div className="mt-12 text-center">
-                  <p className="text-3xl">📱</p>
+                  <Icon name="smartphone" size={36} className="mx-auto text-slate-500" />
                   <p className="mt-2 text-sm text-muted">
                     No se encontraron campañas en tu cuenta de Meta Ads.
                   </p>
@@ -477,12 +496,12 @@ export default function CampaignsPage() {
                               {statusBadge(effStatus(mc))}
                             </div>
                             <div className="mt-2 flex items-center gap-4 text-xs text-muted">
-                              <span>{mc.objective}</span>
+                              <span>{objectiveLabel(mc.objective)}</span>
                               <span>
                                 {mc.dailyBudget
-                                  ? `${formatMetaBudget(mc.dailyBudget)} / día`
+                                  ? `${formatMetaBudget(mc.dailyBudget, mc.currency)} / día`
                                   : mc.lifetimeBudget
-                                    ? `${formatMetaBudget(mc.lifetimeBudget)} total`
+                                    ? `${formatMetaBudget(mc.lifetimeBudget, mc.currency)} total`
                                     : "Sin presupuesto"}
                               </span>
                               <span>{formatDate(mc.createdTime)}</span>
@@ -592,9 +611,9 @@ export default function CampaignsPage() {
                               )}
                               <span>
                                 {adSet.daily_budget
-                                  ? `${formatMetaBudget(adSet.daily_budget)} / día`
+                                  ? `${formatMetaBudget(adSet.daily_budget, selectedCampaign?.currency)} / día`
                                   : adSet.lifetime_budget
-                                    ? `${formatMetaBudget(adSet.lifetime_budget)} total`
+                                    ? `${formatMetaBudget(adSet.lifetime_budget, selectedCampaign?.currency)} total`
                                     : "Sin presupuesto"}
                               </span>
                             </div>

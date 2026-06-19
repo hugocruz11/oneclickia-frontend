@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
+import { Icon } from "@/components/ui/Icon";
 import { VideoTemplateView } from "@/components/VideoTemplateView";
 import { api } from "@/lib/api";
 
@@ -94,8 +95,8 @@ export default function SavedBlueprintDetailPage() {
                 poster={item.sourceThumbnail ?? undefined}
               />
             ) : (
-              <div className="flex aspect-[9/16] w-full items-center justify-center bg-black text-4xl text-white/40">
-                🎬
+              <div className="flex aspect-[9/16] w-full items-center justify-center bg-black text-white/40">
+                <Icon name="video" size={40} />
               </div>
             )}
             <div className="flex flex-col gap-1 p-4">

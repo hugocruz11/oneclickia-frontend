@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
+import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
 
 interface VideoAd {
@@ -166,7 +167,7 @@ export default function VideosSearchPage() {
 
       {searched && !loading && videos.length === 0 && (
         <div className="mt-8 text-center">
-          <p className="text-3xl">🎬</p>
+          <Icon name="video" size={36} className="mx-auto text-rose-500" />
           <p className="mt-2 text-sm text-muted">
             No se encontraron videos para esta búsqueda.
           </p>
@@ -209,8 +210,8 @@ function VideoCard({
               className="h-full w-full object-cover transition-transform group-hover:scale-105"
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-4xl text-white/40">
-              🎬
+            <div className="flex h-full items-center justify-center text-white/40">
+              <Icon name="video" size={40} />
             </div>
           )}
           <div className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
@@ -244,9 +245,14 @@ function VideoCard({
         }}
         aria-label={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
         title={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
-        className="absolute top-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-lg backdrop-blur transition-colors hover:bg-black/70"
+        className="absolute top-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 backdrop-blur transition-colors hover:bg-black/70"
       >
-        {isFavorite ? "❤️" : "🤍"}
+        <Icon
+          name="heart"
+          size={18}
+          fill={isFavorite ? "currentColor" : "none"}
+          className={isFavorite ? "text-red-500" : "text-white"}
+        />
       </button>
     </div>
   );
