@@ -61,7 +61,9 @@ export default function EditCampaignPage() {
   const [ctaType, setCtaType] = useState("LEARN_MORE");
   const [objective, setObjective] = useState("OUTCOME_TRAFFIC");
   const [budgetType, setBudgetType] = useState("DAILY");
-  const [budgetAmount, setBudgetAmount] = useState(0);
+  // String para permitir borrar todo el campo (sin un 0 fijo) y evitar ceros
+  // a la izquierda; se muestra formateado con separador de miles.
+  const [budgetAmount, setBudgetAmount] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [countries, setCountries] = useState<string[]>([]);
@@ -83,7 +85,7 @@ export default function EditCampaignPage() {
         setCtaType(c.ctaType || "LEARN_MORE");
         setObjective(c.objective);
         setBudgetType(c.budgetType);
-        setBudgetAmount(c.budgetAmount);
+        setBudgetAmount(String(c.budgetAmount ?? ""));
         setStartDate(toDateInput(c.startDate));
         setEndDate(toDateInput(c.endDate));
         setCountries(c.targetCountries || []);
@@ -99,6 +101,15 @@ export default function EditCampaignPage() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Monto: solo dígitos, mostrado con separador de miles; vacío permitido.
+  function formatBudgetDisplay(value: string): string {
+    const num = value.replace(/\D/g, "");
+    return num ? Number(num).toLocaleString("es-CO") : "";
+  }
+  function handleBudgetChange(raw: string) {
+    setBudgetAmount(raw.replace(/\D/g, ""));
+  }
 
   // Una vez en Meta, el objetivo no se puede cambiar.
   const isPublished = !!campaign?.metaCampaignId;
@@ -119,7 +130,7 @@ export default function EditCampaignPage() {
         ctaType,
         ...(isPublished ? {} : { objective }),
         budgetType,
-        budgetAmount,
+        budgetAmount: Number(budgetAmount),
         startDate: startDate ? new Date(startDate).toISOString() : undefined,
         endDate: endDate ? new Date(endDate).toISOString() : null,
         targetCountries: countries,
@@ -256,10 +267,11 @@ export default function EditCampaignPage() {
             />
             <Input
               label={`Monto (${campaign.currency})`}
-              type="number"
-              min={1}
-              value={budgetAmount}
-              onChange={(e) => setBudgetAmount(Number(e.target.value))}
+              type="text"
+              inputMode="numeric"
+              placeholder="Ej: 5.000"
+              value={formatBudgetDisplay(budgetAmount)}
+              onChange={(e) => handleBudgetChange(e.target.value)}
               required
             />
           </div>

@@ -17,6 +17,7 @@ import { VariantLightbox } from "@/components/VariantLightbox";
 import { AdPreviewCard } from "@/components/AdPreviewCard";
 import { AiProgress } from "@/components/AiProgress";
 import { Icon } from "@/components/ui/Icon";
+import { STATIC_TEMPLATES, templateImageUrl } from "@/lib/staticTemplates";
 import { api, ApiError } from "@/lib/api";
 import type {
   AdaptCopyResponse,
@@ -82,11 +83,16 @@ export default function CustomAdPage() {
   const [savedProducts, setSavedProducts] = useState<Product[] | null>(null);
   const [existingProductId, setExistingProductId] = useState("");
 
-  // Reference image picker
+  // Reference image picker — el modo "template" es el default.
   const [savedRefImages, setSavedRefImages] = useState<ReferenceImage[]>([]);
-  const [refMode, setRefMode] = useState<"new" | "existing">("new");
+  const [refMode, setRefMode] = useState<"template" | "new" | "existing">(
+    "template",
+  );
   const [existingRefId, setExistingRefId] = useState("");
   const [referenceImage, setReferenceImage] = useState<File | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
+    null,
+  );
 
   // Image generation state
   const [imagePrompt, setImagePrompt] = useState("");
@@ -164,8 +170,10 @@ export default function CustomAdPage() {
       formData.append("targetLang", targetLang);
       formData.append("productId", existingProductId);
 
-      // Reference image: existing or new
-      if (refMode === "existing" && existingRefId) {
+      // Reference image: template (default) | existing | new
+      if (refMode === "template" && selectedTemplateId) {
+        formData.append("templateId", selectedTemplateId);
+      } else if (refMode === "existing" && existingRefId) {
         formData.append("referenceImageId", existingRefId);
       } else if (refMode === "new" && referenceImage) {
         formData.append("referenceImage", referenceImage);
@@ -274,7 +282,10 @@ export default function CustomAdPage() {
       };
       if (imagePrompt.trim()) body.imagePrompt = imagePrompt.trim();
       if (price.trim()) body.price = price.trim();
-      if (referenceImageUrl) body.referenceImageUrl = referenceImageUrl;
+      // Con template, el backend resuelve la imagen de referencia del template;
+      // no mandamos referenceImageUrl para no arrastrar uno viejo del estado.
+      if (selectedTemplateId) body.templateId = selectedTemplateId;
+      else if (referenceImageUrl) body.referenceImageUrl = referenceImageUrl;
 
       const res = await api.post<GenerateImageResponse>(
         "/ads/custom/generate-image",
@@ -506,22 +517,34 @@ export default function CustomAdPage() {
         Imagen de referencia (opcional)
       </h3>
       <p className="mt-1 text-xs text-muted">
-        Sube una imagen de un anuncio que te guste como inspiración visual.
+        Elige uno de nuestros templates de estático o sube tu propia imagen como
+        inspiración visual. La IA la recreará con tu producto y tu marca.
       </p>
 
-      {savedRefImages.length > 0 && (
-        <div className="mt-3 flex gap-3">
-          <button
-            type="button"
-            onClick={() => setRefMode("new")}
-            className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
-              refMode === "new"
-                ? "border-orange text-orange"
-                : "border-sand text-muted hover:border-orange/30"
-            }`}
-          >
-            Subir nueva
-          </button>
+      <div className="mt-3 flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={() => setRefMode("template")}
+          className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
+            refMode === "template"
+              ? "border-orange text-orange"
+              : "border-sand text-muted hover:border-orange/30"
+          }`}
+        >
+          Usar un template
+        </button>
+        <button
+          type="button"
+          onClick={() => setRefMode("new")}
+          className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
+            refMode === "new"
+              ? "border-orange text-orange"
+              : "border-sand text-muted hover:border-orange/30"
+          }`}
+        >
+          Subir nueva
+        </button>
+        {savedRefImages.length > 0 && (
           <button
             type="button"
             onClick={() => setRefMode("existing")}
@@ -533,10 +556,50 @@ export default function CustomAdPage() {
           >
             Usar existente
           </button>
+        )}
+      </div>
+
+      {refMode === "template" && (
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {STATIC_TEMPLATES.map((tpl) => {
+            const isSelected = selectedTemplateId === tpl.id;
+            return (
+              <button
+                key={tpl.id}
+                type="button"
+                onClick={() => setSelectedTemplateId(tpl.id)}
+                title={tpl.description}
+                className={`group relative flex flex-col overflow-hidden rounded-lg border-2 text-left transition-colors ${
+                  isSelected
+                    ? "border-orange ring-2 ring-orange/30"
+                    : "border-sand hover:border-orange/30"
+                }`}
+              >
+                <div className="relative">
+                  <img
+                    src={`${API_HOST}${templateImageUrl(tpl.id)}`}
+                    alt={tpl.name}
+                    className="aspect-[4/5] w-full object-cover"
+                  />
+                  {isSelected && (
+                    <div className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-orange text-[10px] text-white">
+                      ✓
+                    </div>
+                  )}
+                </div>
+                <div className="p-2">
+                  <p className="text-xs font-semibold text-ink">{tpl.name}</p>
+                  <p className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-muted">
+                    {tpl.description}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {refMode === "new" ? (
+      {refMode === "new" && (
         <div className="mt-3">
           <FileUpload
             label="Imagen de referencia"
@@ -545,7 +608,9 @@ export default function CustomAdPage() {
             helperText="La IA usará esta imagen como inspiración para el estilo visual."
           />
         </div>
-      ) : (
+      )}
+
+      {refMode === "existing" && (
         <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
           {savedRefImages.map((ref) => (
             <button

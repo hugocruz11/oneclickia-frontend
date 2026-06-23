@@ -51,13 +51,15 @@ function serviceLabel(key: string): string {
   return SERVICE_LABELS[key] ?? key;
 }
 
-// USD amounts here are tiny (fractions of a cent up to a few dollars), so
-// show 4 decimals to stay precise and reconcile with the Gemini panel.
-function fmtUsd(n: number): string {
-  return `$${n.toLocaleString("en-US", {
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 4,
-  })}`;
+// Los costos se calculan y guardan en USD (lo que cobra Google). El panel los
+// muestra en pesos colombianos usando la TRM oficial (backend /fx/usd-cop).
+// Este valor es solo el fallback si la TRM no carga; se puede fijar por env.
+const USD_TO_COP_FALLBACK = Number(process.env.NEXT_PUBLIC_USD_COP_RATE) || 4000;
+
+interface UsdCopRate {
+  rate: number;
+  date: string;
+  source: "trm" | "fallback";
 }
 
 function fmtNum(n: number): string {
@@ -82,6 +84,21 @@ export default function AdminCostosPage() {
   const [byService, setByService] = useState<ServiceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Tasa USD→COP (TRM oficial). Arranca con el fallback y se actualiza al
+  // cargar /fx/usd-cop. COP es moneda sin decimales → pesos enteros.
+  const [fx, setFx] = useState<UsdCopRate>({
+    rate: USD_TO_COP_FALLBACK,
+    date: "",
+    source: "fallback",
+  });
+  const fmtCop = useCallback(
+    (usd: number): string =>
+      `$${(usd * fx.rate).toLocaleString("es-CO", {
+        maximumFractionDigits: 0,
+      })} COP`,
+    [fx.rate],
+  );
 
   // Per-user service breakdown, fetched on demand when a row is expanded.
   // "loading" while in flight; reset whenever the date range changes.
@@ -142,6 +159,15 @@ export default function AdminCostosPage() {
     else if (!authLoading) setLoading(false);
   }, [user, authLoading, load]);
 
+  // Tasa de cambio en vivo (TRM). Si falla, se queda el fallback.
+  useEffect(() => {
+    if (user?.role !== "ADMIN") return;
+    api
+      .get<UsdCopRate>("/fx/usd-cop")
+      .then(setFx)
+      .catch(() => {});
+  }, [user]);
+
   // Gate the UI too (backend enforces 403 regardless).
   if (authLoading) {
     return (
@@ -170,8 +196,13 @@ export default function AdminCostosPage() {
         <div>
           <h1 className="text-2xl font-semibold text-ink">Costos de IA</h1>
           <p className="mt-1 text-sm text-muted">
-            Gasto real en Gemini por usuario y por servicio. Los totales
-            reconcilian con el tablero de la API de Gemini.
+            Gasto real en Gemini por usuario y por servicio, en pesos
+            colombianos. Convertido desde USD a{" "}
+            {fmtNum(Math.round(fx.rate))} COP/USD
+            {fx.source === "trm"
+              ? ` (TRM ${fx.date})`
+              : " (tasa de respaldo)"}
+            .
           </p>
         </div>
         <div className="flex items-end gap-2">
@@ -214,16 +245,16 @@ export default function AdminCostosPage() {
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <SummaryCard
               label="Costo total"
-              value={summary ? fmtUsd(summary.totalCostUsd) : "—"}
+              value={summary ? fmtCop(summary.totalCostUsd) : "—"}
               highlight
             />
             <SummaryCard
               label="Costo tokens"
-              value={summary ? fmtUsd(summary.tokenCostUsd) : "—"}
+              value={summary ? fmtCop(summary.tokenCostUsd) : "—"}
             />
             <SummaryCard
               label="Costo grounding"
-              value={summary ? fmtUsd(summary.groundingCostUsd) : "—"}
+              value={summary ? fmtCop(summary.groundingCostUsd) : "—"}
             />
             <SummaryCard
               label="Llamadas"
@@ -287,7 +318,7 @@ export default function AdminCostosPage() {
                             </div>
                           </td>
                           <td className="py-3 pr-4 text-right font-semibold text-ink">
-                            {fmtUsd(r.costUsd)}
+                            {fmtCop(r.costUsd)}
                           </td>
                           <td className="py-3 pr-4 text-right text-charcoal">
                             {fmtNum(r.calls)}
@@ -333,7 +364,7 @@ export default function AdminCostosPage() {
                                     {serviceLabel(s.service)}
                                   </td>
                                   <td className="py-2 pr-4 text-right font-medium text-ink">
-                                    {fmtUsd(s.costUsd)}
+                                    {fmtCop(s.costUsd)}
                                   </td>
                                   <td className="py-2 pr-4 text-right text-muted">
                                     {fmtNum(s.calls)}
@@ -384,7 +415,7 @@ export default function AdminCostosPage() {
                         {serviceLabel(r.service)}
                       </td>
                       <td className="py-3 pr-4 text-right font-semibold text-ink">
-                        {fmtUsd(r.costUsd)}
+                        {fmtCop(r.costUsd)}
                       </td>
                       <td className="py-3 pr-4 text-right text-charcoal">
                         {fmtNum(r.calls)}
