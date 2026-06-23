@@ -34,6 +34,16 @@ interface ServiceRow {
   costUsd: number;
 }
 
+interface ModelRow {
+  model: string;
+  calls: number;
+  totalTokens: number;
+  inputTokens: number;
+  outputTextTokens: number;
+  outputImageTokens: number;
+  costUsd: number;
+}
+
 // Spanish labels for the logical service keys recorded by the backend.
 const SERVICE_LABELS: Record<string, string> = {
   copy: "Copy (texto de anuncios)",
@@ -82,6 +92,7 @@ export default function AdminCostosPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [byUser, setByUser] = useState<UserRow[]>([]);
   const [byService, setByService] = useState<ServiceRow[]>([]);
+  const [byModel, setByModel] = useState<ModelRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -112,15 +123,16 @@ export default function AdminCostosPage() {
     setError("");
     const qs = `from=${from}&to=${to}`;
     try {
-      const [s, u, sv] = await Promise.all([
+      const [s, u, sv, m] = await Promise.all([
         api.get<Summary>(`/admin/ai-usage/summary?${qs}`),
         api.get<UserRow[]>(`/admin/ai-usage/by-user?${qs}`),
         api.get<ServiceRow[]>(`/admin/ai-usage/by-service?${qs}`),
+        api.get<ModelRow[]>(`/admin/ai-usage/by-model?${qs}`),
       ]);
       setSummary(s);
       setByUser(u);
       setByService(sv);
-      // Range changed → stale breakdowns no longer apply.
+      setByModel(m);
       setExpandedUser(null);
       setUserBreakdown({});
     } catch (err) {
@@ -265,6 +277,58 @@ export default function AdminCostosPage() {
               value={summary ? fmtNum(summary.totalTokens) : "—"}
             />
           </div>
+
+          {/* By model */}
+          <Card className="mt-6 overflow-x-auto">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
+              Costo por modelo
+            </h3>
+            {byModel.length === 0 ? (
+              <p className="mt-4 text-sm text-muted">
+                No hay consumo registrado en este rango.
+              </p>
+            ) : (
+              <table className="mt-4 w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-sand text-xs font-semibold uppercase tracking-wide text-muted">
+                    <th className="pb-3 pr-4">Modelo</th>
+                    <th className="pb-3 pr-4 text-right">Costo</th>
+                    <th className="pb-3 pr-4 text-right">Llamadas</th>
+                    <th className="pb-3 pr-4 text-right">Tokens entrada</th>
+                    <th className="pb-3 pr-4 text-right">Tokens texto sal.</th>
+                    <th className="pb-3 text-right">Tokens img sal.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {byModel.map((r) => (
+                    <tr
+                      key={r.model}
+                      className="border-b border-sand/50 last:border-0 hover:bg-sand/10 transition-colors"
+                    >
+                      <td className="py-3 pr-4 font-mono text-xs text-ink">
+                        {r.model}
+                      </td>
+                      <td className="py-3 pr-4 text-right font-semibold text-ink">
+                        {fmtCop(r.costUsd)}
+                      </td>
+                      <td className="py-3 pr-4 text-right text-charcoal">
+                        {fmtNum(r.calls)}
+                      </td>
+                      <td className="py-3 pr-4 text-right text-charcoal">
+                        {fmtNum(r.inputTokens)}
+                      </td>
+                      <td className="py-3 pr-4 text-right text-charcoal">
+                        {fmtNum(r.outputTextTokens)}
+                      </td>
+                      <td className="py-3 text-right text-charcoal">
+                        {r.outputImageTokens > 0 ? fmtNum(r.outputImageTokens) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Card>
 
           {/* By user */}
           <Card className="mt-6 overflow-x-auto">
