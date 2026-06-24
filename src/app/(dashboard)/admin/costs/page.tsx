@@ -110,6 +110,31 @@ export default function AdminCostosPage() {
       })} COP`,
     [fx.rate],
   );
+  // USD original (lo que cobra Google). Para montos < $1 mostramos hasta 4
+  // decimales para no perder los consumos pequeños en redondeo.
+  const fmtUsd = useCallback(
+    (usd: number): string =>
+      `US$${usd.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: usd > 0 && usd < 1 ? 4 : 2,
+      })}`,
+    [],
+  );
+  // Celda de dinero: COP arriba (principal) y USD debajo (referencia). Bloque
+  // a todo el ancho → items-end lo alinea a la derecha dentro del <td>.
+  const money = useCallback(
+    (usd: number, bold = false) => (
+      <div className="flex flex-col items-end leading-tight">
+        <span className={bold ? "font-semibold text-ink" : "text-ink"}>
+          {fmtCop(usd)}
+        </span>
+        <span className="text-[11px] font-normal text-muted">
+          {fmtUsd(usd)}
+        </span>
+      </div>
+    ),
+    [fmtCop, fmtUsd],
+  );
 
   // Per-user service breakdown, fetched on demand when a row is expanded.
   // "loading" while in flight; reset whenever the date range changes.
@@ -208,8 +233,8 @@ export default function AdminCostosPage() {
         <div>
           <h1 className="text-2xl font-semibold text-ink">Costos de IA</h1>
           <p className="mt-1 text-sm text-muted">
-            Gasto real en Gemini por usuario y por servicio, en pesos
-            colombianos. Convertido desde USD a{" "}
+            Gasto real en Gemini por usuario y por servicio, en USD (lo que
+            cobra Google) y su equivalente en pesos colombianos a{" "}
             {fmtNum(Math.round(fx.rate))} COP/USD
             {fx.source === "trm"
               ? ` (TRM ${fx.date})`
@@ -258,15 +283,18 @@ export default function AdminCostosPage() {
             <SummaryCard
               label="Costo total"
               value={summary ? fmtCop(summary.totalCostUsd) : "—"}
+              sub={summary ? fmtUsd(summary.totalCostUsd) : undefined}
               highlight
             />
             <SummaryCard
               label="Costo tokens"
               value={summary ? fmtCop(summary.tokenCostUsd) : "—"}
+              sub={summary ? fmtUsd(summary.tokenCostUsd) : undefined}
             />
             <SummaryCard
               label="Costo grounding"
               value={summary ? fmtCop(summary.groundingCostUsd) : "—"}
+              sub={summary ? fmtUsd(summary.groundingCostUsd) : undefined}
             />
             <SummaryCard
               label="Llamadas"
@@ -309,7 +337,7 @@ export default function AdminCostosPage() {
                         {r.model}
                       </td>
                       <td className="py-3 pr-4 text-right font-semibold text-ink">
-                        {fmtCop(r.costUsd)}
+                        {money(r.costUsd, true)}
                       </td>
                       <td className="py-3 pr-4 text-right text-charcoal">
                         {fmtNum(r.calls)}
@@ -382,7 +410,7 @@ export default function AdminCostosPage() {
                             </div>
                           </td>
                           <td className="py-3 pr-4 text-right font-semibold text-ink">
-                            {fmtCop(r.costUsd)}
+                            {money(r.costUsd, true)}
                           </td>
                           <td className="py-3 pr-4 text-right text-charcoal">
                             {fmtNum(r.calls)}
@@ -428,7 +456,7 @@ export default function AdminCostosPage() {
                                     {serviceLabel(s.service)}
                                   </td>
                                   <td className="py-2 pr-4 text-right font-medium text-ink">
-                                    {fmtCop(s.costUsd)}
+                                    {money(s.costUsd, true)}
                                   </td>
                                   <td className="py-2 pr-4 text-right text-muted">
                                     {fmtNum(s.calls)}
@@ -479,7 +507,7 @@ export default function AdminCostosPage() {
                         {serviceLabel(r.service)}
                       </td>
                       <td className="py-3 pr-4 text-right font-semibold text-ink">
-                        {fmtCop(r.costUsd)}
+                        {money(r.costUsd, true)}
                       </td>
                       <td className="py-3 pr-4 text-right text-charcoal">
                         {fmtNum(r.calls)}
@@ -502,10 +530,12 @@ export default function AdminCostosPage() {
 function SummaryCard({
   label,
   value,
+  sub,
   highlight,
 }: {
   label: string;
   value: string;
+  sub?: string;
   highlight?: boolean;
 }) {
   return (
@@ -520,6 +550,7 @@ function SummaryCard({
       >
         {value}
       </p>
+      {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
     </div>
   );
 }
