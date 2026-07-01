@@ -189,6 +189,9 @@ export default function NewCampaignPage() {
   const [variantIndex, setVariantIndex] = useState(0);
   const [additionalImageIds, setAdditionalImageIds] = useState<string[]>([]);
   const [noImage, setNoImage] = useState(false);
+  // Texto del post (flujo custom): título + descripción generados aparte.
+  const [postTitle, setPostTitle] = useState("");
+  const [postDescription, setPostDescription] = useState("");
 
   useEffect(() => {
     // Find the most recent generated image from session storage
@@ -227,6 +230,21 @@ export default function NewCampaignPage() {
         `imageVariantIds_${cachedAdId}`,
       );
       if (variantIds) setAdditionalImageIds(JSON.parse(variantIds));
+
+      // Texto del post (flujo custom): título + descripción.
+      const postCopyRaw = sessionStorage.getItem("postCopy_custom");
+      if (postCopyRaw) {
+        try {
+          const pc = JSON.parse(postCopyRaw) as {
+            title?: string;
+            description?: string;
+          };
+          if (pc.title) setPostTitle(pc.title);
+          if (pc.description) setPostDescription(pc.description);
+        } catch {
+          /* ignore */
+        }
+      }
     }
     if (!foundImage) setNoImage(true);
 
@@ -369,6 +387,8 @@ export default function NewCampaignPage() {
       if (adName.trim()) body.adName = adName.trim();
       if (ctaType) body.ctaType = ctaType;
       if (additionalImageIds.length > 0) body.additionalImageIds = additionalImageIds;
+      if (postTitle.trim()) body.title = postTitle.trim();
+      if (postDescription.trim()) body.description = postDescription.trim();
       if (campaignMode === "existing" && selectedMetaCampaignId) {
         body.existingMetaCampaignId = selectedMetaCampaignId;
         body.existingMetaCampaignName = selectedMetaCampaignName;

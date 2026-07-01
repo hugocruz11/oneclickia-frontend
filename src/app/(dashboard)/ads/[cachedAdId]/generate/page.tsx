@@ -406,15 +406,29 @@ export default function GenerateImagePage() {
             />
           </Card>
 
-          <Button
-            onClick={handleGenerate}
-            loading={loading}
-            size="lg"
-            disabled={formats.length === 0}
-            className="w-full"
-          >
-            Generar imágenes
-          </Button>
+          <div className="flex gap-4">
+            {/* Si ya hay imágenes generadas, se puede volver a revisarlas sin
+                regenerar (no perder las imágenes al retroceder). */}
+            {result && !loading && (
+              <Button
+                variant="ghost"
+                onClick={() => setStep("iterate")}
+                size="lg"
+                className="flex-1"
+              >
+                Continuar a revisión →
+              </Button>
+            )}
+            <Button
+              onClick={handleGenerate}
+              loading={loading}
+              size="lg"
+              disabled={formats.length === 0}
+              className="flex-1"
+            >
+              {result ? "Regenerar imágenes" : "Generar imágenes"}
+            </Button>
+          </div>
         </div>
       )}
 
@@ -521,13 +535,10 @@ export default function GenerateImagePage() {
           <div className="flex gap-4">
             <Button
               variant="ghost"
-              onClick={() => {
-                setResult(null);
-                setStep("generate");
-              }}
+              onClick={() => setStep("generate")}
               className="flex-1"
             >
-              Regenerar desde cero
+              ← Volver a generar
             </Button>
             <Button
               variant="ghost"
@@ -650,7 +661,7 @@ export default function GenerateImagePage() {
                     brandLogoUrl={
                       brand?.logoUrl ? `${API_HOST}${brand.logoUrl}` : null
                     }
-                    primaryText={selectedCopyVariant.description}
+                    primaryText={selectedCopyVariant.description ?? ""}
                     headline={selectedCopyVariant.headline}
                     ctaLabel={selectedCopyVariant.ctaTitle}
                     domain={domainFromUrl(brand?.websiteUrl)}

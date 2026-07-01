@@ -25,6 +25,7 @@ import type {
   GenerateImageResponse,
   EditImageResponse,
   ImageVariantsResponse,
+  PostCopyResponse,
   Product,
   ReferenceImage,
   SavedCopy,
@@ -90,9 +91,9 @@ export default function CustomAdPage() {
   );
   const [existingRefId, setExistingRefId] = useState("");
   const [referenceImage, setReferenceImage] = useState<File | null>(null);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
-    null,
-  );
+  // Multi-select de templates: el copy es UNO solo, pero con 2+ templates se
+  // genera una imagen por template y todas se publican como anuncios.
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
 
   // Image generation state
   const [imagePrompt, setImagePrompt] = useState("");
@@ -101,11 +102,22 @@ export default function CustomAdPage() {
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState("");
   const [imageResult, setImageResult] = useState<GenerateImageResponse | null>(null);
+  // Con 2+ templates: una imagen generada por cada template (misma copy).
+  const [templateImages, setTemplateImages] = useState<GenerateImageResponse[]>(
+    [],
+  );
 
   // Edit state
   const [editInstructions, setEditInstructions] = useState("");
   const [editFormat, setEditFormat] = useState("feed");
+  const [editImageIndex, setEditImageIndex] = useState(0);
   const [editing, setEditing] = useState(false);
+
+  // Texto de la publicación (título + descripción): se genera tras las imágenes.
+  const [postTitle, setPostTitle] = useState("");
+  const [postDescription, setPostDescription] = useState("");
+  const [postCopyLoading, setPostCopyLoading] = useState(false);
+  const [postCopyError, setPostCopyError] = useState("");
 
   // Variants state
   const [variantCount, setVariantCount] = useState(6);
@@ -118,6 +130,13 @@ export default function CustomAdPage() {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const generatingVariants = generatingFormats.size > 0;
+
+  // Multi-template: solo con 2+ templates elegidos en modo "template". En ese
+  // caso se genera una imagen por template y NO se permiten variantes.
+  const isMultiTemplate =
+    refMode === "template" && selectedTemplateIds.length > 1;
+  const templateName = (id: string) =>
+    STATIC_TEMPLATES.find((t) => t.id === id)?.name ?? id;
 
   // Brand header for the ad previews (name + logo).
   const [brand, setBrand] = useState<Brand | null>(null);
@@ -152,7 +171,6 @@ export default function CustomAdPage() {
 
   async function handleGenerateCopy(e: FormEvent) {
     e.preventDefault();
-    if (!copyPrompt.trim()) return;
 
     setCopyError("");
     setCopyLoading(true);
@@ -171,8 +189,15 @@ export default function CustomAdPage() {
       formData.append("productId", existingProductId);
 
       // Reference image: template (default) | existing | new
-      if (refMode === "template" && selectedTemplateId) {
-        formData.append("templateId", selectedTemplateId);
+      if (refMode === "template" && selectedTemplateIds.length > 0) {
+        // El primero define la referencia visual; con 2+ además se mandan todos
+        // para que el copy combine sus ángulos.
+        formData.append("templateId", selectedTemplateIds[0]);
+        if (selectedTemplateIds.length > 1) {
+          selectedTemplateIds.forEach((id) =>
+            formData.append("templateIds", id),
+          );
+        }
       } else if (refMode === "existing" && existingRefId) {
         formData.append("referenceImageId", existingRefId);
       } else if (refMode === "new" && referenceImage) {
@@ -267,37 +292,79 @@ export default function CustomAdPage() {
     return fmts;
   }
 
+  // Genera el texto de la publicación (título + descripción) del variant elegido.
+  async function generatePostCopy() {
+    if (!copyResult) return;
+    setPostCopyError("");
+    setPostCopyLoading(true);
+    try {
+      const res = await api.post<PostCopyResponse>(
+        "/ads/custom/generate-post-copy",
+        { adaptationId: copyResult.adaptationId, variantIndex: selectedVariant },
+      );
+      setPostTitle(res.title);
+      setPostDescription(res.description);
+    } catch (err) {
+      if (err instanceof ApiError) setPostCopyError(err.message);
+      else setPostCopyError("Error al generar el texto de la publicación.");
+    } finally {
+      setPostCopyLoading(false);
+    }
+  }
+
   async function handleGenerateImage() {
     if (!copyResult || formats.length === 0) return;
 
     setImageError("");
     setImageLoading(true);
     setImageResult(null);
+    setTemplateImages([]);
 
     try {
-      const body: Record<string, unknown> = {
+      const base: Record<string, unknown> = {
         adaptationId: copyResult.adaptationId,
         variantIndex: selectedVariant,
         formats,
       };
-      if (imagePrompt.trim()) body.imagePrompt = imagePrompt.trim();
-      if (price.trim()) body.price = price.trim();
-      // Con template, el backend resuelve la imagen de referencia del template;
-      // no mandamos referenceImageUrl para no arrastrar uno viejo del estado.
-      if (selectedTemplateId) body.templateId = selectedTemplateId;
-      else if (referenceImageUrl) body.referenceImageUrl = referenceImageUrl;
+      if (imagePrompt.trim()) base.imagePrompt = imagePrompt.trim();
+      if (price.trim()) base.price = price.trim();
 
-      const res = await api.post<GenerateImageResponse>(
-        "/ads/custom/generate-image",
-        body,
-      );
-      setImageResult(res);
+      let results: GenerateImageResponse[];
+      if (isMultiTemplate) {
+        // Una imagen por template (misma copy). El backend resuelve la imagen
+        // de referencia de cada template.
+        results = await Promise.all(
+          selectedTemplateIds.map((templateId) =>
+            api.post<GenerateImageResponse>("/ads/custom/generate-image", {
+              ...base,
+              templateId,
+            }),
+          ),
+        );
+      } else {
+        const body = { ...base };
+        // Con template, el backend resuelve la imagen de referencia; no mandamos
+        // referenceImageUrl para no arrastrar uno viejo del estado.
+        if (selectedTemplateIds[0]) body.templateId = selectedTemplateIds[0];
+        else if (referenceImageUrl) body.referenceImageUrl = referenceImageUrl;
+        results = [
+          await api.post<GenerateImageResponse>(
+            "/ads/custom/generate-image",
+            body,
+          ),
+        ];
+      }
+
+      const primary = results[0];
+      setTemplateImages(results.length > 1 ? results : []);
+      setImageResult(primary);
+      setEditImageIndex(0);
       setStep("iterate");
 
       const generated = [];
-      if (res.feedImageUrl) generated.push("feed");
-      if (res.verticalImageUrl) generated.push("vertical");
-      if (res.storyImageUrl) generated.push("story");
+      if (primary.feedImageUrl) generated.push("feed");
+      if (primary.verticalImageUrl) generated.push("vertical");
+      if (primary.storyImageUrl) generated.push("story");
       if (generated.length > 0) {
         setEditFormat(generated[0]);
         setVariantFormat(generated[0]);
@@ -314,7 +381,13 @@ export default function CustomAdPage() {
       keysToRemove.forEach((k) => sessionStorage.removeItem(k));
 
       // Store for campaign creation
-      sessionStorage.setItem("generatedImage_custom", JSON.stringify(res));
+      sessionStorage.setItem("generatedImage_custom", JSON.stringify(primary));
+
+      // Ya con las imágenes listas, generar el texto del post (título + descripción)
+      // si aún no existe (no re-generar al volver a revisar imágenes ya hechas).
+      if (!postTitle && !postDescription) {
+        void generatePostCopy();
+      }
     } catch (err) {
       if (err instanceof ApiError) setImageError(err.message);
       else setImageError("Error al generar imágenes.");
@@ -324,7 +397,12 @@ export default function CustomAdPage() {
   }
 
   async function handleEdit() {
-    if (!imageResult || !editInstructions.trim()) return;
+    if (!editInstructions.trim()) return;
+
+    // Con 2+ templates se edita la imagen seleccionada; si no, la única.
+    const isMulti = templateImages.length > 1;
+    const target = isMulti ? templateImages[editImageIndex] : imageResult;
+    if (!target) return;
 
     const targets =
       editFormat === "all" ? getGeneratedFormats() : [editFormat];
@@ -337,24 +415,48 @@ export default function CustomAdPage() {
       const results = await Promise.all(
         targets.map((fmt) =>
           api.post<EditImageResponse>("/ads/_/edit-image", {
-            generatedImageId: imageResult.generatedImageId,
+            generatedImageId: target.generatedImageId,
             format: fmt,
             instructions: editInstructions.trim(),
           }),
         ),
       );
 
-      setImageResult((prev) => {
-        if (!prev) return prev;
-        const updated = { ...prev };
+      const applyEdits = (img: GenerateImageResponse): GenerateImageResponse => {
+        const updated = { ...img };
         for (const res of results) {
           if (res.format === "feed") updated.feedImageUrl = res.imageUrl;
           if (res.format === "vertical") updated.verticalImageUrl = res.imageUrl;
           if (res.format === "story") updated.storyImageUrl = res.imageUrl;
         }
-        sessionStorage.setItem("generatedImage_custom", JSON.stringify(updated));
         return updated;
-      });
+      };
+
+      if (isMulti) {
+        setTemplateImages((prev) => {
+          const next = [...prev];
+          next[editImageIndex] = applyEdits(next[editImageIndex]);
+          // El primero es el que se guarda como imagen base para la campaña.
+          if (editImageIndex === 0) {
+            setImageResult(next[0]);
+            sessionStorage.setItem(
+              "generatedImage_custom",
+              JSON.stringify(next[0]),
+            );
+          }
+          return next;
+        });
+      } else {
+        setImageResult((prev) => {
+          if (!prev) return prev;
+          const updated = applyEdits(prev);
+          sessionStorage.setItem(
+            "generatedImage_custom",
+            JSON.stringify(updated),
+          );
+          return updated;
+        });
+      }
 
       setEditInstructions("");
     } catch (err) {
@@ -444,6 +546,25 @@ export default function CustomAdPage() {
   }
 
   function handleContinueToCampaign() {
+    // Texto del post (título + descripción): uno solo para todos los anuncios.
+    sessionStorage.setItem(
+      "postCopy_custom",
+      JSON.stringify({ title: postTitle, description: postDescription }),
+    );
+    if (templateImages.length > 1) {
+      // Un anuncio por template: el primero es la imagen base, el resto van como
+      // imágenes adicionales (mismo mecanismo que las variantes seleccionadas).
+      sessionStorage.setItem(
+        "generatedImage_custom",
+        JSON.stringify(templateImages[0]),
+      );
+      sessionStorage.setItem(
+        "imageVariantIds_custom",
+        JSON.stringify(templateImages.slice(1).map((i) => i.generatedImageId)),
+      );
+      router.push("/campaigns/new");
+      return;
+    }
     if (imageResult) {
       sessionStorage.setItem(
         "generatedImage_custom",
@@ -517,8 +638,10 @@ export default function CustomAdPage() {
         Imagen de referencia (opcional)
       </h3>
       <p className="mt-1 text-xs text-muted">
-        Elige uno de nuestros templates de estático o sube tu propia imagen como
-        inspiración visual. La IA la recreará con tu producto y tu marca.
+        Elige hasta 3 de nuestros templates de estático o sube tu propia imagen
+        como inspiración visual. La IA la recreará con tu producto y tu marca. Si
+        eliges varios templates, el copy es uno solo y se genera una imagen por
+        template.
       </p>
 
       <div className="mt-3 flex flex-wrap gap-3">
@@ -562,12 +685,21 @@ export default function CustomAdPage() {
       {refMode === "template" && (
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {STATIC_TEMPLATES.map((tpl) => {
-            const isSelected = selectedTemplateId === tpl.id;
+            const order = selectedTemplateIds.indexOf(tpl.id);
+            const isSelected = order !== -1;
             return (
               <button
                 key={tpl.id}
                 type="button"
-                onClick={() => setSelectedTemplateId(tpl.id)}
+                onClick={() =>
+                  setSelectedTemplateIds((prev) =>
+                    prev.includes(tpl.id)
+                      ? prev.filter((id) => id !== tpl.id)
+                      : prev.length >= 3
+                        ? prev // máximo 3 templates
+                        : [...prev, tpl.id],
+                  )
+                }
                 title={tpl.description}
                 className={`group relative flex flex-col overflow-hidden rounded-lg border-2 text-left transition-colors ${
                   isSelected
@@ -582,8 +714,8 @@ export default function CustomAdPage() {
                     className="aspect-[4/5] w-full object-cover"
                   />
                   {isSelected && (
-                    <div className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-orange text-[10px] text-white">
-                      ✓
+                    <div className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-orange text-[10px] font-bold text-white">
+                      {selectedTemplateIds.length > 1 ? order + 1 : "✓"}
                     </div>
                   )}
                 </div>
@@ -668,7 +800,10 @@ export default function CustomAdPage() {
 
   function jumpToStep(target: Step) {
     const targetIdx = steps.findIndex((s) => s.key === target);
-    if (targetIdx === -1 || targetIdx > currentStepIndex) return;
+    if (targetIdx === -1) return;
+    // Se puede avanzar a "Revisar" sin regenerar si ya hay imágenes generadas.
+    if (targetIdx > currentStepIndex && !(target === "iterate" && imageResult))
+      return;
     setStep(target);
   }
 
@@ -735,7 +870,8 @@ export default function CustomAdPage() {
         {steps.map((s, i) => {
           const isCurrent = i === currentStepIndex;
           const isDone = i < currentStepIndex;
-          const isClickable = i < currentStepIndex;
+          const isClickable =
+            i < currentStepIndex || (s.key === "iterate" && !!imageResult);
           return (
             <button
               type="button"
@@ -858,11 +994,12 @@ export default function CustomAdPage() {
         <form onSubmit={handleGenerateCopy} className="mt-4 flex flex-col gap-4">
           <Card>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Describe tu anuncio
+              Describe tu anuncio (opcional)
             </h3>
             <p className="mt-1 text-xs text-muted">
-              Cuéntale a la IA qué tipo de anuncio quieres. Sé lo más
-              específico posible.
+              Complemento opcional: si quieres algo más personalizado para tu
+              template, cuéntale a la IA qué tipo de anuncio quieres. Si lo dejas
+              vacío, la IA se basará en tu producto, marca y template.
             </p>
             <Textarea
               className="mt-3"
@@ -870,7 +1007,6 @@ export default function CustomAdPage() {
               placeholder="Ej: Quiero un anuncio para promocionar nuestro nuevo kit de skincare natural. El tono debe ser fresco y juvenil, enfocado en ingredientes orgánicos. Incluir una oferta de lanzamiento del 20% de descuento."
               value={copyPrompt}
               onChange={(e) => setCopyPrompt(e.target.value)}
-              required
             />
           </Card>
 
@@ -901,7 +1037,6 @@ export default function CustomAdPage() {
             type="submit"
             loading={copyLoading}
             size="lg"
-            disabled={!copyPrompt.trim()}
             className="w-full"
           >
             Generar copy
@@ -918,10 +1053,11 @@ export default function CustomAdPage() {
         <div className="mt-6 flex flex-col gap-6">
           <div>
             <h2 className="text-lg font-semibold text-ink">
-              Elige una variante de copy
+              Elige el copy de la imagen
             </h2>
             <p className="text-sm text-muted">
-              Selecciona la que mejor represente tu marca.
+              Este es el headline y el CTA que irán sobre la imagen. El texto de
+              la publicación (título y descripción) se genera después.
             </p>
           </div>
 
@@ -931,6 +1067,7 @@ export default function CustomAdPage() {
             selected={selectedVariant}
             onSelect={setSelectedVariant}
             productId={copyResult.product?.id ?? null}
+            hideDescription
             onVariantsChange={(variants) =>
               setCopyResult({ ...copyResult, variants })
             }
@@ -941,6 +1078,8 @@ export default function CustomAdPage() {
               variant="ghost"
               onClick={() => {
                 setCopyResult(null);
+                setPostTitle("");
+                setPostDescription("");
                 setStep("copy");
               }}
               className="flex-1"
@@ -964,52 +1103,68 @@ export default function CustomAdPage() {
           {/* Show selected copy */}
           <Card>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Copy seleccionado — Variante {selectedVariant + 1}
+              Copy de la imagen — Variante {selectedVariant + 1}
             </h3>
             <p className="mt-2 text-base font-semibold text-ink">
               {copyResult.variants[selectedVariant].headline}
-            </p>
-            <p className="mt-1 text-sm text-charcoal">
-              {copyResult.variants[selectedVariant].description}
             </p>
             <Badge variant="orange" className="mt-2">
               {copyResult.variants[selectedVariant].ctaTitle}
             </Badge>
           </Card>
 
-          {/* Reference images: reference + product */}
-          {(referenceImageUrl || copyResult.product?.imageUrl) && (
-            <Card>
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-                Imágenes de referencia
-              </h3>
-              <p className="mt-1 text-xs text-muted">
-                La IA usará estas imágenes como base para generar tu creativo.
-              </p>
-              <div className="mt-3 flex gap-4">
-                {referenceImageUrl && (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium text-muted">Imagen de referencia</span>
-                    <img
-                      src={`${API_HOST}${referenceImageUrl}`}
-                      alt="Referencia"
-                      className="h-32 w-32 rounded-lg border border-sand object-cover"
-                    />
-                  </div>
-                )}
-                {copyResult.product?.imageUrl && (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium text-muted">Tu producto</span>
-                    <img
-                      src={`${API_HOST}${copyResult.product.imageUrl}`}
-                      alt="Producto"
-                      className="h-32 w-32 rounded-lg border border-sand object-cover"
-                    />
-                  </div>
-                )}
-              </div>
-            </Card>
-          )}
+          {/* Reference images: template(s) elegidos + product */}
+          {(() => {
+            // Con templates elegidos mostramos TODOS (uno por template); si no,
+            // la imagen de referencia única del copy.
+            const refImages =
+              refMode === "template" && selectedTemplateIds.length > 0
+                ? selectedTemplateIds.map((id) => ({
+                    url: templateImageUrl(id),
+                    label: templateName(id),
+                  }))
+                : referenceImageUrl
+                  ? [{ url: referenceImageUrl, label: "Imagen de referencia" }]
+                  : [];
+            if (refImages.length === 0 && !copyResult.product?.imageUrl)
+              return null;
+            return (
+              <Card>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
+                  Imágenes de referencia
+                </h3>
+                <p className="mt-1 text-xs text-muted">
+                  {selectedTemplateIds.length > 1
+                    ? "Se generará una imagen por cada template elegido, usando estas referencias."
+                    : "La IA usará estas imágenes como base para generar tu creativo."}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-4">
+                  {refImages.map((ref) => (
+                    <div key={ref.url} className="flex flex-col gap-1.5">
+                      <span className="text-xs font-medium text-muted">
+                        {ref.label}
+                      </span>
+                      <img
+                        src={`${API_HOST}${ref.url}`}
+                        alt={ref.label}
+                        className="h-32 w-32 rounded-lg border border-sand object-cover"
+                      />
+                    </div>
+                  ))}
+                  {copyResult.product?.imageUrl && (
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-xs font-medium text-muted">Tu producto</span>
+                      <img
+                        src={`${API_HOST}${copyResult.product.imageUrl}`}
+                        alt="Producto"
+                        className="h-32 w-32 rounded-lg border border-sand object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+              </Card>
+            );
+          })()}
 
           <Card>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
@@ -1074,6 +1229,17 @@ export default function CustomAdPage() {
             >
               ← Cambiar variante
             </Button>
+            {/* Si ya se generaron imágenes, se puede volver a revisarlas sin
+                regenerar (no perder las imágenes al retroceder). */}
+            {imageResult && !imageLoading && (
+              <Button
+                variant="ghost"
+                onClick={() => setStep("iterate")}
+                className="flex-1"
+              >
+                Continuar a revisión →
+              </Button>
+            )}
             <Button
               onClick={handleGenerateImage}
               loading={imageLoading}
@@ -1081,7 +1247,7 @@ export default function CustomAdPage() {
               disabled={formats.length === 0}
               className="flex-1"
             >
-              Generar imágenes
+              {imageResult ? "Regenerar imágenes" : "Generar imágenes"}
             </Button>
           </div>
 
@@ -1102,43 +1268,57 @@ export default function CustomAdPage() {
               Imágenes generadas
             </h2>
             <p className="text-sm text-muted">
-              Revisa los creativos. Puedes pedir cambios o generar variantes.
+              {templateImages.length > 1
+                ? "Se generó una imagen por template. Puedes pedir cambios; se publicarán como anuncios."
+                : "Revisa los creativos. Puedes pedir cambios o generar variantes."}
             </p>
           </div>
 
-          {/* Image grid */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {imageResult.feedImageUrl && (
-              <div className="flex flex-col gap-2">
-                <Badge variant="default">Feed (1:1)</Badge>
-                <img
-                  src={`${API_HOST}${imageResult.feedImageUrl}`}
-                  alt="Feed"
-                  className="w-full rounded-lg border border-sand"
-                />
+          {/* Image grid — una sección por template cuando hay varios */}
+          {(templateImages.length > 1
+            ? templateImages
+            : [imageResult]
+          ).map((img, i) => (
+            <div key={img.generatedImageId} className="flex flex-col gap-2">
+              {templateImages.length > 1 && (
+                <h3 className="text-sm font-semibold text-ink">
+                  {i + 1}. {templateName(selectedTemplateIds[i])}
+                </h3>
+              )}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {img.feedImageUrl && (
+                  <div className="flex flex-col gap-2">
+                    <Badge variant="default">Feed (1:1)</Badge>
+                    <img
+                      src={`${API_HOST}${img.feedImageUrl}`}
+                      alt="Feed"
+                      className="w-full rounded-lg border border-sand"
+                    />
+                  </div>
+                )}
+                {img.verticalImageUrl && (
+                  <div className="flex flex-col gap-2">
+                    <Badge variant="default">Vertical (4:5)</Badge>
+                    <img
+                      src={`${API_HOST}${img.verticalImageUrl}`}
+                      alt="Vertical"
+                      className="w-full rounded-lg border border-sand"
+                    />
+                  </div>
+                )}
+                {img.storyImageUrl && (
+                  <div className="flex flex-col gap-2">
+                    <Badge variant="default">Story (9:16)</Badge>
+                    <img
+                      src={`${API_HOST}${img.storyImageUrl}`}
+                      alt="Story"
+                      className="w-full rounded-lg border border-sand"
+                    />
+                  </div>
+                )}
               </div>
-            )}
-            {imageResult.verticalImageUrl && (
-              <div className="flex flex-col gap-2">
-                <Badge variant="default">Vertical (4:5)</Badge>
-                <img
-                  src={`${API_HOST}${imageResult.verticalImageUrl}`}
-                  alt="Vertical"
-                  className="w-full rounded-lg border border-sand"
-                />
-              </div>
-            )}
-            {imageResult.storyImageUrl && (
-              <div className="flex flex-col gap-2">
-                <Badge variant="default">Story (9:16)</Badge>
-                <img
-                  src={`${API_HOST}${imageResult.storyImageUrl}`}
-                  alt="Story"
-                  className="w-full rounded-lg border border-sand"
-                />
-              </div>
-            )}
-          </div>
+            </div>
+          ))}
 
           {/* Edit section */}
           <Card>
@@ -1151,6 +1331,17 @@ export default function CustomAdPage() {
             </p>
 
             <div className="mt-3 flex flex-col gap-3">
+              {templateImages.length > 1 && (
+                <Select
+                  label="Imagen a editar"
+                  value={String(editImageIndex)}
+                  onChange={(e) => setEditImageIndex(Number(e.target.value))}
+                  options={templateImages.map((_, i) => ({
+                    value: String(i),
+                    label: `${i + 1}. ${templateName(selectedTemplateIds[i])}`,
+                  }))}
+                />
+              )}
               {getGeneratedFormats().length > 1 && (
                 <Select
                   label="Formato a editar"
@@ -1185,6 +1376,58 @@ export default function CustomAdPage() {
             </div>
           </Card>
 
+          {/* Texto de la publicación (feed): se genera tras las imágenes. */}
+          {!refreshCampaignId && (
+            <Card>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
+                  Texto de la publicación
+                </h3>
+                <button
+                  type="button"
+                  onClick={generatePostCopy}
+                  disabled={postCopyLoading}
+                  className="text-xs font-medium text-orange hover:text-orange/80 disabled:opacity-60"
+                >
+                  {postCopyLoading ? "Generando…" : "Regenerar texto"}
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                El título aparece bajo la imagen y la descripción es el texto
+                principal del anuncio. Puedes editarlos.
+              </p>
+
+              {postCopyLoading && !postTitle && !postDescription ? (
+                <div className="mt-4 flex items-center gap-3">
+                  <Spinner size="sm" />
+                  <p className="text-sm text-muted">
+                    Generando el texto de la publicación…
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-3 flex flex-col gap-3">
+                  <Input
+                    label="Título"
+                    placeholder="Titular bajo la imagen"
+                    value={postTitle}
+                    onChange={(e) => setPostTitle(e.target.value)}
+                  />
+                  <Textarea
+                    label="Descripción"
+                    rows={3}
+                    placeholder="Texto principal del anuncio"
+                    value={postDescription}
+                    onChange={(e) => setPostDescription(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {postCopyError && (
+                <p className="mt-2 text-sm text-error">{postCopyError}</p>
+              )}
+            </Card>
+          )}
+
           {imageError && (
             <div className="rounded-md border border-error/20 bg-error/10 p-3">
               <p className="text-sm text-error">{imageError}</p>
@@ -1217,6 +1460,7 @@ export default function CustomAdPage() {
                   variant="ghost"
                   onClick={() => {
                     setImageResult(null);
+                    setTemplateImages([]);
                     setStep("image");
                   }}
                   className="flex-1"
@@ -1240,25 +1484,32 @@ export default function CustomAdPage() {
                 variant="ghost"
                 onClick={() => {
                   setImageResult(null);
+                  setTemplateImages([]);
                   setStep("image");
                 }}
                 className="flex-1"
               >
                 Regenerar desde cero
               </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setStep("variants")}
-                className="flex-1"
-              >
-                Generar variantes
-              </Button>
+              {/* Con 2+ templates no se generan variantes: cada template ya es
+                  una creatividad distinta que se publica como anuncio. */}
+              {templateImages.length <= 1 && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setStep("variants")}
+                  className="flex-1"
+                >
+                  Generar variantes
+                </Button>
+              )}
               <Button
                 onClick={handleContinueToCampaign}
                 size="lg"
                 className="flex-1"
               >
-                Crear campaña
+                {templateImages.length > 1
+                  ? `Crear campaña (${templateImages.length} anuncios)`
+                  : "Crear campaña"}
               </Button>
             </div>
           )}
@@ -1407,8 +1658,8 @@ export default function CustomAdPage() {
                                   ? `${API_HOST}${brand.logoUrl}`
                                   : null
                               }
-                              primaryText={copy?.description ?? ""}
-                              headline={copy?.headline ?? ""}
+                              primaryText={postDescription || copy?.description || ""}
+                              headline={postTitle || copy?.headline || ""}
                               ctaLabel={copy?.ctaTitle ?? "Más información"}
                               domain={domainFromUrl(brand?.websiteUrl)}
                               label={`Variante ${labelIndex} · ${formatLabel}`}
