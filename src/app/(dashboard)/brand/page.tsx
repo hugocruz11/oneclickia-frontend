@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
+import { FileUpload } from "@/components/ui/FileUpload";
 import { api, ApiError } from "@/lib/api";
 import type { Brand, PricePositioning } from "@/lib/types";
 
@@ -54,6 +55,9 @@ function BrandPageContent() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Logo: se sube por separado (multipart) al guardar.
+  const [logoFile, setLogoFile] = useState<File | null>(null);
 
   // Editable fields (basics)
   const [name, setName] = useState("");
@@ -117,6 +121,7 @@ function BrandPageContent() {
 
   function handleCancel() {
     if (brand) populateForm(brand);
+    setLogoFile(null);
     setEditing(false);
     setError("");
   }
@@ -126,6 +131,12 @@ function BrandPageContent() {
     setError("");
     setSaved(false);
     try {
+      // Si se eligió un logo nuevo, se sube primero (endpoint multipart aparte).
+      if (logoFile) {
+        const form = new FormData();
+        form.append("logo", logoFile);
+        await api.post<{ brand: Brand }>("/brand/logo", form);
+      }
       const updated = await api.patch<{ brand: Brand }>("/brand", {
         name: name.trim() || undefined,
         websiteUrl: websiteUrl.trim() || undefined,
@@ -150,6 +161,7 @@ function BrandPageContent() {
         marketGap: marketGap.trim() || undefined,
       });
       setBrand(updated.brand);
+      setLogoFile(null);
       setEditing(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -247,6 +259,16 @@ function BrandPageContent() {
             <div className="flex-1">
               {editing ? (
                 <div className="flex flex-col gap-3">
+                  <FileUpload
+                    label="Logo"
+                    value={logoFile}
+                    onChange={setLogoFile}
+                    helperText={
+                      brand.logoUrl && !logoFile
+                        ? "Ya tienes un logo. Sube uno nuevo para reemplazarlo."
+                        : "PNG, JPG o WEBP (max 5MB)."
+                    }
+                  />
                   <Input
                     label="Nombre"
                     value={name}
