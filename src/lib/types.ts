@@ -175,9 +175,16 @@ export interface ReferenceImage {
 
 export interface CopyVariant {
   headline: string;
-  description: string;
+  // El flujo custom separa el texto del post; description es opcional aquí.
+  description?: string;
   ctaTitle: string;
   rationale: string;
+}
+
+/** Texto del post (feed), generado tras las imágenes. title = Meta `name`. */
+export interface PostCopyResponse {
+  title: string;
+  description: string;
 }
 
 export interface Product {

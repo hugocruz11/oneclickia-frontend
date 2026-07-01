@@ -11,6 +11,8 @@ interface CopyVariantPickerProps {
   onSelect: (index: number) => void;
   onVariantsChange: (variants: CopyVariant[]) => void;
   productId?: string | null;
+  /** Flujo custom: el texto del post se genera aparte, oculta la descripción. */
+  hideDescription?: boolean;
 }
 
 export function CopyVariantPicker({
@@ -20,6 +22,7 @@ export function CopyVariantPicker({
   onSelect,
   onVariantsChange,
   productId,
+  hideDescription = false,
 }: CopyVariantPickerProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draft, setDraft] = useState<CopyVariant | null>(null);
@@ -73,7 +76,7 @@ export function CopyVariantPicker({
         `/ads/adaptations/${adaptationId}/variants/${editingIndex}`,
         {
           headline: draft.headline,
-          description: draft.description,
+          description: draft.description ?? "",
           ctaTitle: draft.ctaTitle,
         },
       );
@@ -93,7 +96,7 @@ export function CopyVariantPicker({
     try {
       const created = await api.post<{ id: string }>("/ads/saved-copies", {
         headline: v.headline,
-        description: v.description,
+        description: v.description ?? "",
         ctaTitle: v.ctaTitle,
         rationale: v.rationale,
         sourceAdaptationId: adaptationId,
@@ -195,19 +198,21 @@ export function CopyVariantPicker({
                     className="mt-1 w-full rounded-md border border-sand bg-cream px-3 py-2 text-ink focus:border-orange focus:outline-none"
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-medium uppercase text-muted">
-                    Descripción
-                  </label>
-                  <textarea
-                    value={draft.description}
-                    onChange={(e) =>
-                      setDraft({ ...draft, description: e.target.value })
-                    }
-                    rows={3}
-                    className="mt-1 w-full resize-none rounded-md border border-sand bg-cream px-3 py-2 text-ink focus:border-orange focus:outline-none"
-                  />
-                </div>
+                {!hideDescription && (
+                  <div>
+                    <label className="text-xs font-medium uppercase text-muted">
+                      Descripción
+                    </label>
+                    <textarea
+                      value={draft.description ?? ""}
+                      onChange={(e) =>
+                        setDraft({ ...draft, description: e.target.value })
+                      }
+                      rows={3}
+                      className="mt-1 w-full resize-none rounded-md border border-sand bg-cream px-3 py-2 text-ink focus:border-orange focus:outline-none"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="text-xs font-medium uppercase text-muted">
                     CTA
@@ -246,9 +251,11 @@ export function CopyVariantPicker({
                 <h4 className="mt-2 text-base font-semibold text-ink">
                   {variant.headline}
                 </h4>
-                <p className="mt-1 text-sm text-charcoal">
-                  {variant.description}
-                </p>
+                {!hideDescription && (
+                  <p className="mt-1 text-sm text-charcoal">
+                    {variant.description}
+                  </p>
+                )}
 
                 <div className="mt-3 flex items-center justify-between">
                   <span className="inline-flex items-center rounded-sm border border-orange/20 bg-orange/10 px-2 py-0.5 text-xs font-semibold text-orange">
