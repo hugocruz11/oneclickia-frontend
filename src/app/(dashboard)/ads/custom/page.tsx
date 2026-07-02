@@ -97,6 +97,8 @@ export default function CustomAdPage() {
 
   // Image generation state
   const [imagePrompt, setImagePrompt] = useState("");
+  // "Déjalo todo a la IA": prompt experimental libre, sin contexto de marca.
+  const [freeStyle, setFreeStyle] = useState(false);
   const [price, setPrice] = useState("");
   const [formats, setFormats] = useState<string[]>(["feed"]);
   const [imageLoading, setImageLoading] = useState(false);
@@ -128,6 +130,8 @@ export default function CustomAdPage() {
   >([]);
   const [selectedVariants, setSelectedVariants] = useState<Set<string>>(new Set());
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  // Zoom (lupa) para ampliar una imagen generada en el paso "Revisar".
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   const generatingVariants = generatingFormats.size > 0;
 
@@ -137,6 +141,25 @@ export default function CustomAdPage() {
     refMode === "template" && selectedTemplateIds.length > 1;
   const templateName = (id: string) =>
     STATIC_TEMPLATES.find((t) => t.id === id)?.name ?? id;
+
+  // Imagen con botón de lupa para ampliarla en el lightbox.
+  const zoomableImg = (relativeUrl: string, alt: string) => {
+    const full = `${API_HOST}${relativeUrl}`;
+    return (
+      <div className="group relative">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={full} alt={alt} className="w-full rounded-lg border border-sand" />
+        <button
+          type="button"
+          onClick={() => setZoomUrl(full)}
+          aria-label="Ampliar imagen"
+          className="absolute right-2 top-2 rounded-full bg-black/50 p-1.5 text-white transition-colors hover:bg-black/70"
+        >
+          <Icon name="search" size={16} />
+        </button>
+      </div>
+    );
+  };
 
   // Brand header for the ad previews (name + logo).
   const [brand, setBrand] = useState<Brand | null>(null);
@@ -172,6 +195,13 @@ export default function CustomAdPage() {
   async function handleGenerateCopy(e: FormEvent) {
     e.preventDefault();
 
+    if (freeStyle && !copyPrompt.trim()) {
+      setCopyError(
+        "Describe lo que quieres para el anuncio (obligatorio en modo “Déjalo todo a la IA”).",
+      );
+      return;
+    }
+
     setCopyError("");
     setCopyLoading(true);
     setCopyResult(null);
@@ -188,8 +218,14 @@ export default function CustomAdPage() {
       formData.append("targetLang", targetLang);
       formData.append("productId", existingProductId);
 
+      // "Déjalo todo a la IA": el copy se genera solo con el nombre de la marca
+      // + la descripción del usuario (sin templates ni contexto de marca).
+      if (freeStyle) {
+        formData.append("freeStyle", "true");
+      }
+
       // Reference image: template (default) | existing | new
-      if (refMode === "template" && selectedTemplateIds.length > 0) {
+      if (!freeStyle && refMode === "template" && selectedTemplateIds.length > 0) {
         // El primero define la referencia visual; con 2+ además se mandan todos
         // para que el copy combine sus ángulos.
         formData.append("templateId", selectedTemplateIds[0]);
@@ -330,7 +366,18 @@ export default function CustomAdPage() {
       if (price.trim()) base.price = price.trim();
 
       let results: GenerateImageResponse[];
-      if (isMultiTemplate) {
+      if (freeStyle) {
+        // "Déjalo todo a la IA": una sola imagen, sin template ni marca. Si no
+        // hay dirección creativa propia, se usa la descripción del anuncio.
+        const override = imagePrompt.trim() || copyPrompt.trim();
+        results = [
+          await api.post<GenerateImageResponse>("/ads/custom/generate-image", {
+            ...base,
+            imagePrompt: override || undefined,
+            freeStyle: true,
+          }),
+        ];
+      } else if (isMultiTemplate) {
         // Una imagen por template (misma copy). El backend resuelve la imagen
         // de referencia de cada template.
         results = await Promise.all(
@@ -992,14 +1039,53 @@ export default function CustomAdPage() {
 
       {step === "copy" && copySource === "new" && (
         <form onSubmit={handleGenerateCopy} className="mt-4 flex flex-col gap-4">
+          {/* "Déjalo todo a la IA": rige todo el flujo — deshabilita templates y
+              exige describir el anuncio. */}
+          <Card className={freeStyle ? "border-orange/40 bg-orange/5" : undefined}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-ink">
+                  Déjalo todo a la IA
+                </h3>
+                <p className="mt-1 text-xs text-muted">
+                  La IA crea el creativo con total libertad a partir de tu
+                  producto y de lo que describas. No se usan templates ni el
+                  contexto de tu marca (colores, logo, identidad).
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={freeStyle}
+                onClick={() =>
+                  setFreeStyle((v) => {
+                    const next = !v;
+                    // Al activar, se limpian los templates (no se pueden usar).
+                    if (next) setSelectedTemplateIds([]);
+                    return next;
+                  })
+                }
+                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                  freeStyle ? "bg-orange" : "bg-sand"
+                }`}
+              >
+                <span
+                  className={`absolute top-1 left-0 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                    freeStyle ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+          </Card>
+
           <Card>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Describe tu anuncio (opcional)
+              Describe tu anuncio {freeStyle ? "(obligatorio)" : "(opcional)"}
             </h3>
             <p className="mt-1 text-xs text-muted">
-              Complemento opcional: si quieres algo más personalizado para tu
-              template, cuéntale a la IA qué tipo de anuncio quieres. Si lo dejas
-              vacío, la IA se basará en tu producto, marca y template.
+              {freeStyle
+                ? "En modo “Déjalo todo a la IA” es obligatorio: cuéntale a la IA exactamente el anuncio que quieres (estilo, escena, mensaje, oferta…)."
+                : "Complemento opcional: si quieres algo más personalizado para tu template, cuéntale a la IA qué tipo de anuncio quieres. Si lo dejas vacío, la IA se basará en tu producto, marca y template."}
             </p>
             <Textarea
               className="mt-3"
@@ -1007,12 +1093,20 @@ export default function CustomAdPage() {
               placeholder="Ej: Quiero un anuncio para promocionar nuestro nuevo kit de skincare natural. El tono debe ser fresco y juvenil, enfocado en ingredientes orgánicos. Incluir una oferta de lanzamiento del 20% de descuento."
               value={copyPrompt}
               onChange={(e) => setCopyPrompt(e.target.value)}
+              required={freeStyle}
             />
           </Card>
 
           {productPickerCard}
 
-          {referencePickerCard}
+          {/* Con "Déjalo todo a la IA" los templates quedan deshabilitados. */}
+          {freeStyle ? (
+            <div className="pointer-events-none opacity-50" aria-disabled>
+              {referencePickerCard}
+            </div>
+          ) : (
+            referencePickerCard
+          )}
 
           <Card>
             <Select
@@ -1037,6 +1131,7 @@ export default function CustomAdPage() {
             type="submit"
             loading={copyLoading}
             size="lg"
+            disabled={freeStyle && !copyPrompt.trim()}
             className="w-full"
           >
             Generar copy
@@ -1289,36 +1384,32 @@ export default function CustomAdPage() {
                 {img.feedImageUrl && (
                   <div className="flex flex-col gap-2">
                     <Badge variant="default">Feed (1:1)</Badge>
-                    <img
-                      src={`${API_HOST}${img.feedImageUrl}`}
-                      alt="Feed"
-                      className="w-full rounded-lg border border-sand"
-                    />
+                    {zoomableImg(img.feedImageUrl, "Feed")}
                   </div>
                 )}
                 {img.verticalImageUrl && (
                   <div className="flex flex-col gap-2">
                     <Badge variant="default">Vertical (4:5)</Badge>
-                    <img
-                      src={`${API_HOST}${img.verticalImageUrl}`}
-                      alt="Vertical"
-                      className="w-full rounded-lg border border-sand"
-                    />
+                    {zoomableImg(img.verticalImageUrl, "Vertical")}
                   </div>
                 )}
                 {img.storyImageUrl && (
                   <div className="flex flex-col gap-2">
                     <Badge variant="default">Story (9:16)</Badge>
-                    <img
-                      src={`${API_HOST}${img.storyImageUrl}`}
-                      alt="Story"
-                      className="w-full rounded-lg border border-sand"
-                    />
+                    {zoomableImg(img.storyImageUrl, "Story")}
                   </div>
                 )}
               </div>
             </div>
           ))}
+
+          {zoomUrl && (
+            <VariantLightbox
+              imageUrl={zoomUrl}
+              label="Imagen generada"
+              onClose={() => setZoomUrl(null)}
+            />
+          )}
 
           {/* Edit section */}
           <Card>
