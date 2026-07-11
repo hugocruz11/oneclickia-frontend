@@ -6,38 +6,28 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
-import { SubscribeModal } from "@/components/SubscribeModal";
 import { useCredits, CREDITS_ENABLED } from "@/contexts/CreditsContext";
-import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/lib/api";
 import {
   billingApi,
+  formatCop,
   formatUsd,
   type Plan,
+  type PlanTier,
   type CreditPack,
-  type EpaycoConfig,
 } from "@/lib/billing";
-import { openPackCheckout } from "@/lib/epayco";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-// Packs are priced in our USD catalog; charge the same currency.
-const PACK_CURRENCY = "USD";
+type Banner = "success" | "cancel" | "pending" | "subscribed" | null;
 
 export default function PlansPage() {
   const { summary, refresh } = useCredits();
-  const { user } = useAuth();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [packs, setPacks] = useState<CreditPack[]>([]);
-  const [config, setConfig] = useState<EpaycoConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [pending, setPending] = useState<string | null>(null);
   const [canceling, setCanceling] = useState(false);
-  const [modalPlan, setModalPlan] = useState<Plan | null>(null);
-  const [banner, setBanner] = useState<"success" | "cancel" | "subscribed" | null>(
-    null,
-  );
+  const [banner, setBanner] = useState<Banner>(null);
 
   const router = useRouter();
 
@@ -47,57 +37,65 @@ export default function PlansPage() {
       router.replace("/ads/search");
       return;
     }
-    Promise.all([billingApi.plans(), billingApi.packs(), billingApi.config()])
-      .then(([p, k, c]) => {
+    const params = new URLSearchParams(window.location.search);
+
+    Promise.all([billingApi.plans(), billingApi.packs()])
+      .then(([p, k]) => {
         setPlans(p);
         setPacks(k);
-        setConfig(c);
-        // ?plan=PRO (e.g. coming from the landing → register) preselects a
-        // plan and opens the card form straight away.
-        const wanted = new URLSearchParams(window.location.search).get("plan");
+        // ?plan=PRO (e.g. coming from the landing → register) starts the
+        // Mercado Pago checkout for that plan straight away.
+        const wanted = params.get("plan") as PlanTier | null;
         const match = wanted ? p.find((pl) => pl.tier === wanted) : undefined;
-        if (match && match.tier !== "FREE") setModalPlan(match);
+        if (match && match.tier !== "FREE") void subscribeTo(match.tier);
       })
       .catch((err) =>
         setError(err instanceof ApiError ? err.message : "Error al cargar."),
       )
       .finally(() => setLoading(false));
 
-    // Returning from the ePayco pack checkout: show a banner + refresh.
-    const status = new URLSearchParams(window.location.search).get("status");
-    if (status === "success" || status === "cancel") {
+    // Returning from a Mercado Pago checkout: show a banner + refresh.
+    // "subscribed"/"success" credits land when the webhook confirms, so we
+    // refresh optimistically here and again on window focus.
+    const status = params.get("status") as Banner;
+    if (
+      status === "success" ||
+      status === "cancel" ||
+      status === "pending" ||
+      status === "subscribed"
+    ) {
       setBanner(status);
-      if (status === "success") void refresh();
+      if (status === "success" || status === "subscribed") void refresh();
     }
   }, [refresh, router]);
 
-  async function buyPack(pack: CreditPack) {
-    if (!config || !user) {
-      setError("No se pudo iniciar el pago. Recarga la página.");
-      return;
+  /** Create the checkout at the backend and send the user to Mercado Pago. */
+  async function subscribeTo(tier: PlanTier) {
+    setPending(tier);
+    setError("");
+    try {
+      const { initPoint } = await billingApi.subscribe(tier);
+      window.location.href = initPoint;
+    } catch (err) {
+      setError(
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : "No se pudo iniciar la suscripción.",
+      );
+      setPending(null);
     }
+  }
+
+  async function buyPack(pack: CreditPack) {
     setPending(pack.id);
     setError("");
     try {
-      await openPackCheckout({
-        publicKey: config.publicKey,
-        test: config.test,
-        amount: pack.priceUsdCents / 100,
-        currency: PACK_CURRENCY,
-        name: `OneClickIA — ${pack.name}`,
-        description: `${pack.credits} créditos`,
-        invoice: `pack-${pack.id}-${user.id.slice(0, 8)}-${Date.now()}`,
-        email: user.email,
-        userId: user.id,
-        packId: pack.id,
-        confirmationUrl: `${API_BASE}/billing/webhook`,
-        responseUrl: `${window.location.origin}/plans?status=success`,
-      });
+      const { initPoint } = await billingApi.packCheckout(pack.id);
+      window.location.href = initPoint;
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "No se pudo abrir el pago.",
       );
-    } finally {
       setPending(null);
     }
   }
@@ -119,12 +117,6 @@ export default function PlansPage() {
     } finally {
       setCanceling(false);
     }
-  }
-
-  function onSubscribed() {
-    setModalPlan(null);
-    setBanner("subscribed");
-    void refresh();
   }
 
   // Créditos desactivados → no renderizamos la página (ya redirigimos arriba).
@@ -184,8 +176,16 @@ export default function PlansPage() {
       {banner === "subscribed" && (
         <div className="mt-4 rounded-md border border-success/20 bg-success/10 p-3">
           <p className="text-sm text-success-text">
-            ¡Suscripción creada! Tus créditos se acreditan cuando ePayco confirma
-            el primer cobro.
+            ¡Suscripción autorizada! Tus créditos se acreditan cuando Mercado
+            Pago confirma el primer cobro (suele tardar unos segundos).
+          </p>
+        </div>
+      )}
+      {banner === "pending" && (
+        <div className="mt-4 rounded-md border border-warning/30 bg-warning/10 p-3">
+          <p className="text-sm text-charcoal">
+            Tu pago está en proceso. Los créditos se acreditan cuando Mercado
+            Pago lo apruebe.
           </p>
         </div>
       )}
@@ -216,10 +216,15 @@ export default function PlansPage() {
               </div>
               <p className="mt-2">
                 <span className="text-2xl font-bold text-ink">
-                  {formatUsd(plan.priceUsdCents)}
+                  {formatCop(plan.priceCop)}
                 </span>
                 {!isFree && <span className="text-sm text-muted">/mes</span>}
               </p>
+              {!isFree && (
+                <p className="mt-0.5 text-xs text-muted">
+                  ≈ {formatUsd(plan.priceUsdCents)} USD
+                </p>
+              )}
               <p className="mt-1 text-sm text-muted">
                 {plan.monthlyCredits.toLocaleString("es")} créditos / mes
               </p>
@@ -239,8 +244,9 @@ export default function PlansPage() {
                 ) : (
                   <Button
                     className="w-full"
-                    disabled={isCurrent}
-                    onClick={() => setModalPlan(plan)}
+                    disabled={isCurrent || pending !== null}
+                    loading={pending === plan.tier}
+                    onClick={() => subscribeTo(plan.tier)}
                   >
                     {isCurrent ? "Plan actual" : "Suscribirme"}
                   </Button>
@@ -250,6 +256,10 @@ export default function PlansPage() {
           );
         })}
       </div>
+      <p className="mt-2 text-xs text-muted">
+        Pago seguro procesado por Mercado Pago. La suscripción se renueva
+        automáticamente cada mes; puedes cancelarla cuando quieras.
+      </p>
 
       {/* ── One-off credit packs ── */}
       <h2 className="mt-10 text-lg font-semibold text-ink">Packs de créditos</h2>
@@ -261,7 +271,7 @@ export default function PlansPage() {
           <Card key={pack.id} className="flex flex-col">
             <h3 className="font-semibold text-ink">{pack.name}</h3>
             <p className="mt-2 text-2xl font-bold text-ink">
-              {formatUsd(pack.priceUsdCents)}
+              {formatCop(pack.priceCop)}
             </p>
             <p className="mt-1 flex-1 text-sm text-muted">
               {pack.credits.toLocaleString("es")} créditos · no caducan
@@ -278,16 +288,6 @@ export default function PlansPage() {
           </Card>
         ))}
       </div>
-
-      {modalPlan && config && (
-        <SubscribeModal
-          plan={modalPlan}
-          config={config}
-          defaultEmail={user?.email}
-          onClose={() => setModalPlan(null)}
-          onSuccess={onSubscribed}
-        />
-      )}
     </div>
   );
 }
