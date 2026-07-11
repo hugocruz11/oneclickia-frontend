@@ -31,6 +31,8 @@ export interface Plan {
   tier: PlanTier;
   name: string;
   priceUsdCents: number;
+  /** What Mercado Pago actually charges, in whole COP. */
+  priceCop: number;
   monthlyCredits: number;
   maxLinkedBusinesses: number;
   features: string[];
@@ -41,6 +43,8 @@ export interface CreditPack {
   name: string;
   credits: number;
   priceUsdCents: number;
+  /** What Mercado Pago actually charges, in whole COP. */
+  priceCop: number;
 }
 
 /** Event dispatched by the API client on any HTTP 402 response. */
@@ -57,36 +61,32 @@ export function formatUsd(cents: number): string {
   return `$${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)}`;
 }
 
-// ── API calls ──
-
-/** ePayco public config the browser needs to tokenize cards / checkout. */
-export interface EpaycoConfig {
-  publicKey: string;
-  test: boolean;
+/** Whole COP, e.g. 139900 → "$139.900 COP". */
+export function formatCop(pesos: number): string {
+  if (pesos === 0) return "Gratis";
+  return `$${pesos.toLocaleString("es-CO")} COP`;
 }
 
-/** Payload for POST /billing/subscribe — the card is already tokenized. */
-export interface SubscribePayload {
-  tier: PlanTier;
-  tokenCard: string;
-  docType: string;
-  docNumber: string;
-  name?: string;
-  phone?: string;
+// ── API calls ──
+
+/** Both checkouts answer with the Mercado Pago URL to redirect to. */
+export interface CheckoutRedirect {
+  initPoint: string;
 }
 
 export const billingApi = {
   me: () => api.get<BillingSummary>("/billing/me"),
   plans: () => api.get<Plan[]>("/billing/plans"),
   packs: () => api.get<CreditPack[]>("/billing/packs"),
-  /** ePayco public key + test flag for the browser SDK. */
-  config: () => api.get<EpaycoConfig>("/billing/config"),
-  /** Create the recurring subscription from a browser-tokenized card. */
-  subscribe: (payload: SubscribePayload) =>
-    api.post<{ status: SubscriptionStatus; tier: PlanTier }>(
-      "/billing/subscribe",
-      payload,
-    ),
+  /**
+   * Start a subscription checkout at Mercado Pago. Redirect the browser
+   * to `initPoint`; activation/credits arrive via webhooks after payment.
+   */
+  subscribe: (tier: PlanTier) =>
+    api.post<CheckoutRedirect>("/billing/subscribe", { tier }),
+  /** Start a one-off credit-pack checkout at Mercado Pago. */
+  packCheckout: (packId: string) =>
+    api.post<CheckoutRedirect>("/billing/packs/checkout", { packId }),
   /** Cancel the recurring subscription (keeps already-paid credits). */
   cancel: () => api.post<{ canceled: true }>("/billing/cancel"),
 };

@@ -85,7 +85,7 @@ export function CreditsProvider({ children }: { children: ReactNode }) {
       // The action was rejected, so the balance is authoritative — refresh.
       void refresh();
     };
-    // Keep the balance fresh when the user returns from the ePayco checkout.
+    // Keep the balance fresh when the user returns from the Mercado Pago checkout.
     const onFocus = () => void refresh();
 
     window.addEventListener(INSUFFICIENT_CREDITS_EVENT, onInsufficient);

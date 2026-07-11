@@ -50,9 +50,9 @@ export default function RegisterPage() {
 
       // Subscribe-before-register funnel: if the landing sent a paid plan
       // (?plan=PRO), send the new user to the plans page with that plan
-      // preselected so the card form opens for it. Subscribing needs the
-      // ePayco card-tokenization form, so it lives on /plans (not a redirect
-      // to a hosted page). Otherwise go straight to onboarding.
+      // preselected. Subscribing happens on the
+      // Mercado Pago checkout redirect, which /plans triggers automatically
+      // for that plan. Otherwise go straight to onboarding.
       const plan = new URLSearchParams(window.location.search).get(
         "plan",
       ) as PlanTier | null;
