@@ -685,10 +685,11 @@ export default function CustomAdPage() {
         Imagen de referencia (opcional)
       </h3>
       <p className="mt-1 text-xs text-muted">
-        Elige hasta 3 de nuestros templates de estático o sube tu propia imagen
-        como inspiración visual. La IA la recreará con tu producto y tu marca. Si
-        eliges varios templates, el copy es uno solo y se genera una imagen por
-        template.
+        Elige hasta 5 tipos de anuncio o sube tu propia imagen como inspiración
+        visual. Cada template define el tipo de anuncio (la IA crea una
+        composición original con tu producto y tu marca, no copia la imagen de
+        ejemplo). Si eliges varios templates, el copy es uno solo y se genera
+        una imagen por template.
       </p>
 
       <div className="mt-3 flex flex-wrap gap-3">
@@ -742,8 +743,8 @@ export default function CustomAdPage() {
                   setSelectedTemplateIds((prev) =>
                     prev.includes(tpl.id)
                       ? prev.filter((id) => id !== tpl.id)
-                      : prev.length >= 3
-                        ? prev // máximo 3 templates
+                      : prev.length >= 5
+                        ? prev // máximo 5 templates
                         : [...prev, tpl.id],
                   )
                 }
