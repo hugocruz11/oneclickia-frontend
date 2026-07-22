@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { FontStyleField } from "@/components/ui/FontStylePicker";
 import { VariantLightbox } from "@/components/VariantLightbox";
 import { AdPreviewCard } from "@/components/AdPreviewCard";
 import { AiProgress } from "@/components/AiProgress";
@@ -52,6 +53,8 @@ export default function GenerateImagePage() {
   const [formats, setFormats] = useState<string[]>(["feed"]);
   const [price, setPrice] = useState("");
   const [imagePrompt, setImagePrompt] = useState("");
+  const [fontStyle, setFontStyle] = useState("");
+  const [fontSaving, setFontSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<GenerateImageResponse | null>(null);
@@ -85,7 +88,10 @@ export default function GenerateImagePage() {
   useEffect(() => {
     api
       .get<{ brand: Brand }>("/brand")
-      .then((r) => setBrand(r.brand))
+      .then((r) => {
+        setBrand(r.brand);
+        setFontStyle(r.brand.fontPreference ?? "");
+      })
       .catch(() => {});
   }, []);
 
@@ -132,6 +138,17 @@ export default function GenerateImagePage() {
       };
       if (price.trim()) body.price = price.trim();
       if (imagePrompt.trim()) body.imagePrompt = imagePrompt.trim();
+      const font = fontStyle.trim();
+      if (font) body.fontStyle = font;
+      // Persiste la tipografía como preferencia de marca si cambió.
+      if (font !== (brand?.fontPreference ?? "")) {
+        setFontSaving(true);
+        api
+          .patch<{ brand: Brand }>("/brand", { fontPreference: font })
+          .then((r) => setBrand(r.brand))
+          .catch(() => {})
+          .finally(() => setFontSaving(false));
+      }
 
       const res = await api.post<GenerateImageResponse>(
         `/ads/${cachedAdId}/generate-image`,
@@ -370,6 +387,14 @@ export default function GenerateImagePage() {
               value={imagePrompt}
               onChange={(e) => setImagePrompt(e.target.value)}
             />
+            <div className="mt-4">
+              <FontStyleField
+                value={fontStyle}
+                onChange={setFontStyle}
+                saving={fontSaving}
+                saved={!!(brand?.fontPreference && brand.fontPreference === fontStyle.trim())}
+              />
+            </div>
           </Card>
 
           <Card>

@@ -114,20 +114,18 @@ function ProductCard({
   deleting: boolean;
 }) {
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-  const imageSrc = product.imageUrl.startsWith("http")
-    ? product.imageUrl
-    : `${apiBase}${product.imageUrl}`;
+  const srcOf = (url: string) =>
+    url.startsWith("http") ? url : `${apiBase}${url}`;
+  const images = [product.imageUrl, ...(product.extraImageUrls ?? [])].filter(
+    Boolean,
+  );
 
   return (
     <Card padding="md" className="flex flex-col gap-3">
-      <div className="aspect-square w-full overflow-hidden rounded-md bg-sand">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={imageSrc}
-          alt={product.name ?? "Producto"}
-          className="h-full w-full object-cover"
-        />
-      </div>
+      <ImageCarousel
+        images={images.map(srcOf)}
+        alt={product.name ?? "Producto"}
+      />
 
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm font-semibold text-ink line-clamp-2">
@@ -167,5 +165,63 @@ function ProductCard({
         </Button>
       </div>
     </Card>
+  );
+}
+
+function ImageCarousel({ images, alt }: { images: string[]; alt: string }) {
+  const [index, setIndex] = useState(0);
+  const count = images.length;
+  const safe = Math.min(index, Math.max(0, count - 1));
+  const go = (dir: number) =>
+    setIndex((i) => (i + dir + count) % count);
+
+  return (
+    <div className="group relative aspect-square w-full overflow-hidden rounded-md bg-sand">
+      {images.map((src, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={src + i}
+          src={src}
+          alt={`${alt} ${i + 1}`}
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
+            i === safe ? "opacity-100" : "opacity-0"
+          }`}
+        />
+      ))}
+
+      {count > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={() => go(-1)}
+            aria-label="Anterior"
+            className="absolute left-1.5 top-1/2 -translate-y-1/2 rounded-full bg-ink/50 px-2 py-1 text-white opacity-0 transition-opacity hover:bg-ink/70 group-hover:opacity-100"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            onClick={() => go(1)}
+            aria-label="Siguiente"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-ink/50 px-2 py-1 text-white opacity-0 transition-opacity hover:bg-ink/70 group-hover:opacity-100"
+          >
+            ›
+          </button>
+          <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setIndex(i)}
+                aria-label={`Imagen ${i + 1}`}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === safe ? "w-4 bg-white" : "w-1.5 bg-white/60"
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }

@@ -18,6 +18,7 @@ import { AdPreviewCard } from "@/components/AdPreviewCard";
 import { AiProgress } from "@/components/AiProgress";
 import { Icon } from "@/components/ui/Icon";
 import { STATIC_TEMPLATES, templateImageUrl } from "@/lib/staticTemplates";
+import { FontStyleField } from "@/components/ui/FontStylePicker";
 import { api, ApiError } from "@/lib/api";
 import type {
   AdaptCopyResponse,
@@ -97,6 +98,8 @@ export default function CustomAdPage() {
 
   // Image generation state
   const [imagePrompt, setImagePrompt] = useState("");
+  const [fontStyle, setFontStyle] = useState("");
+  const [fontSaving, setFontSaving] = useState(false);
   // "Déjalo todo a la IA": prompt experimental libre, sin contexto de marca.
   const [freeStyle, setFreeStyle] = useState(false);
   const [price, setPrice] = useState("");
@@ -166,7 +169,10 @@ export default function CustomAdPage() {
   useEffect(() => {
     api
       .get<{ brand: Brand }>("/brand")
-      .then((r) => setBrand(r.brand))
+      .then((r) => {
+        setBrand(r.brand);
+        setFontStyle(r.brand.fontPreference ?? "");
+      })
       .catch(() => {});
   }, []);
 
@@ -364,6 +370,17 @@ export default function CustomAdPage() {
       };
       if (imagePrompt.trim()) base.imagePrompt = imagePrompt.trim();
       if (price.trim()) base.price = price.trim();
+      const font = fontStyle.trim();
+      if (font) base.fontStyle = font;
+      // Persiste la tipografía como preferencia de marca si cambió.
+      if (font !== (brand?.fontPreference ?? "")) {
+        setFontSaving(true);
+        api
+          .patch<{ brand: Brand }>("/brand", { fontPreference: font })
+          .then((r) => setBrand(r.brand))
+          .catch(() => {})
+          .finally(() => setFontSaving(false));
+      }
 
       let results: GenerateImageResponse[];
       if (freeStyle) {
@@ -1276,6 +1293,14 @@ export default function CustomAdPage() {
               value={imagePrompt}
               onChange={(e) => setImagePrompt(e.target.value)}
             />
+            <div className="mt-4">
+              <FontStyleField
+                value={fontStyle}
+                onChange={setFontStyle}
+                saving={fontSaving}
+                saved={!!(brand?.fontPreference && brand.fontPreference === fontStyle.trim())}
+              />
+            </div>
           </Card>
 
           <Card>

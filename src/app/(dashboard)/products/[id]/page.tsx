@@ -11,7 +11,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { FileUpload } from "@/components/ui/FileUpload";
+import { MultiFileUpload } from "@/components/ui/MultiFileUpload";
 import { Textarea } from "@/components/ui/Textarea";
 import { Spinner } from "@/components/ui/Spinner";
 import { api, ApiError } from "@/lib/api";
@@ -91,8 +91,8 @@ export default function EditProductPage() {
 
   const [bootstrapped, setBootstrapped] = useState(false);
   const [state, setState] = useState<WizardState>(EMPTY_STATE);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [newImage, setNewImage] = useState<File | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [newImages, setNewImages] = useState<File[]>([]);
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -105,7 +105,7 @@ export default function EditProductPage() {
         );
         const hydrated = hydrate(product);
         setState(hydrated);
-        setImageUrl(product.imageUrl);
+        setImageUrls([product.imageUrl, ...(product.extraImageUrls ?? [])]);
         setStep(resumeStep(hydrated));
       } catch (err) {
         setError(err instanceof ApiError ? err.message : "No se pudo cargar el producto.");
@@ -133,17 +133,17 @@ export default function EditProductPage() {
     setError("");
 
     try {
-      if (step === 1 && newImage) {
-        // Step 1 may change the image — use multipart.
+      if (step === 1 && newImages.length) {
+        // Step 1 may replace the images — use multipart.
         const formData = new FormData();
         formData.append("name", state.name.trim());
-        formData.append("image", newImage);
+        newImages.forEach((img) => formData.append("images", img));
         const { product } = await api.patch<{ product: Product }>(
           `/products/${productId}`,
           formData,
         );
-        setImageUrl(product.imageUrl);
-        setNewImage(null);
+        setImageUrls([product.imageUrl, ...(product.extraImageUrls ?? [])]);
+        setNewImages([]);
       } else {
         // Otherwise JSON patch with only the fields for the current step.
         const payload: Record<string, unknown> = { ...extras };
@@ -202,9 +202,9 @@ export default function EditProductPage() {
           <Step1
             state={state}
             update={update}
-            imageUrl={imageUrl}
-            newImage={newImage}
-            setNewImage={setNewImage}
+            imageUrls={imageUrls}
+            newImages={newImages}
+            setNewImages={setNewImages}
             onSubmit={handleStepSubmit}
             saving={saving}
             error={error}
@@ -358,26 +358,26 @@ interface StepProps {
 function Step1({
   state,
   update,
-  imageUrl,
-  newImage,
-  setNewImage,
+  imageUrls,
+  newImages,
+  setNewImages,
   onSubmit,
   saving,
   error,
 }: StepProps & {
-  imageUrl: string | null;
-  newImage: File | null;
-  setNewImage: (f: File | null) => void;
+  imageUrls: string[];
+  newImages: File[];
+  setNewImages: (f: File[]) => void;
 }) {
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-  const previewSrc =
-    imageUrl && (imageUrl.startsWith("http") ? imageUrl : `${apiBase}${imageUrl}`);
+  const srcOf = (url: string) =>
+    url.startsWith("http") ? url : `${apiBase}${url}`;
 
   return (
     <>
       <StepHeader
         title="Básicos del producto"
-        subtitle="Confirma el nombre y la imagen. Si quieres cambiar la imagen, sube una nueva."
+        subtitle="Confirma el nombre y las imágenes. Para cambiarlas, sube nuevas (reemplazan todas)."
       />
       <FormShell onSubmit={onSubmit}>
         <Input
@@ -387,25 +387,42 @@ function Step1({
           required
         />
 
-        {previewSrc && !newImage && (
-          <div className="flex items-center gap-4 rounded-md border border-sand bg-cream p-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={previewSrc}
-              alt="Imagen actual"
-              className="h-20 w-20 rounded-md border border-sand object-cover"
-            />
-            <div className="flex-1 text-sm text-muted">
-              Imagen actual. Para reemplazarla, sube una nueva abajo.
+        {imageUrls.length > 0 && newImages.length === 0 && (
+          <div className="rounded-md border border-sand bg-cream p-4">
+            <p className="mb-3 text-sm text-muted">
+              Imágenes actuales. Para reemplazarlas, sube nuevas abajo.
+            </p>
+            <div className="grid grid-cols-3 gap-3">
+              {imageUrls.map((url, i) => (
+                <div
+                  key={url}
+                  className="relative aspect-square overflow-hidden rounded-md border border-sand"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={srcOf(url)}
+                    alt={`Imagen ${i + 1}`}
+                    className="h-full w-full object-cover"
+                  />
+                  {i === 0 && (
+                    <span className="absolute left-1 top-1 rounded bg-orange px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                      Principal
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        <FileUpload
-          label={newImage ? "Nueva imagen" : "Reemplazar imagen (opcional)"}
-          value={newImage}
-          onChange={setNewImage}
-          helperText="Si subes una imagen aquí, sobrescribirá la actual al guardar."
+        <MultiFileUpload
+          label={
+            newImages.length ? "Nuevas imágenes" : "Reemplazar imágenes (opcional)"
+          }
+          value={newImages}
+          onChange={setNewImages}
+          max={3}
+          helperText="Si subes imágenes aquí, sobrescriben las actuales al guardar."
         />
 
         <ErrorBox error={error} />
