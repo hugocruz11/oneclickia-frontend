@@ -53,11 +53,13 @@ export default function RegisterPage() {
       // preselected. Subscribing happens on the
       // Mercado Pago checkout redirect, which /plans triggers automatically
       // for that plan. Otherwise go straight to onboarding.
-      const plan = new URLSearchParams(window.location.search).get(
-        "plan",
-      ) as PlanTier | null;
+      const search = new URLSearchParams(window.location.search);
+      const plan = search.get("plan") as PlanTier | null;
       if (plan && PAID_TIERS.includes(plan)) {
-        window.location.href = `/plans?plan=${plan}`;
+        // Carry the billing period (monthly/annual) through to checkout.
+        const period = search.get("period");
+        const suffix = period === "annual" ? "&period=annual" : "";
+        window.location.href = `/plans?plan=${plan}${suffix}`;
         return;
       }
       window.location.href = "/onboarding";

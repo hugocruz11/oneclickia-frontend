@@ -6,14 +6,14 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { FileUpload } from "@/components/ui/FileUpload";
+import { MultiFileUpload } from "@/components/ui/MultiFileUpload";
 import { api, ApiError } from "@/lib/api";
 import type { Product } from "@/lib/types";
 
 export default function NewProductPage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [image, setImage] = useState<File | null>(null);
+  const [images, setImages] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -21,13 +21,14 @@ export default function NewProductPage() {
     e.preventDefault();
     setError("");
     if (!name.trim()) return setError("El nombre del producto es obligatorio.");
-    if (!image) return setError("La imagen del producto es obligatoria.");
+    if (!images.length)
+      return setError("Sube al menos una imagen del producto.");
 
     setSaving(true);
     try {
       const formData = new FormData();
       formData.append("name", name.trim());
-      formData.append("image", image);
+      images.forEach((img) => formData.append("images", img));
       const { product } = await api.post<{ product: Product }>(
         "/products",
         formData,
@@ -53,7 +54,7 @@ export default function NewProductPage() {
       <Card padding="lg" className="mt-4">
         <h1 className="text-xl font-semibold text-ink">Nuevo producto</h1>
         <p className="mt-2 text-sm text-muted">
-          Empecemos con lo esencial: el nombre y una imagen. Después podrás completar las
+          Empecemos con lo esencial: el nombre y hasta 3 imágenes. Después podrás completar las
           10 preguntas que la IA usa para generar anuncios con contexto real.
         </p>
 
@@ -66,11 +67,12 @@ export default function NewProductPage() {
             required
           />
 
-          <FileUpload
-            label="Imagen del producto *"
-            value={image}
-            onChange={setImage}
-            helperText="Esta imagen se usa como referencia en cada anuncio generado."
+          <MultiFileUpload
+            label="Imágenes del producto *"
+            value={images}
+            onChange={setImages}
+            max={3}
+            helperText="Se usan como referencia en cada anuncio generado con IA."
           />
 
           {error && (

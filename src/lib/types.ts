@@ -34,6 +34,7 @@ export interface Brand {
   logoUrl: string | null;
   logoAnalysis: string | null;
   primaryColors: string[];
+  fontPreference: string | null;
   // ── LA MARCA — Brand Intelligence Survey ──
   identityContext: string | null;
   markets: string | null;
@@ -192,6 +193,9 @@ export interface Product {
   brandId: string;
   name: string | null;
   imageUrl: string;
+  // Vistas adicionales del producto (hasta 2). Se envían a la IA junto con
+  // imageUrl como vistas del mismo producto.
+  extraImageUrls: string[];
   // ── 10 EL PRODUCTO survey fields ──
   description: string | null;
   composition: string | null;
