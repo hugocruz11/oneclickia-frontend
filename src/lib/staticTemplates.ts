@@ -51,7 +51,7 @@ export const STATIC_TEMPLATES: StaticTemplate[] = [
   {
     id: "oferta-promo",
     name: "Oferta / Promo",
-    description: "El precio es el protagonista: precio tachado, oferta, urgencia y CTA.",
+    description: "Oferta y urgencia como protagonistas. El precio solo aparece si lo escribiste tú.",
   },
 ];
 
