@@ -251,8 +251,19 @@ export interface EditImageResponse {
 }
 
 export interface ImageVariantsResponse {
-  variants: { id: string; imageUrl: string }[];
+  variants: {
+    id: string;
+    /** Imagen principal (primer tamaño generado). */
+    imageUrl: string;
+    /** Template de estático usado, si se pidió por template. */
+    templateId?: string;
+    /** Nombre visible del template / dirección creativa. */
+    label?: string;
+    /** Una imagen por cada tamaño generado de esta misma variante. */
+    images?: { format: string; imageUrl: string }[];
+  }[];
   format: string;
+  formats?: string[];
 }
 
 // ── Campaigns ──

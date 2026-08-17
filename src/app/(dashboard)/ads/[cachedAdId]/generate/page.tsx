@@ -11,9 +11,11 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { FontStyleField } from "@/components/ui/FontStylePicker";
 import { VariantLightbox } from "@/components/VariantLightbox";
+import { ZoomableImage } from "@/components/ZoomableImage";
 import { AdPreviewCard } from "@/components/AdPreviewCard";
 import { AiProgress } from "@/components/AiProgress";
 import { api, ApiError } from "@/lib/api";
+import { STATIC_TEMPLATES, templateImageUrl } from "@/lib/staticTemplates";
 import type {
   AdaptCopyResponse,
   Brand,
@@ -43,6 +45,12 @@ const FORMAT_OPTIONS = [
 
 type Step = "generate" | "iterate" | "variants";
 
+/** Máximo de tipos de anuncio (templates) por tanda de variantes. */
+const MAX_VARIANT_TEMPLATES = 5;
+
+const formatLabel = (key: string) =>
+  FORMAT_OPTIONS.find((o) => o.key === key)?.label ?? key;
+
 export default function GenerateImagePage() {
   const { cachedAdId } = useParams<{ cachedAdId: string }>();
 
@@ -65,11 +73,12 @@ export default function GenerateImagePage() {
   const [editFormat, setEditFormat] = useState("story");
   const [editing, setEditing] = useState(false);
 
-  // Variants state
-  const [variantCount, setVariantCount] = useState(6);
-  const [variantFormat, setVariantFormat] = useState("story");
+  // Variants state — una variante por tipo de anuncio (template) elegido.
+  const [variantTemplateIds, setVariantTemplateIds] = useState<string[]>([]);
   const [generatingVariants, setGeneratingVariants] = useState(false);
-  const [imageVariants, setImageVariants] = useState<{ id: string; imageUrl: string }[]>([]);
+  const [imageVariants, setImageVariants] = useState<
+    ImageVariantsResponse["variants"]
+  >([]);
   const [selectedVariants, setSelectedVariants] = useState<Set<number>>(new Set());
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
@@ -162,10 +171,7 @@ export default function GenerateImagePage() {
       if (res.feedImageUrl) generated.push("feed");
       if (res.verticalImageUrl) generated.push("vertical");
       if (res.storyImageUrl) generated.push("story");
-      if (generated.length > 0) {
-        setEditFormat(generated[0]);
-        setVariantFormat(generated[0]);
-      }
+      if (generated.length > 0) setEditFormat(generated[0]);
 
       // Clear any previous generated image keys to avoid stale data
       const keysToRemove: string[] = [];
@@ -229,8 +235,9 @@ export default function GenerateImagePage() {
     }
   }
 
+  /** Una variante por template elegido, renderizada en cada tamaño generado. */
   async function handleGenerateVariants() {
-    if (!result) return;
+    if (!result || variantTemplateIds.length === 0) return;
 
     setGeneratingVariants(true);
     setError("");
@@ -242,8 +249,8 @@ export default function GenerateImagePage() {
         `/ads/${cachedAdId}/image-variants`,
         {
           generatedImageId: result.generatedImageId,
-          format: variantFormat,
-          count: variantCount,
+          formats: getGeneratedFormats(),
+          templateIds: variantTemplateIds,
         },
       );
 
@@ -256,6 +263,16 @@ export default function GenerateImagePage() {
     } finally {
       setGeneratingVariants(false);
     }
+  }
+
+  function toggleVariantTemplate(id: string) {
+    setVariantTemplateIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((t) => t !== id)
+        : prev.length >= MAX_VARIANT_TEMPLATES
+          ? prev // máximo 5 tipos de anuncio
+          : [...prev, id],
+    );
   }
 
   function toggleVariantSelection(index: number) {
@@ -302,6 +319,25 @@ export default function GenerateImagePage() {
   }
 
   const selectedCopyVariant = adaptation.variants[variantIndex];
+
+  // Lista plana de todas las imágenes (variante × tamaño) para el lightbox,
+  // más el índice donde arranca cada variante.
+  const lightboxImages: { url: string; label: string }[] = [];
+  const variantImageOffsets: number[] = [];
+  imageVariants.forEach((v, i) => {
+    const images = v.images?.length
+      ? v.images
+      : [{ format: "", imageUrl: v.imageUrl }];
+    variantImageOffsets[i] = lightboxImages.length;
+    for (const img of images) {
+      lightboxImages.push({
+        url: `${API_HOST}${img.imageUrl}`,
+        label: `${v.label ?? `Variante ${i + 1}`}${
+          img.format ? ` — ${formatLabel(img.format)}` : ""
+        }`,
+      });
+    }
+  });
 
   return (
     <div className="max-w-4xl">
@@ -351,7 +387,7 @@ export default function GenerateImagePage() {
                 {(ad?.imageUrl || ad?.thumbnailUrl) && (
                   <div className="flex flex-col gap-1.5">
                     <span className="text-xs font-medium text-muted">Ad original</span>
-                    <img
+                    <ZoomableImage
                       src={ad.imageUrl || ad.thumbnailUrl!}
                       alt="Ad original"
                       className="h-32 w-32 rounded-lg border border-sand object-cover"
@@ -361,7 +397,7 @@ export default function GenerateImagePage() {
                 {adaptation?.product?.imageUrl && (
                   <div className="flex flex-col gap-1.5">
                     <span className="text-xs font-medium text-muted">Tu producto</span>
-                    <img
+                    <ZoomableImage
                       src={`${API_HOST}${adaptation.product.imageUrl}`}
                       alt="Producto"
                       className="h-32 w-32 rounded-lg border border-sand object-cover"
@@ -487,9 +523,10 @@ export default function GenerateImagePage() {
             {result.feedImageUrl && (
               <div className="flex flex-col gap-2">
                 <Badge variant="default">Feed (1:1)</Badge>
-                <img
+                <ZoomableImage
                   src={`${API_HOST}${result.feedImageUrl}`}
                   alt="Feed"
+                  label="Feed (1:1)"
                   className="w-full rounded-lg border border-sand"
                 />
               </div>
@@ -497,9 +534,10 @@ export default function GenerateImagePage() {
             {result.verticalImageUrl && (
               <div className="flex flex-col gap-2">
                 <Badge variant="default">Vertical (4:5)</Badge>
-                <img
+                <ZoomableImage
                   src={`${API_HOST}${result.verticalImageUrl}`}
                   alt="Vertical"
+                  label="Vertical (4:5)"
                   className="w-full rounded-lg border border-sand"
                 />
               </div>
@@ -507,9 +545,10 @@ export default function GenerateImagePage() {
             {result.storyImageUrl && (
               <div className="flex flex-col gap-2">
                 <Badge variant="default">Story (9:16)</Badge>
-                <img
+                <ZoomableImage
                   src={`${API_HOST}${result.storyImageUrl}`}
                   alt="Story"
+                  label="Story (9:16)"
                   className="w-full rounded-lg border border-sand"
                 />
               </div>
@@ -598,9 +637,12 @@ export default function GenerateImagePage() {
                     <Badge variant="default">
                       {FORMAT_OPTIONS.find((o) => o.key === fmt)?.label ?? fmt}
                     </Badge>
-                    <img
+                    <ZoomableImage
                       src={url}
                       alt={fmt}
+                      label={
+                        FORMAT_OPTIONS.find((o) => o.key === fmt)?.label ?? fmt
+                      }
                       className="max-h-64 rounded-lg border border-sand object-contain"
                     />
                   </div>
@@ -613,54 +655,83 @@ export default function GenerateImagePage() {
           {imageVariants.length === 0 && (
             <Card>
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-                Configurar variantes
+                Tipo de variantes
               </h3>
               <p className="mt-1 text-xs text-muted">
-                Genera hasta 10 variantes de tu imagen aprobada para A/B testing
-                en tu campaña.
+                Elige hasta {MAX_VARIANT_TEMPLATES} tipos de anuncio para el A/B
+                testing. Se genera una variante por tipo, manteniendo tu
+                producto, tu marca y el mismo copy, en cada tamaño que generaste
+                ({getGeneratedFormats().map(formatLabel).join(", ")}).
               </p>
-              <div className="mt-4 flex gap-4">
-                {getGeneratedFormats().length > 1 && (
-                  <div className="w-48">
-                    <Select
-                      label="Formato base"
-                      value={variantFormat}
-                      onChange={(e) => setVariantFormat(e.target.value)}
-                      options={getGeneratedFormats().map((f) => ({
-                        value: f,
-                        label:
-                          FORMAT_OPTIONS.find((o) => o.key === f)?.label ?? f,
-                      }))}
-                    />
-                  </div>
-                )}
-                <div className="w-32">
-                  <Select
-                    label="Cantidad"
-                    value={String(variantCount)}
-                    onChange={(e) => setVariantCount(Number(e.target.value))}
-                    options={Array.from({ length: 10 }, (_, i) => ({
-                      value: String(i + 1),
-                      label: String(i + 1),
-                    }))}
-                  />
-                </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {STATIC_TEMPLATES.map((tpl) => {
+                  const order = variantTemplateIds.indexOf(tpl.id);
+                  const isSelected = order !== -1;
+                  return (
+                    <button
+                      key={tpl.id}
+                      type="button"
+                      onClick={() => toggleVariantTemplate(tpl.id)}
+                      title={tpl.description}
+                      className={`group relative flex flex-col overflow-hidden rounded-lg border-2 text-left transition-colors ${
+                        isSelected
+                          ? "border-orange ring-2 ring-orange/30"
+                          : "border-sand hover:border-orange/30"
+                      }`}
+                    >
+                      <div className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`${API_HOST}${templateImageUrl(tpl.id)}`}
+                          alt={tpl.name}
+                          className="aspect-[4/5] w-full object-cover"
+                        />
+                        {isSelected && (
+                          <div className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-orange text-[10px] font-bold text-white">
+                            {order + 1}
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-2">
+                        <p className="text-xs font-semibold text-ink">
+                          {tpl.name}
+                        </p>
+                        <p className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-muted">
+                          {tpl.description}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
+
               <Button
                 onClick={handleGenerateVariants}
                 loading={generatingVariants}
+                disabled={variantTemplateIds.length === 0}
                 size="lg"
                 className="mt-4 w-full"
               >
-                Generar {variantCount} variante{variantCount > 1 ? "s" : ""}
+                {variantTemplateIds.length === 0
+                  ? "Elige al menos un tipo de anuncio"
+                  : `Generar ${variantTemplateIds.length} variante${
+                      variantTemplateIds.length > 1 ? "s" : ""
+                    } × ${getGeneratedFormats().length} tamaño${
+                      getGeneratedFormats().length > 1 ? "s" : ""
+                    }`}
               </Button>
             </Card>
           )}
 
           {generatingVariants && (
             <AiProgress
-              message={`Generando ${variantCount} variantes…`}
-              estimateSeconds={60}
+              message={`Generando ${variantTemplateIds.length} variantes en ${
+                getGeneratedFormats().length
+              } tamaño${getGeneratedFormats().length > 1 ? "s" : ""}…`}
+              estimateSeconds={
+                20 * variantTemplateIds.length * getGeneratedFormats().length
+              }
             />
           )}
 
@@ -672,29 +743,48 @@ export default function GenerateImagePage() {
                   Variantes generadas
                 </h2>
                 <p className="text-sm text-muted">
-                  Selecciona las que quieres usar. Cada imagen seleccionada se
-                  convierte en un anuncio independiente dentro de tu campaña.
+                  Una variante por tipo de anuncio, en cada tamaño que
+                  generaste. Selecciona las que quieres usar: cada variante
+                  seleccionada se convierte en un anuncio independiente dentro
+                  de tu campaña (con todos sus tamaños).
                 </p>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {imageVariants.map((v, i) => (
-                  <AdPreviewCard
-                    key={v.id}
-                    imageUrl={`${API_HOST}${v.imageUrl}`}
-                    brandName={brand?.name || "Tu marca"}
-                    brandLogoUrl={
-                      brand?.logoUrl ? `${API_HOST}${brand.logoUrl}` : null
-                    }
-                    primaryText={selectedCopyVariant.description ?? ""}
-                    headline={selectedCopyVariant.headline}
-                    ctaLabel={selectedCopyVariant.ctaTitle}
-                    domain={domainFromUrl(brand?.websiteUrl)}
-                    label={`Variante ${i + 1}`}
-                    selected={selectedVariants.has(i)}
-                    onToggle={() => toggleVariantSelection(i)}
-                    onZoom={() => setLightboxIndex(i)}
-                  />
+                  <div key={v.id} className="flex flex-col gap-1.5">
+                    <AdPreviewCard
+                      imageUrl={`${API_HOST}${v.imageUrl}`}
+                      brandName={brand?.name || "Tu marca"}
+                      brandLogoUrl={
+                        brand?.logoUrl ? `${API_HOST}${brand.logoUrl}` : null
+                      }
+                      primaryText={selectedCopyVariant.description ?? ""}
+                      headline={selectedCopyVariant.headline}
+                      ctaLabel={selectedCopyVariant.ctaTitle}
+                      domain={domainFromUrl(brand?.websiteUrl)}
+                      label={v.label ?? `Variante ${i + 1}`}
+                      selected={selectedVariants.has(i)}
+                      onToggle={() => toggleVariantSelection(i)}
+                      onZoom={() => setLightboxIndex(variantImageOffsets[i])}
+                    />
+                    {(v.images?.length ?? 0) > 1 && (
+                      <div className="flex flex-wrap gap-1.5 px-1">
+                        {v.images!.map((img, j) => (
+                          <button
+                            key={img.format}
+                            type="button"
+                            onClick={() =>
+                              setLightboxIndex(variantImageOffsets[i] + j)
+                            }
+                            className="rounded-full border border-sand px-2 py-0.5 text-[11px] text-muted transition-colors hover:border-orange/40 hover:text-ink"
+                          >
+                            {formatLabel(img.format)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
 
@@ -718,10 +808,10 @@ export default function GenerateImagePage() {
                 </p>
               </div>
 
-              {lightboxIndex !== null && imageVariants[lightboxIndex] && (
+              {lightboxIndex !== null && lightboxImages[lightboxIndex] && (
                 <VariantLightbox
-                  imageUrl={`${API_HOST}${imageVariants[lightboxIndex].imageUrl}`}
-                  label={`Variante ${lightboxIndex + 1}`}
+                  imageUrl={lightboxImages[lightboxIndex].url}
+                  label={lightboxImages[lightboxIndex].label}
                   onClose={() => setLightboxIndex(null)}
                   onPrev={
                     lightboxIndex > 0
@@ -729,7 +819,7 @@ export default function GenerateImagePage() {
                       : undefined
                   }
                   onNext={
-                    lightboxIndex < imageVariants.length - 1
+                    lightboxIndex < lightboxImages.length - 1
                       ? () => setLightboxIndex(lightboxIndex + 1)
                       : undefined
                   }
