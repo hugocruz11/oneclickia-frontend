@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useT } from "@/contexts/I18nContext";
 
 interface Props {
   imageUrl: string;
@@ -11,6 +12,8 @@ interface Props {
 }
 
 export function VariantLightbox({ imageUrl, label, onClose, onPrev, onNext }: Props) {
+  const t = useT();
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -34,7 +37,7 @@ export function VariantLightbox({ imageUrl, label, onClose, onPrev, onNext }: Pr
       <button
         type="button"
         onClick={onClose}
-        aria-label="Cerrar"
+        aria-label={t("Cerrar")}
         className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -50,7 +53,7 @@ export function VariantLightbox({ imageUrl, label, onClose, onPrev, onNext }: Pr
             e.stopPropagation();
             onPrev();
           }}
-          aria-label="Anterior"
+          aria-label={t("Anterior")}
           className="absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -66,7 +69,7 @@ export function VariantLightbox({ imageUrl, label, onClose, onPrev, onNext }: Pr
             e.stopPropagation();
             onNext();
           }}
-          aria-label="Siguiente"
+          aria-label={t("Siguiente")}
           className="absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

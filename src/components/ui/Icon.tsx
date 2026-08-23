@@ -36,7 +36,8 @@ export type IconName =
   | "alert-triangle"
   | "check"
   | "link"
-  | "map-pin";
+  | "map-pin"
+  | "globe";
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, "name"> {
   name: IconName;
@@ -233,6 +234,13 @@ const paths: Record<IconName, React.ReactNode> = {
     <>
       <path d="M20 10c0 5-8 12-8 12s-8-7-8-12a8 8 0 0 1 16 0z" />
       <circle cx="12" cy="10" r="2.5" />
+    </>
+  ),
+  globe: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z" />
     </>
   ),
 };

@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { Icon } from "@/components/ui/Icon";
 import { useCredits } from "@/contexts/CreditsContext";
+import { useI18n } from "@/contexts/I18nContext";
+import { RichText } from "@/components/RichText";
 import { api, ApiError } from "@/lib/api";
 import {
   landingsApi,
@@ -45,6 +47,7 @@ export default function LandingEditorPage() {
   const router = useRouter();
   const { refresh, enabled: creditsEnabled } = useCredits();
 
+  const { t, localeTag } = useI18n();
   const [landing, setLanding] = useState<Landing | null>(null);
   const [content, setContent] = useState<LandingContent | null>(null);
   const [html, setHtml] = useState<string>("");
@@ -145,7 +148,7 @@ export default function LandingEditorPage() {
   async function handleDelete() {
     if (
       !window.confirm(
-        "¿Eliminar esta landing? Esta acción no se puede deshacer.",
+        t("¿Eliminar esta landing? Esta acción no se puede deshacer."),
       )
     ) {
       return;
@@ -179,7 +182,7 @@ export default function LandingEditorPage() {
     );
   }
   if (!landing || !content) {
-    return <p className="text-sm text-error">{error || "No encontrada."}</p>;
+    return <p className="text-sm text-error">{t(error || "No encontrada.")}</p>;
   }
 
   const publicUrl = shop
@@ -195,7 +198,7 @@ export default function LandingEditorPage() {
       <div className="flex items-center justify-between">
         <div>
           <Link href="/landings" className="text-sm text-muted hover:text-ink">
-            ← Landings
+            {t("← Landings")}
           </Link>
           <h1 className="mt-1 text-2xl font-semibold text-ink">
             {landing.title || landing.slug}
@@ -203,7 +206,7 @@ export default function LandingEditorPage() {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={landing.status === "PUBLISHED" ? "success" : "muted"}>
-            {landing.status === "PUBLISHED" ? "Publicada" : "Borrador"}
+            {landing.status === "PUBLISHED" ? t("Publicada") : t("Borrador")}
           </Badge>
           <a
             href={`${API_BASE}/landing-preview/${id}`}
@@ -211,37 +214,39 @@ export default function LandingEditorPage() {
             rel="noreferrer"
           >
             <Button variant="ghost" size="sm">
-              Vista previa
+              {t("Vista previa")}
             </Button>
           </a>
           <Button variant="ghost" size="sm" onClick={togglePublish}>
-            {landing.status === "PUBLISHED" ? "Despublicar" : "Publicar"}
+            {landing.status === "PUBLISHED" ? t("Despublicar") : t("Publicar")}
           </Button>
           <button
             type="button"
             onClick={handleDelete}
             className="rounded-md px-3 py-1.5 text-sm font-medium text-error hover:bg-error/10"
           >
-            Eliminar
+            {t("Eliminar")}
           </button>
           <Button onClick={handleSave} loading={saving} size="sm">
-            Guardar
+            {t("Guardar")}
           </Button>
         </div>
       </div>
 
       {savedAt && (
-        <p className="mt-2 text-xs text-success-text">Guardado a las {savedAt}.</p>
+        <p className="mt-2 text-xs text-success-text">
+          {t("Guardado a las {time}.", { time: savedAt })}
+        </p>
       )}
       {error && (
         <div className="mt-3 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
       {publicUrl && (
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
-          <span>URL para tu anuncio:</span>
+          <span>{t("URL para tu anuncio:")}</span>
           <a
             href={publicUrl}
             target="_blank"
@@ -255,10 +260,10 @@ export default function LandingEditorPage() {
             className="rounded border border-sand px-2 py-0.5 text-charcoal hover:bg-sand-light"
             onClick={() => navigator.clipboard?.writeText(publicUrl)}
           >
-            Copiar
+            {t("Copiar")}
           </button>
           {landing.status !== "PUBLISHED" && (
-            <span>(publícala para que sea visible)</span>
+            <span>{t("(publícala para que sea visible)")}</span>
           )}
         </div>
       )}
@@ -267,15 +272,15 @@ export default function LandingEditorPage() {
       <div className="mt-4 flex gap-4">
         <Card className="flex-1 text-center">
           <p className="text-2xl font-bold text-ink">
-            {landing.views.toLocaleString("es")}
+            {landing.views.toLocaleString(localeTag)}
           </p>
-          <p className="text-xs text-muted">Vistas</p>
+          <p className="text-xs text-muted">{t("Vistas")}</p>
         </Card>
         <Card className="flex-1 text-center">
           <p className="text-2xl font-bold text-ink">
-            {landing.clicks.toLocaleString("es")}
+            {landing.clicks.toLocaleString(localeTag)}
           </p>
-          <p className="text-xs text-muted">Clics al CTA</p>
+          <p className="text-xs text-muted">{t("Clics al CTA")}</p>
         </Card>
         <Card className="flex-1 text-center">
           <p className="text-2xl font-bold text-ink">
@@ -289,27 +294,29 @@ export default function LandingEditorPage() {
 
       {/* ── AI generation ── */}
       <Card className="mt-6">
-        <h2 className="text-sm font-semibold text-ink">Generar con IA</h2>
+        <h2 className="text-sm font-semibold text-ink">{t("Generar con IA")}</h2>
         <p className="mt-1 text-xs text-muted">
-          Describe el avatar/ángulo y la IA <strong>diseña toda la landing</strong>{" "}
-          con la identidad de tu marca.{creditsEnabled ? " (15 créditos)" : ""}
+          <RichText>
+            {"Describe el avatar/ángulo y la IA **diseña toda la landing** con la identidad de tu marca."}
+          </RichText>
+          {creditsEnabled ? t(" (15 créditos)") : ""}
         </p>
         <div className="mt-3 grid gap-3">
           <div>
-            <label className={label}>Avatar / ángulo</label>
+            <label className={label}>{t("Avatar / ángulo")}</label>
             <input
               className={input}
-              placeholder="Ej: mujeres con problemas de digestión, cansadas de los polvos verdes"
+              placeholder={t("Ej: mujeres con problemas de digestión, cansadas de los polvos verdes")}
               value={avatar}
               onChange={(e) => setAvatar(e.target.value)}
             />
           </div>
           <div>
-            <label className={label}>Instrucciones extra (opcional)</label>
+            <label className={label}>{t("Instrucciones extra (opcional)")}</label>
             <textarea
               className={input}
               rows={2}
-              placeholder="Tono, ofertas, datos a destacar…"
+              placeholder={t("Tono, ofertas, datos a destacar…")}
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
             />
@@ -317,7 +324,7 @@ export default function LandingEditorPage() {
           <div>
             <Button onClick={handleGenerate} loading={generating}>
               <Icon name="sparkles" size={16} className="mr-1.5" />
-              {hasHtml ? "Regenerar landing" : "Generar landing"}
+              {hasHtml ? t("Regenerar landing") : t("Generar landing")}
             </Button>
           </div>
         </div>
@@ -325,10 +332,10 @@ export default function LandingEditorPage() {
 
       {/* ── Metadata ── */}
       <Card className="mt-4">
-        <h2 className="text-sm font-semibold text-ink">Configuración</h2>
+        <h2 className="text-sm font-semibold text-ink">{t("Configuración")}</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <div>
-            <label className={label}>Nombre</label>
+            <label className={label}>{t("Nombre")}</label>
             <input
               className={input}
               value={landing.title ?? ""}
@@ -336,13 +343,13 @@ export default function LandingEditorPage() {
             />
           </div>
           <div>
-            <label className={label}>Producto Shopify (checkout)</label>
+            <label className={label}>{t("Producto Shopify (checkout)")}</label>
             <select
               className={input}
               value={landing.productHandle ?? ""}
               onChange={(e) => patch("productHandle", e.target.value)}
             >
-              <option value="">— Sin producto —</option>
+              <option value="">{t("— Sin producto —")}</option>
               {products.map((p) => (
                 <option key={p.id} value={p.handle}>
                   {p.title}
@@ -351,16 +358,18 @@ export default function LandingEditorPage() {
             </select>
           </div>
           <div>
-            <label className={label}>Producto de la app (para el copy)</label>
+            <label className={label}>
+              {t("Producto de la app (para el copy)")}
+            </label>
             <select
               className={input}
               value={landing.appProductId ?? ""}
               onChange={(e) => patch("appProductId", e.target.value)}
             >
-              <option value="">— Ninguno —</option>
+              <option value="">{t("— Ninguno —")}</option>
               {appProducts.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name || "(sin nombre)"}
+                  {p.name || t("(sin nombre)")}
                 </option>
               ))}
             </select>
@@ -374,7 +383,7 @@ export default function LandingEditorPage() {
             />
           </div>
           <div>
-            <label className={label}>Avatar (etiqueta)</label>
+            <label className={label}>{t("Avatar (etiqueta)")}</label>
             <input
               className={input}
               value={landing.avatar ?? ""}
@@ -382,7 +391,7 @@ export default function LandingEditorPage() {
             />
           </div>
           <div className="sm:col-span-2">
-            <label className={label}>SEO título</label>
+            <label className={label}>{t("SEO título")}</label>
             <input
               className={input}
               value={landing.seoTitle ?? ""}
@@ -390,7 +399,7 @@ export default function LandingEditorPage() {
             />
           </div>
           <div className="sm:col-span-2">
-            <label className={label}>SEO descripción</label>
+            <label className={label}>{t("SEO descripción")}</label>
             <input
               className={input}
               value={landing.seoDescription ?? ""}
@@ -403,11 +412,13 @@ export default function LandingEditorPage() {
       {/* ── AI-designed HTML (new approach) ── */}
       {hasHtml && (
         <Card className="mt-4">
-          <h2 className="text-sm font-semibold text-ink">HTML de la landing</h2>
+          <h2 className="text-sm font-semibold text-ink">
+            {t("HTML de la landing")}
+          </h2>
           <p className="mt-1 text-xs text-muted">
-            La IA diseñó esta página completa con la identidad de tu marca. Puedes
-            ajustar el HTML aquí (avanzado) o pulsar “Regenerar landing” arriba. El
-            botón de compra, precio y pixel se inyectan solos — no los toques.
+            {t(
+              "La IA diseñó esta página completa con la identidad de tu marca. Puedes ajustar el HTML aquí (avanzado) o pulsar “Regenerar landing” arriba. El botón de compra, precio y pixel se inyectan solos — no los toques.",
+            )}
           </p>
           <textarea
             className={`${input} mt-3 font-mono text-xs`}
@@ -417,7 +428,7 @@ export default function LandingEditorPage() {
             spellCheck={false}
           />
           <p className="mt-2 text-xs text-muted">
-            Usa “Vista previa” (arriba) para ver el resultado. Recuerda Guardar.
+            {t("Usa “Vista previa” (arriba) para ver el resultado. Recuerda Guardar.")}
           </p>
         </Card>
       )}
@@ -427,10 +438,11 @@ export default function LandingEditorPage() {
         <>
       {/* ── Brand identity (theme) ── */}
       <Card className="mt-4">
-        <h2 className="text-sm font-semibold text-ink">Identidad de marca</h2>
+        <h2 className="text-sm font-semibold text-ink">{t("Identidad de marca")}</h2>
         <p className="mt-1 text-xs text-muted">
-          Colores y logo de la landing. Se toman de tu marca al crearla; ajústalos
-          aquí. (La IA cambia los textos, no estos colores.)
+          {t(
+            "Colores y logo de la landing. Se toman de tu marca al crearla; ajústalos aquí. (La IA cambia los textos, no estos colores.)",
+          )}
         </p>
         {(() => {
           const theme = content.theme ?? DEFAULT_THEME;
@@ -445,7 +457,9 @@ export default function LandingEditorPage() {
                   value={theme.primaryColor}
                   onChange={(e) => setTheme({ primaryColor: e.target.value })}
                 />
-                <span className="text-sm text-charcoal">Color principal (botón)</span>
+                <span className="text-sm text-charcoal">
+                  {t("Color principal (botón)")}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -454,7 +468,7 @@ export default function LandingEditorPage() {
                   value={theme.backgroundColor}
                   onChange={(e) => setTheme({ backgroundColor: e.target.value })}
                 />
-                <span className="text-sm text-charcoal">Fondo</span>
+                <span className="text-sm text-charcoal">{t("Fondo")}</span>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -463,13 +477,13 @@ export default function LandingEditorPage() {
                   value={theme.textColor}
                   onChange={(e) => setTheme({ textColor: e.target.value })}
                 />
-                <span className="text-sm text-charcoal">Texto</span>
+                <span className="text-sm text-charcoal">{t("Texto")}</span>
               </div>
               <div className="sm:col-span-2">
-                <label className={label}>URL del logo (opcional)</label>
+                <label className={label}>{t("URL del logo (opcional)")}</label>
                 <input
                   className={input}
-                  placeholder="https://.../logo.png"
+                  placeholder={t("https://.../logo.png")}
                   value={theme.logoUrl ?? ""}
                   onChange={(e) =>
                     setTheme({ logoUrl: e.target.value || null })
@@ -483,11 +497,11 @@ export default function LandingEditorPage() {
 
       {/* ── Content sections ── */}
       <Card className="mt-4">
-        <h2 className="text-sm font-semibold text-ink">Contenido</h2>
+        <h2 className="text-sm font-semibold text-ink">{t("Contenido")}</h2>
 
         <div className="mt-3 grid gap-3">
           <div>
-            <label className={label}>Hero — titular</label>
+            <label className={label}>{t("Hero — titular")}</label>
             <input
               className={input}
               value={content.hero.headline}
@@ -497,7 +511,7 @@ export default function LandingEditorPage() {
             />
           </div>
           <div>
-            <label className={label}>Hero — subtítulo</label>
+            <label className={label}>{t("Hero — subtítulo")}</label>
             <input
               className={input}
               value={content.hero.subheadline ?? ""}
@@ -508,7 +522,7 @@ export default function LandingEditorPage() {
           </div>
 
           <div>
-            <label className={label}>Dolor — título</label>
+            <label className={label}>{t("Dolor — título")}</label>
             <input
               className={input}
               value={content.pain.title}
@@ -517,7 +531,7 @@ export default function LandingEditorPage() {
               }
             />
             <label className={`${label} mt-2 block`}>
-              Dolor — puntos (uno por línea)
+              {t("Dolor — puntos (uno por línea)")}
             </label>
             <textarea
               className={input}
@@ -533,7 +547,7 @@ export default function LandingEditorPage() {
           </div>
 
           <div>
-            <label className={label}>Beneficios — título</label>
+            <label className={label}>{t("Beneficios — título")}</label>
             <input
               className={input}
               value={content.benefits.title}
@@ -542,7 +556,7 @@ export default function LandingEditorPage() {
               }
             />
             <label className={`${label} mt-2 block`}>
-              Beneficios — “Título :: Descripción” (uno por línea)
+              {t("Beneficios — “Título :: Descripción” (uno por línea)")}
             </label>
             <textarea
               className={input}
@@ -563,7 +577,7 @@ export default function LandingEditorPage() {
           </div>
 
           <div>
-            <label className={label}>Mecanismo — título</label>
+            <label className={label}>{t("Mecanismo — título")}</label>
             <input
               className={input}
               value={content.mechanism.title}
@@ -571,7 +585,7 @@ export default function LandingEditorPage() {
                 setSection("mechanism", { ...content.mechanism, title: e.target.value })
               }
             />
-            <label className={`${label} mt-2 block`}>Mecanismo — texto</label>
+            <label className={`${label} mt-2 block`}>{t("Mecanismo — texto")}</label>
             <textarea
               className={input}
               rows={3}
@@ -583,12 +597,14 @@ export default function LandingEditorPage() {
           </div>
 
           <div>
-            <label className={label}>Testimonios — “Nombre :: Frase” (uno por línea)</label>
+            <label className={label}>
+              {t("Testimonios — “Nombre :: Frase” (uno por línea)")}
+            </label>
             <textarea
               className={input}
               rows={3}
               value={content.testimonials
-                .map((t) => `${t.name} :: ${t.quote}`)
+                .map((item) => `${item.name} :: ${item.quote}`)
                 .join("\n")}
               onChange={(e) =>
                 setSection(
@@ -604,7 +620,7 @@ export default function LandingEditorPage() {
           </div>
 
           <div>
-            <label className={label}>Oferta — titular</label>
+            <label className={label}>{t("Oferta — titular")}</label>
             <input
               className={input}
               value={content.offer.headline}
@@ -612,7 +628,7 @@ export default function LandingEditorPage() {
                 setSection("offer", { ...content.offer, headline: e.target.value })
               }
             />
-            <label className={`${label} mt-2 block`}>Oferta — nota</label>
+            <label className={`${label} mt-2 block`}>{t("Oferta — nota")}</label>
             <input
               className={input}
               value={content.offer.note ?? ""}
@@ -623,7 +639,7 @@ export default function LandingEditorPage() {
           </div>
 
           <div>
-            <label className={label}>Botón (CTA)</label>
+            <label className={label}>{t("Botón (CTA)")}</label>
             <input
               className={input}
               value={content.cta.label}
@@ -632,7 +648,9 @@ export default function LandingEditorPage() {
           </div>
 
           <div>
-            <label className={label}>FAQ — “Pregunta :: Respuesta” (una por línea)</label>
+            <label className={label}>
+              {t("FAQ — “Pregunta :: Respuesta” (una por línea)")}
+            </label>
             <textarea
               className={input}
               rows={3}

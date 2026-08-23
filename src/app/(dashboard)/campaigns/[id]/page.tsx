@@ -11,6 +11,7 @@ import { CampaignStatusBadge } from "@/components/CampaignStatusBadge";
 import { api, ApiError } from "@/lib/api";
 import { objectiveLabel, countryName, performanceGoalLabel } from "@/lib/labels";
 import type { Campaign } from "@/lib/types";
+import { useI18n } from "@/contexts/I18nContext";
 
 const API_HOST = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -19,6 +20,7 @@ interface AdPreview {
   html: string;
 }
 
+// Los textos en español son también sus claves de traducción (ver src/i18n).
 const FORMAT_LABELS: Record<string, string> = {
   DESKTOP_FEED_STANDARD: "Facebook Feed",
   MOBILE_FEED_STANDARD: "Facebook Móvil",
@@ -34,6 +36,7 @@ const PUBLISHING_STUCK_THRESHOLD_SECS = 60;
 export default function CampaignDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { t, localeTag } = useI18n();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [previews, setPreviews] = useState<AdPreview[]>([]);
   const [showPreviews, setShowPreviews] = useState(false);
@@ -106,7 +109,14 @@ export default function CampaignDetailPage() {
       setPreviews([]);
     } catch (err) {
       if (err instanceof ApiError) setError(err.message);
-      else setError(`Error al ${action === "publish" ? "publicar" : action === "activate" ? "activar" : "pausar"} la campaña.`);
+      else
+        setError(
+          action === "publish"
+            ? "Error al publicar la campaña."
+            : action === "activate"
+              ? "Error al activar la campaña."
+              : "Error al pausar la campaña.",
+        );
     } finally {
       setActionLoading("");
     }
@@ -127,7 +137,7 @@ export default function CampaignDetailPage() {
 
   function formatBudget(amount: number, currency: string) {
     // amount is stored in whole currency units (not cents).
-    return new Intl.NumberFormat("es", {
+    return new Intl.NumberFormat(localeTag, {
       style: "currency",
       currency,
       minimumFractionDigits: 0,
@@ -135,7 +145,7 @@ export default function CampaignDetailPage() {
   }
 
   function formatDate(dateStr: string) {
-    return new Date(dateStr).toLocaleDateString("es", {
+    return new Date(dateStr).toLocaleDateString(localeTag, {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -154,10 +164,10 @@ export default function CampaignDetailPage() {
     return (
       <Card>
         <p className="text-error">
-          {error || "No se encontró la campaña."}
+          {t(error || "No se encontró la campaña.")}
         </p>
         <Link href="/campaigns" className="mt-4 inline-block">
-          <Button variant="ghost" size="sm">Volver a campañas</Button>
+          <Button variant="ghost" size="sm">{t("Volver a campañas")}</Button>
         </Link>
       </Card>
     );
@@ -169,21 +179,23 @@ export default function CampaignDetailPage() {
         href="/campaigns"
         className="text-sm text-muted hover:text-ink transition-colors"
       >
-        ← Volver a campañas
+        {t("← Volver a campañas")}
       </Link>
 
       <div className="mt-4 flex items-center gap-3">
-        <h1 className="text-2xl font-semibold text-ink">Campaña</h1>
+        <h1 className="text-2xl font-semibold text-ink">{t("Campaña")}</h1>
         <CampaignStatusBadge status={campaign.status} />
         {campaign.status !== "PUBLISHING" && (
           <div className="ml-auto flex items-center gap-2">
             {(campaign.status === "ACTIVE" || campaign.status === "PAUSED") && (
               <Link href={`/ads/custom?refresh=${id}`}>
-                <Button variant="ghost" size="sm">Refrescar creativo</Button>
+                <Button variant="ghost" size="sm">
+                  {t("Refrescar creativo")}
+                </Button>
               </Link>
             )}
             <Link href={`/campaigns/${id}/edit`}>
-              <Button variant="ghost" size="sm">Editar</Button>
+              <Button variant="ghost" size="sm">{t("Editar")}</Button>
             </Link>
           </div>
         )}
@@ -191,14 +203,14 @@ export default function CampaignDetailPage() {
 
       {error && (
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
       {campaign.status === "ERROR" && campaign.errorMessage && (
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-4">
           <h3 className="text-sm font-semibold text-error">
-            Error en: {campaign.errorStep}
+            {t("Error en: {step}", { step: campaign.errorStep ?? "" })}
           </h3>
           <p className="mt-1 text-sm text-error/80">
             {campaign.errorMessage}
@@ -212,10 +224,10 @@ export default function CampaignDetailPage() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Preview del anuncio
+                {t("Preview del anuncio")}
               </h3>
               <p className="mt-1 text-xs text-muted">
-                Visualiza cómo se verá tu anuncio en Meta.
+                {t("Visualiza cómo se verá tu anuncio en Meta.")}
               </p>
             </div>
             <Button
@@ -231,14 +243,16 @@ export default function CampaignDetailPage() {
               }}
               loading={loadingPreviews}
             >
-              {showPreviews ? "Ocultar preview" : "Ver preview"}
+              {showPreviews ? t("Ocultar preview") : t("Ver preview")}
             </Button>
           </div>
 
           {loadingPreviews && (
             <div className="mt-4 flex items-center gap-3 py-4">
               <Spinner size="sm" />
-              <p className="text-sm text-muted">Cargando preview de Meta...</p>
+              <p className="text-sm text-muted">
+                {t("Cargando preview de Meta...")}
+              </p>
             </div>
           )}
 
@@ -247,7 +261,9 @@ export default function CampaignDetailPage() {
               {previews.map((preview) => (
                 <div key={preview.format} className="flex flex-col gap-2">
                   <Badge variant="orange">
-                    {FORMAT_LABELS[preview.format] || preview.format}
+                    {FORMAT_LABELS[preview.format]
+                      ? t(FORMAT_LABELS[preview.format])
+                      : preview.format}
                   </Badge>
                   <div
                     className="rounded-lg border border-sand [&_iframe]:!w-full [&_iframe]:!max-w-full"
@@ -264,12 +280,16 @@ export default function CampaignDetailPage() {
       {campaign.generatedImage && (
         <Card className="mt-4">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Creativos del anuncio
+            {t("Creativos del anuncio")}
           </h3>
           <p className="mt-1 text-xs text-muted">
-            Imagen principal
+            {t("Imagen principal")}
             {campaign.additionalImages && campaign.additionalImages.length > 0
-              ? ` + ${campaign.additionalImages.length} variante${campaign.additionalImages.length > 1 ? "s" : ""} para A/B testing`
+              ? campaign.additionalImages.length === 1
+                ? t(" + 1 variante para A/B testing")
+                : t(" + {count} variantes para A/B testing", {
+                    count: campaign.additionalImages.length,
+                  })
               : ""}
           </p>
 
@@ -278,11 +298,13 @@ export default function CampaignDetailPage() {
             <div className="relative overflow-hidden rounded-lg border-2 border-orange">
               <img
                 src={`${API_HOST}${campaign.generatedImage.feedImageUrl || campaign.generatedImage.verticalImageUrl || campaign.generatedImage.storyImageUrl}`}
-                alt="Imagen principal"
+                alt={t("Imagen principal")}
                 className="w-full"
               />
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                <span className="text-xs font-medium text-white">Principal</span>
+                <span className="text-xs font-medium text-white">
+                  {t("Principal")}
+                </span>
               </div>
             </div>
 
@@ -291,12 +313,12 @@ export default function CampaignDetailPage() {
               <div key={img.id} className="relative overflow-hidden rounded-lg border border-sand">
                 <img
                   src={`${API_HOST}${img.feedImageUrl || img.verticalImageUrl || img.storyImageUrl}`}
-                  alt={`Variante ${i + 2}`}
+                  alt={t("Variante {n}", { n: i + 2 })}
                   className="w-full"
                 />
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
                   <span className="text-xs font-medium text-white">
-                    Variante {i + 2}
+                    {t("Variante {n}", { n: i + 2 })}
                   </span>
                 </div>
               </div>
@@ -308,7 +330,7 @@ export default function CampaignDetailPage() {
       {/* Copy */}
       <Card className="mt-4">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-          Copy del anuncio
+          {t("Copy del anuncio")}
         </h3>
         <p className="mt-2 text-base font-semibold text-ink">
           {campaign.headline}
@@ -323,35 +345,35 @@ export default function CampaignDetailPage() {
       {/* Budget & Schedule */}
       <Card className="mt-4">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-          Presupuesto y duración
+          {t("Presupuesto y duración")}
         </h3>
         <div className="mt-3 grid grid-cols-2 gap-4">
           <div>
-            <p className="text-xs text-muted">Presupuesto</p>
+            <p className="text-xs text-muted">{t("Presupuesto")}</p>
             <p className="text-sm font-semibold text-ink">
               {formatBudget(campaign.budgetAmount, campaign.currency)}{" "}
-              {campaign.budgetType === "DAILY" ? "/ día" : "total"}
+              {campaign.budgetType === "DAILY" ? t("/ día") : t("total")}
             </p>
           </div>
           <div>
-            <p className="text-xs text-muted">Objetivo</p>
+            <p className="text-xs text-muted">{t("Objetivo")}</p>
             <p className="text-sm font-semibold text-ink">
-              {objectiveLabel(campaign.objective)}
+              {objectiveLabel(campaign.objective, t)}
             </p>
           </div>
           <div>
-            <p className="text-xs text-muted">Meta del grupo</p>
+            <p className="text-xs text-muted">{t("Meta del grupo")}</p>
             <p className="text-sm font-semibold text-ink">
-              {performanceGoalLabel(campaign.performanceGoal)}
+              {performanceGoalLabel(campaign.performanceGoal, t)}
             </p>
           </div>
           <div>
-            <p className="text-xs text-muted">Inicio</p>
+            <p className="text-xs text-muted">{t("Inicio")}</p>
             <p className="text-sm text-ink">{formatDate(campaign.startDate)}</p>
           </div>
           {campaign.endDate && (
             <div>
-              <p className="text-xs text-muted">Fin</p>
+              <p className="text-xs text-muted">{t("Fin")}</p>
               <p className="text-sm text-ink">
                 {formatDate(campaign.endDate)}
               </p>
@@ -363,20 +385,20 @@ export default function CampaignDetailPage() {
       {/* Targeting */}
       <Card className="mt-4">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-          Segmentación
+          {t("Segmentación")}
         </h3>
         <div className="mt-3 flex flex-col gap-3">
           <div>
-            <p className="text-xs text-muted">Países</p>
+            <p className="text-xs text-muted">{t("Países")}</p>
             <div className="mt-1 flex flex-wrap gap-1">
               {campaign.targetCountries.map((c) => (
-                <Badge key={c} variant="default">{countryName(c)}</Badge>
+                <Badge key={c} variant="default">{countryName(c, t)}</Badge>
               ))}
             </div>
           </div>
           {campaign.targetCities && campaign.targetCities.length > 0 && (
             <div>
-              <p className="text-xs text-muted">Ciudades</p>
+              <p className="text-xs text-muted">{t("Ciudades")}</p>
               <div className="mt-1 flex flex-wrap gap-1">
                 {campaign.targetCities.map((city) => (
                   <Badge key={city.key} variant="default">{city.name}</Badge>
@@ -386,23 +408,28 @@ export default function CampaignDetailPage() {
           )}
           <div className="flex gap-6">
             <div>
-              <p className="text-xs text-muted">Edad</p>
+              <p className="text-xs text-muted">{t("Edad")}</p>
               <p className="text-sm text-ink">
-                {campaign.ageMin} – {campaign.ageMax} años
+                {t("{min} – {max} años", {
+                  min: campaign.ageMin,
+                  max: campaign.ageMax,
+                })}
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted">Género</p>
+              <p className="text-xs text-muted">{t("Género")}</p>
               <p className="text-sm text-ink">
                 {campaign.genders.includes(0)
-                  ? "Todos"
-                  : campaign.genders.map((g) => (g === 1 ? "Hombre" : "Mujer")).join(", ")}
+                  ? t("Todos")
+                  : campaign.genders
+                      .map((g) => (g === 1 ? t("Hombre") : t("Mujer")))
+                      .join(", ")}
               </p>
             </div>
           </div>
           {campaign.interests && campaign.interests.length > 0 && (
             <div>
-              <p className="text-xs text-muted">Intereses</p>
+              <p className="text-xs text-muted">{t("Intereses")}</p>
               <div className="mt-1 flex flex-wrap gap-1">
                 {campaign.interests.map((i) => (
                   <Badge key={i.id} variant="orange">{i.name}</Badge>
@@ -412,7 +439,9 @@ export default function CampaignDetailPage() {
           )}
           {campaign.customAudienceIds && campaign.customAudienceIds.length > 0 && (
             <div>
-              <p className="text-xs text-muted">Públicos personalizados</p>
+              <p className="text-xs text-muted">
+                {t("Públicos personalizados")}
+              </p>
               <div className="mt-1 flex flex-wrap gap-1 font-mono text-xs">
                 {campaign.customAudienceIds.map((id) => (
                   <Badge key={id} variant="muted">{id}</Badge>
@@ -426,11 +455,11 @@ export default function CampaignDetailPage() {
       {/* Estructura en Meta — nombres + IDs por nivel */}
       <Card className="mt-4">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-          Estructura en Meta
+          {t("Estructura en Meta")}
         </h3>
         <div className="mt-3 flex flex-col gap-3">
           <div>
-            <p className="text-xs text-muted">Campaña</p>
+            <p className="text-xs text-muted">{t("Campaña")}</p>
             <p className="text-sm font-medium text-ink">
               {campaign.campaignName || `OneClickIA — ${campaign.headline}`}
             </p>
@@ -439,7 +468,7 @@ export default function CampaignDetailPage() {
             )}
           </div>
           <div>
-            <p className="text-xs text-muted">Grupo de anuncios</p>
+            <p className="text-xs text-muted">{t("Grupo de anuncios")}</p>
             <p className="text-sm font-medium text-ink">
               {campaign.adSetName || `OneClickIA AdSet — ${campaign.headline}`}
             </p>
@@ -448,7 +477,7 @@ export default function CampaignDetailPage() {
             )}
           </div>
           <div>
-            <p className="text-xs text-muted">Anuncio</p>
+            <p className="text-xs text-muted">{t("Anuncio")}</p>
             <p className="text-sm font-medium text-ink">
               {campaign.adName || `OneClickIA Ad — ${campaign.headline}`}
             </p>
@@ -469,7 +498,7 @@ export default function CampaignDetailPage() {
               size="lg"
               className="flex-1"
             >
-              Publicar en Meta
+              {t("Publicar en Meta")}
             </Button>
             <Button
               variant="ghost"
@@ -477,7 +506,7 @@ export default function CampaignDetailPage() {
               loading={actionLoading === "delete"}
               size="sm"
             >
-              Eliminar
+              {t("Eliminar")}
             </Button>
           </>
         )}
@@ -489,7 +518,7 @@ export default function CampaignDetailPage() {
             size="lg"
             className="flex-1"
           >
-            Reintentar publicación
+            {t("Reintentar publicación")}
           </Button>
         )}
 
@@ -500,7 +529,7 @@ export default function CampaignDetailPage() {
             size="lg"
             className="flex-1"
           >
-            Activar campaña
+            {t("Activar campaña")}
           </Button>
         )}
 
@@ -512,7 +541,7 @@ export default function CampaignDetailPage() {
             size="lg"
             className="flex-1"
           >
-            Pausar campaña
+            {t("Pausar campaña")}
           </Button>
         )}
 
@@ -526,18 +555,18 @@ export default function CampaignDetailPage() {
               <div className="flex items-center gap-3 text-sm text-muted">
                 <Spinner size="sm" />
                 <span>
-                  Publicando en Meta... ({elapsedSecs}s)
+                  {t("Publicando en Meta... ({secs}s)", { secs: elapsedSecs })}
                 </span>
               </div>
               {isStuck && (
                 <div className="rounded-md border border-warning/20 bg-warning/10 p-3">
                   <p className="text-sm font-medium text-warning">
-                    La publicación está tardando más de lo normal.
+                    {t("La publicación está tardando más de lo normal.")}
                   </p>
                   <p className="mt-1 text-xs text-charcoal">
-                    Puede ser un timeout de red. La publicación es
-                    idempotente — reintentar continuará desde el paso
-                    donde se quedó, sin duplicar nada en Meta.
+                    {t(
+                      "Puede ser un timeout de red. La publicación es idempotente — reintentar continuará desde el paso donde se quedó, sin duplicar nada en Meta.",
+                    )}
                   </p>
                   <Button
                     size="sm"
@@ -545,7 +574,7 @@ export default function CampaignDetailPage() {
                     loading={actionLoading === "publish"}
                     className="mt-3"
                   >
-                    Reintentar publicación
+                    {t("Reintentar publicación")}
                   </Button>
                 </div>
               )}

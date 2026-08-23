@@ -7,6 +7,7 @@
  */
 export interface StaticTemplate {
   id: string;
+  /** Texto en español; es también su clave de traducción (ver src/i18n). */
   name: string;
   /** Una línea genérica describiendo qué carga el peso del formato. */
   description: string;

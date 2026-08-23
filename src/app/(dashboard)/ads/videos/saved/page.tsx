@@ -6,8 +6,10 @@ import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
 import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
+import { useI18n, useT } from "@/contexts/I18nContext";
 
 type Lang = "es" | "en" | "pt";
+// Los textos en español son también sus claves de traducción (ver src/i18n).
 const LANG_LABELS: Record<Lang, string> = {
   es: "Español",
   en: "Inglés",
@@ -27,6 +29,7 @@ interface SavedBlueprint {
 }
 
 export default function SavedVideosPage() {
+  const t = useT();
   const [items, setItems] = useState<SavedBlueprint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -42,7 +45,7 @@ export default function SavedVideosPage() {
   }, []);
 
   async function handleRename(item: SavedBlueprint) {
-    const name = window.prompt("Nuevo nombre:", item.name);
+    const name = window.prompt(t("Nuevo nombre:"), item.name);
     if (!name || !name.trim() || name.trim() === item.name) return;
     try {
       await api.patch(`/video-ads/saved-blueprints/${item.id}`, {
@@ -54,17 +57,17 @@ export default function SavedVideosPage() {
         ),
       );
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo renombrar.");
+      alert(err instanceof ApiError ? err.message : t("No se pudo renombrar."));
     }
   }
 
   async function handleDelete(item: SavedBlueprint) {
-    if (!window.confirm(`¿Eliminar "${item.name}"?`)) return;
+    if (!window.confirm(t("¿Eliminar “{name}”?", { name: item.name }))) return;
     try {
       await api.delete(`/video-ads/saved-blueprints/${item.id}`);
       setItems((prev) => prev.filter((p) => p.id !== item.id));
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo eliminar.");
+      alert(err instanceof ApiError ? err.message : t("No se pudo eliminar."));
     }
   }
 
@@ -72,23 +75,27 @@ export default function SavedVideosPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-16">
         <Spinner size="lg" />
-        <p className="text-sm text-muted">Cargando blueprints guardados...</p>
+        <p className="text-sm text-muted">
+          {t("Cargando blueprints guardados...")}
+        </p>
       </div>
     );
   }
 
   return (
     <div className="max-w-6xl">
-      <h1 className="text-2xl font-semibold text-ink">Videos guardados</h1>
+      <h1 className="text-2xl font-semibold text-ink">
+        {t("Videos guardados")}
+      </h1>
       <p className="mt-1 text-sm text-muted">
-        Tu librería de estructuras de video guardadas. Cada una es un
-        snapshot independiente — regenerar el blueprint original no las
-        afecta.
+        {t(
+          "Tu librería de estructuras de video guardadas. Cada una es un snapshot independiente — regenerar el blueprint original no las afecta.",
+        )}
       </p>
 
       {error && (
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
@@ -96,9 +103,9 @@ export default function SavedVideosPage() {
         <div className="mt-12 text-center">
           <Icon name="bookmark" size={36} className="mx-auto text-indigo-500" />
           <p className="mt-2 text-sm text-muted">
-            Aún no tienes blueprints guardados.{" "}
+            {t("Aún no tienes blueprints guardados.")}{" "}
             <Link href="/ads/videos" className="text-orange hover:text-orange/80">
-              Buscar videos
+              {t("Buscar videos")}
             </Link>
           </p>
         </div>
@@ -129,6 +136,7 @@ function SavedBlueprintCard({
   onRename: () => void;
   onDelete: () => void;
 }) {
+  const { t, localeTag } = useI18n();
   const langKey = (
     ["es", "en", "pt"].includes(item.lang) ? item.lang : "es"
   ) as Lang;
@@ -151,7 +159,7 @@ function SavedBlueprintCard({
             </div>
           )}
           <div className="absolute bottom-2 left-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium text-white">
-            {LANG_LABELS[langKey]}
+            {t(LANG_LABELS[langKey])}
           </div>
         </div>
         <div className="flex flex-col gap-1 px-3 pt-3">
@@ -167,7 +175,7 @@ function SavedBlueprintCard({
             </p>
           )}
           <p className="mt-1 text-[10px] text-muted">
-            {new Date(item.createdAt).toLocaleDateString("es")}
+            {new Date(item.createdAt).toLocaleDateString(localeTag)}
           </p>
         </div>
       </Link>
@@ -177,7 +185,7 @@ function SavedBlueprintCard({
           onClick={onRename}
           className="text-xs text-muted hover:text-orange transition-colors"
         >
-          Renombrar
+          {t("Renombrar")}
         </button>
         <span className="text-xs text-muted">·</span>
         <button
@@ -185,7 +193,7 @@ function SavedBlueprintCard({
           onClick={onDelete}
           className="text-xs text-muted hover:text-error transition-colors"
         >
-          Eliminar
+          {t("Eliminar")}
         </button>
       </div>
     </Card>

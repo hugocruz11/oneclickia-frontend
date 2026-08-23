@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/contexts/I18nContext";
 import { Input } from "@/components/ui/Input";
 
 interface FontStyleFieldProps {
@@ -21,20 +22,25 @@ export function FontStyleField({
   saving,
   saved,
 }: FontStyleFieldProps) {
+  const t = useT();
+
   return (
     <div className="flex flex-col gap-1">
       <Input
-        label="Tipografía"
-        placeholder='Ej: "Montserrat", "Bebas Neue en mayúsculas", "una serif elegante"…'
+        label={t("Tipografía")}
+        placeholder={t(
+          'Ej: "Montserrat", "Bebas Neue en mayúsculas", "una serif elegante"…',
+        )}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
       <p className="text-xs text-muted">
-        Se aplica a todas tus imágenes y se guarda como tu preferencia. Déjalo
-        vacío para que la IA elija.
-        {saving && <span className="ml-1 text-orange">Guardando…</span>}
+        {t(
+          "Se aplica a todas tus imágenes y se guarda como tu preferencia. Déjalo vacío para que la IA elija.",
+        )}
+        {saving && <span className="ml-1 text-orange">{t("Guardando…")}</span>}
         {saved && !saving && (
-          <span className="ml-1 text-green-600">Guardada ✓</span>
+          <span className="ml-1 text-green-600">{t("Guardada ✓")}</span>
         )}
       </p>
     </div>

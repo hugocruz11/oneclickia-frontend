@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type DragEvent, type ChangeEvent } from "react";
+import { useT } from "@/contexts/I18nContext";
 
 interface FileUploadProps {
   label?: string;
@@ -19,6 +20,7 @@ export function FileUpload({
   value,
   onChange,
 }: FileUploadProps) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -107,7 +109,7 @@ export function FileUpload({
             onClick={handleRemove}
             className="text-sm text-muted hover:text-error transition-colors"
           >
-            Quitar
+            {t("Quitar")}
           </button>
         </div>
       ) : (
@@ -125,10 +127,14 @@ export function FileUpload({
           }`}
         >
           <p className="text-sm text-muted">
-            Arrastra un archivo o{" "}
-            <span className="font-medium text-orange">haz clic para subir</span>
+            {t("Arrastra un archivo o")}{" "}
+            <span className="font-medium text-orange">
+              {t("haz clic para subir")}
+            </span>
           </p>
-          <p className="mt-1 text-xs text-muted">PNG, JPG o WEBP (max 5MB)</p>
+          <p className="mt-1 text-xs text-muted">
+            {t("PNG, JPG o WEBP (max 5MB)")}
+          </p>
         </div>
       )}
 

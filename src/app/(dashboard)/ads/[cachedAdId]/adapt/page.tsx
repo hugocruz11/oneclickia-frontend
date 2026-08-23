@@ -13,12 +13,14 @@ import { CopyVariantPicker } from "@/components/CopyVariantPicker";
 import { SavedCopiesBrowser } from "@/components/SavedCopiesBrowser";
 import { api, ApiError } from "@/lib/api";
 import type { CachedAd, AdaptCopyResponse, Product } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
 
 const API_HOST = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 export default function AdaptCopyPage() {
   const { cachedAdId } = useParams<{ cachedAdId: string }>();
   const router = useRouter();
+  const t = useT();
   const [ad, setAd] = useState<CachedAd | null>(null);
 
   // Product picker — only complete products are eligible
@@ -100,10 +102,10 @@ export default function AdaptCopyPage() {
     return (
       <Card>
         <p className="text-error">
-          No se encontró el anuncio. Vuelve a buscarlo.
+          {t("No se encontró el anuncio. Vuelve a buscarlo.")}
         </p>
         <Link href="/ads/search" className="mt-4 inline-block">
-          <Button variant="ghost" size="sm">Volver a buscar</Button>
+          <Button variant="ghost" size="sm">{t("Volver a buscar")}</Button>
         </Link>
       </Card>
     );
@@ -126,19 +128,20 @@ export default function AdaptCopyPage() {
           href={`/ads/${cachedAdId}`}
           className="text-sm text-muted hover:text-ink transition-colors"
         >
-          ← Volver al anuncio
+          {t("← Volver al anuncio")}
         </Link>
         <Card className="mt-6 text-center">
           <Icon name="box" size={36} className="mx-auto text-amber-700" />
           <h2 className="mt-2 text-lg font-semibold text-ink">
-            Primero necesitas un producto
+            {t("Primero necesitas un producto")}
           </h2>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-            Para adaptar el copy a tu marca necesitamos al menos un producto con
-            su información completa. Crea uno y vuelve a este paso.
+            {t(
+              "Para adaptar el copy a tu marca necesitamos al menos un producto con su información completa. Crea uno y vuelve a este paso.",
+            )}
           </p>
           <Link href="/products/new" className="mt-4 inline-block">
-            <Button>Crear mi primer producto</Button>
+            <Button>{t("Crear mi primer producto")}</Button>
           </Link>
         </Card>
       </div>
@@ -151,34 +154,42 @@ export default function AdaptCopyPage() {
         href={`/ads/${cachedAdId}`}
         className="text-sm text-muted hover:text-ink transition-colors"
       >
-        ← Volver al anuncio
+        {t("← Volver al anuncio")}
       </Link>
 
-      <h1 className="mt-4 text-2xl font-semibold text-ink">Adaptar copy</h1>
+      <h1 className="mt-4 text-2xl font-semibold text-ink">{t("Adaptar copy")}</h1>
       <p className="mt-1 text-sm text-muted">
-        Adapta el copy de &quot;{ad.headline || "este anuncio"}&quot; a tu marca.
+        {t("Adapta el copy de “{headline}” a tu marca.", {
+          headline: ad.headline || t("este anuncio"),
+        })}
       </p>
 
       <Card className="mt-6">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-          Copy original del anuncio
+          {t("Copy original del anuncio")}
         </h3>
         <div className="mt-3 flex flex-col gap-3 rounded-md border border-sand bg-sand-light p-4">
           {ad.headline && (
             <div>
-              <span className="text-xs font-medium uppercase text-muted">Headline</span>
+              <span className="text-xs font-medium uppercase text-muted">
+                {t("Headline")}
+              </span>
               <p className="mt-0.5 text-sm font-medium text-ink">{ad.headline}</p>
             </div>
           )}
           {ad.description && (
             <div>
-              <span className="text-xs font-medium uppercase text-muted">Descripción</span>
+              <span className="text-xs font-medium uppercase text-muted">
+                {t("Descripción")}
+              </span>
               <p className="mt-0.5 text-sm text-charcoal whitespace-pre-line">{ad.description}</p>
             </div>
           )}
           {ad.ctaTitle && (
             <div>
-              <span className="text-xs font-medium uppercase text-muted">CTA</span>
+              <span className="text-xs font-medium uppercase text-muted">
+                {t("CTA")}
+              </span>
               <p className="mt-0.5 text-sm text-charcoal">{ad.ctaTitle}</p>
             </div>
           )}
@@ -190,13 +201,13 @@ export default function AdaptCopyPage() {
           <Card className="mt-4">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-                Producto a pautar
+                {t("Producto a pautar")}
               </h3>
               <Link
                 href="/products/new"
                 className="text-xs font-medium text-orange hover:text-orange/80"
               >
-                + Nuevo producto
+                {t("+ Nuevo producto")}
               </Link>
             </div>
             <div className="mt-4">
@@ -219,7 +230,7 @@ export default function AdaptCopyPage() {
                     : "border-sand text-muted hover:border-orange/30"
                 }`}
               >
-                Generar nuevo
+                {t("Generar nuevo")}
               </button>
               <button
                 type="button"
@@ -230,7 +241,7 @@ export default function AdaptCopyPage() {
                     : "border-sand text-muted hover:border-orange/30"
                 }`}
               >
-                Usar copy guardado
+                {t("Usar copy guardado")}
               </button>
             </div>
           </Card>
@@ -256,16 +267,17 @@ export default function AdaptCopyPage() {
             <>
               <Card className="mt-4">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-                  ¿Qué quieres adaptar?
+                  {t("¿Qué quieres adaptar?")}
                 </h3>
                 <p className="mt-1 text-xs text-muted">
-                  Describe en tus palabras qué cambios quieres en el copy. La IA usará
-                  estas instrucciones junto con la información de tu marca y producto.
+                  {t(
+                    "Describe en tus palabras qué cambios quieres en el copy. La IA usará estas instrucciones junto con la información de tu marca y producto.",
+                  )}
                 </p>
                 <Textarea
                   className="mt-3"
                   rows={4}
-                  placeholder="Ej: Quiero que el tono sea más juvenil y directo, enfocado en el beneficio de ahorro de tiempo. Menciona que tenemos envío gratis en Colombia."
+                  placeholder={t("Ej: Quiero que el tono sea más juvenil y directo, enfocado en el beneficio de ahorro de tiempo. Menciona que tenemos envío gratis en Colombia.")}
                   value={userInstructions}
                   onChange={(e) => setUserInstructions(e.target.value)}
                 />
@@ -274,7 +286,7 @@ export default function AdaptCopyPage() {
               <Card className="mt-4">
                 <form onSubmit={handleAdapt}>
                   <Button type="submit" loading={loading} size="lg" className="w-full">
-                    Adaptar copy a mi marca
+                    {t("Adaptar copy a mi marca")}
                   </Button>
                 </form>
               </Card>
@@ -285,14 +297,14 @@ export default function AdaptCopyPage() {
 
       {loading && (
         <AiProgress
-          message="Adaptando el copy a tu marca…"
+          message={t("Adaptando el copy a tu marca…")}
           estimateSeconds={20}
         />
       )}
 
       {error && (
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
@@ -300,10 +312,10 @@ export default function AdaptCopyPage() {
         <div className="mt-6 flex flex-col gap-6">
           <div>
             <h2 className="text-lg font-semibold text-ink">
-              Elige una variante
+              {t("Elige una variante")}
             </h2>
             <p className="text-sm text-muted">
-              Selecciona la que mejor represente tu marca.
+              {t("Selecciona la que mejor represente tu marca.")}
             </p>
           </div>
 
@@ -329,10 +341,10 @@ export default function AdaptCopyPage() {
               onClick={() => setResult(null)}
               className="flex-1"
             >
-              Regenerar
+              {t("Regenerar")}
             </Button>
             <Button onClick={handleContinue} size="lg" className="flex-1">
-              Generar imágenes
+              {t("Generar imágenes")}
             </Button>
           </div>
         </div>
@@ -350,6 +362,8 @@ function ProductPicker({
   selectedId: string;
   onSelect: (id: string) => void;
 }) {
+  const t = useT();
+
   return (
     <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
       {products.map((p) => (
@@ -366,7 +380,7 @@ function ProductPicker({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`${API_HOST}${p.imageUrl}`}
-            alt={p.name || "Producto"}
+            alt={p.name || t("Producto")}
             className="aspect-square w-full object-cover"
           />
           {p.name && (

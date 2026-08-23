@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/Badge";
+import { useT } from "@/contexts/I18nContext";
 import type { CampaignStatus } from "@/lib/types";
 
 const STATUS_CONFIG: Record<
@@ -20,6 +21,7 @@ interface CampaignStatusBadgeProps {
 }
 
 export function CampaignStatusBadge({ status }: CampaignStatusBadgeProps) {
+  const t = useT();
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.DRAFT;
-  return <Badge variant={config.variant}>{config.label}</Badge>;
+  return <Badge variant={config.variant}>{t(config.label)}</Badge>;
 }

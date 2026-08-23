@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
+import { useT } from "@/contexts/I18nContext";
 
 interface VideoAd {
   id: string;
@@ -42,6 +43,7 @@ function formatDuration(secs: number | null): string {
 }
 
 export default function VideosSearchPage() {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [order, setOrder] = useState<
     "most_relevant" | "newest" | "longest_running"
@@ -107,18 +109,18 @@ export default function VideosSearchPage() {
 
   return (
     <div className="max-w-6xl">
-      <h1 className="text-2xl font-semibold text-ink">Buscar Videos</h1>
+      <h1 className="text-2xl font-semibold text-ink">{t("Buscar Videos")}</h1>
       <p className="mt-1 text-sm text-muted">
-        Encuentra anuncios en video de la competencia y úsalos como plantilla
-        para tu marca. La IA extrae la estructura del script y la convierte en
-        un template universal con variables para que puedas reusarlo.
+        {t(
+          "Encuentra anuncios en video de la competencia y úsalos como plantilla para tu marca. La IA extrae la estructura del script y la convierte en un template universal con variables para que puedas reusarlo.",
+        )}
       </p>
 
       <Card className="mt-6">
         <form onSubmit={handleSearch} className="flex flex-col gap-3">
           <Input
-            label="Palabra clave"
-            placeholder="Ej: skincare natural, batidos detox, maletas viaje"
+            label={t("Palabra clave")}
+            placeholder={t("Ej: skincare natural, batidos detox, maletas viaje")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             required
@@ -126,7 +128,7 @@ export default function VideosSearchPage() {
           <div className="flex flex-wrap items-end gap-3">
             <div className="w-56">
               <Select
-                label="Orden"
+                label={t("Orden")}
                 value={order}
                 onChange={(e) =>
                   setOrder(
@@ -137,14 +139,14 @@ export default function VideosSearchPage() {
                   )
                 }
                 options={[
-                  { value: "most_relevant", label: "Más relevantes" },
-                  { value: "longest_running", label: "Más tiempo activos" },
-                  { value: "newest", label: "Más recientes" },
+                  { value: "most_relevant", label: t("Más relevantes") },
+                  { value: "longest_running", label: t("Más tiempo activos") },
+                  { value: "newest", label: t("Más recientes") },
                 ]}
               />
             </div>
             <Button type="submit" loading={loading} disabled={!query.trim()}>
-              Buscar videos
+              {t("Buscar videos")}
             </Button>
           </div>
         </form>
@@ -152,7 +154,7 @@ export default function VideosSearchPage() {
 
       {error && (
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
@@ -160,7 +162,7 @@ export default function VideosSearchPage() {
         <div className="mt-8 flex flex-col items-center gap-3 py-8">
           <Spinner size="lg" />
           <p className="text-sm text-muted">
-            Buscando videos en Foreplay...
+            {t("Buscando videos en Foreplay...")}
           </p>
         </div>
       )}
@@ -169,7 +171,7 @@ export default function VideosSearchPage() {
         <div className="mt-8 text-center">
           <Icon name="video" size={36} className="mx-auto text-rose-500" />
           <p className="mt-2 text-sm text-muted">
-            No se encontraron videos para esta búsqueda.
+            {t("No se encontraron videos para esta búsqueda.")}
           </p>
         </div>
       )}
@@ -199,6 +201,8 @@ function VideoCard({
   isFavorite: boolean;
   onToggleFavorite: () => void;
 }) {
+  const t = useT();
+
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-lg border border-sand bg-white transition-colors hover:border-orange/40">
       <Link href={`/ads/videos/${video.id}`} className="flex flex-col">
@@ -206,7 +210,7 @@ function VideoCard({
           {video.thumbnailUrl ? (
             <img
               src={video.thumbnailUrl}
-              alt={video.headline || video.brandName || "Video"}
+              alt={video.headline || video.brandName || t("Video")}
               className="h-full w-full object-cover transition-transform group-hover:scale-105"
             />
           ) : (
@@ -243,8 +247,10 @@ function VideoCard({
           e.stopPropagation();
           onToggleFavorite();
         }}
-        aria-label={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
-        title={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+        aria-label={
+          isFavorite ? t("Quitar de favoritos") : t("Agregar a favoritos")
+        }
+        title={isFavorite ? t("Quitar de favoritos") : t("Agregar a favoritos")}
         className="absolute top-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 backdrop-blur transition-colors hover:bg-black/70"
       >
         <Icon

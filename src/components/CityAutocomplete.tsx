@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import type { MetaGeoLocation } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
 
 interface CityAutocompleteProps {
   selected: { key: string; name: string }[];
@@ -10,6 +11,7 @@ interface CityAutocompleteProps {
 }
 
 export function CityAutocomplete({ selected, onChange }: CityAutocompleteProps) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<MetaGeoLocation[]>([]);
   const [open, setOpen] = useState(false);
@@ -71,7 +73,7 @@ export function CityAutocomplete({ selected, onChange }: CityAutocompleteProps) 
   return (
     <div ref={containerRef} className="relative">
       <label className="mb-1 block text-sm font-medium text-ink">
-        Ciudades objetivo
+        {t("Ciudades objetivo")}
       </label>
 
       {selected.length > 0 && (
@@ -107,11 +109,13 @@ export function CityAutocomplete({ selected, onChange }: CityAutocompleteProps) 
             if (results.length > 0) addCity(results[0]);
           }
         }}
-        placeholder="Buscar ciudades..."
+        placeholder={t("Buscar ciudades...")}
         className="w-full rounded-md border border-sand bg-cream px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-orange focus:outline-none focus:ring-1 focus:ring-orange"
       />
 
-      {loading && <p className="mt-1 text-xs text-muted">Buscando...</p>}
+      {loading && (
+        <p className="mt-1 text-xs text-muted">{t("Buscando...")}</p>
+      )}
 
       {open && results.length > 0 && (
         <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-sand bg-cream shadow-sm">
@@ -130,8 +134,9 @@ export function CityAutocomplete({ selected, onChange }: CityAutocompleteProps) 
       )}
 
       <p className="mt-1 text-xs text-muted">
-        Si eliges ciudades, la campaña se segmentará solo a esas ciudades (en
-        lugar del país). Escribe al menos 2 caracteres.
+        {t(
+          "Si eliges ciudades, la campaña se segmentará solo a esas ciudades (en lugar del país). Escribe al menos 2 caracteres.",
+        )}
       </p>
     </div>
   );

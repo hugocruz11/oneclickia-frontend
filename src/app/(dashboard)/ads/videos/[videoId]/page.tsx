@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Icon } from "@/components/ui/Icon";
 import { VideoTemplateView } from "@/components/VideoTemplateView";
 import { api, ApiError } from "@/lib/api";
+import { useT } from "@/contexts/I18nContext";
 
 interface VideoAd {
   id: string;
@@ -42,6 +43,7 @@ interface BlueprintResponse {
 
 export default function VideoBlueprintPage() {
   const { videoId } = useParams<{ videoId: string }>();
+  const t = useT();
   const [video, setVideo] = useState<VideoAd | null>(null);
   const [blueprint, setBlueprint] = useState<BlueprintResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -100,16 +102,16 @@ export default function VideoBlueprintPage() {
   async function handleSave() {
     if (!videoId || !blueprint) return;
     const defaultName =
-      video?.headline?.slice(0, 60) || video?.brandName || "Mi template";
-    const name = window.prompt("Nombre para este template:", defaultName);
+      video?.headline?.slice(0, 60) || video?.brandName || t("Mi template");
+    const name = window.prompt(t("Nombre para este template:"), defaultName);
     if (!name || !name.trim()) return;
     try {
       await api.post(`/video-ads/${videoId}/blueprint/save`, {
         name: name.trim(),
       });
-      alert(`Guardado como "${name.trim()}".`);
+      alert(t("Guardado como “{name}”.", { name: name.trim() }));
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo guardar.");
+      alert(err instanceof ApiError ? err.message : t("No se pudo guardar."));
     }
   }
 
@@ -117,7 +119,7 @@ export default function VideoBlueprintPage() {
     if (!videoId) return;
     if (
       !window.confirm(
-        "¿Regenerar el template? Reemplaza el análisis actual.",
+        t("¿Regenerar el template? Reemplaza el análisis actual."),
       )
     ) {
       return;
@@ -142,7 +144,7 @@ export default function VideoBlueprintPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-16">
         <Spinner size="lg" />
-        <p className="text-sm text-muted">Cargando video...</p>
+        <p className="text-sm text-muted">{t("Cargando video...")}</p>
       </div>
     );
   }
@@ -154,10 +156,10 @@ export default function VideoBlueprintPage() {
           href="/ads/videos"
           className="text-sm text-orange hover:text-orange/80"
         >
-          ← Volver a buscar videos
+          {t("← Volver a buscar videos")}
         </Link>
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       </div>
     );
@@ -171,7 +173,7 @@ export default function VideoBlueprintPage() {
         href="/ads/videos"
         className="text-sm text-orange hover:text-orange/80"
       >
-        ← Volver a buscar videos
+        {t("← Volver a buscar videos")}
       </Link>
 
       <div className="mt-3 grid grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]">
@@ -202,10 +204,10 @@ export default function VideoBlueprintPage() {
                   type="button"
                   onClick={toggleFavorite}
                   aria-label={
-                    isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"
+                    isFavorite ? t("Quitar de favoritos") : t("Agregar a favoritos")
                   }
                   title={
-                    isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"
+                    isFavorite ? t("Quitar de favoritos") : t("Agregar a favoritos")
                   }
                   className="shrink-0 transition-transform hover:scale-110"
                 >
@@ -236,7 +238,7 @@ export default function VideoBlueprintPage() {
           {video.fullTranscription && (
             <Card>
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Transcripción
+                {t("Transcripción")}
               </h3>
               <p className="mt-2 text-xs text-charcoal whitespace-pre-wrap">
                 {video.fullTranscription}
@@ -250,15 +252,15 @@ export default function VideoBlueprintPage() {
           {!blueprint && !analyzing && (
             <Card>
               <h2 className="text-lg font-semibold text-ink">
-                Estructura del anuncio
+                {t("Estructura del anuncio")}
               </h2>
               <p className="mt-1 text-sm text-muted">
-                La IA analiza el script del video y extrae su estructura como un
-                template universal neutro. Reemplazás las variables entre
-                [CORCHETES] con tu producto y tenés un anuncio nuevo listo.
+                {t(
+                  "La IA analiza el script del video y extrae su estructura como un template universal neutro. Reemplazás las variables entre [CORCHETES] con tu producto y tenés un anuncio nuevo listo.",
+                )}
               </p>
               <div className="mt-4">
-                <Button onClick={handleAnalyze}>Analizar con IA</Button>
+                <Button onClick={handleAnalyze}>{t("Analizar con IA")}</Button>
               </div>
             </Card>
           )}
@@ -267,14 +269,16 @@ export default function VideoBlueprintPage() {
             <Card className="flex flex-col items-center gap-3 py-10">
               <Spinner size="lg" />
               <p className="text-sm text-muted">
-                Analizando el video con Gemini... esto puede tardar 30s-1min.
+                {t(
+                  "Analizando el video con Gemini... esto puede tardar 30s-1min.",
+                )}
               </p>
             </Card>
           )}
 
           {error && (
             <div className="rounded-md border border-error/20 bg-error/10 p-3">
-              <p className="text-sm text-error">{error}</p>
+              <p className="text-sm text-error">{t(error)}</p>
             </div>
           )}
 
@@ -283,17 +287,17 @@ export default function VideoBlueprintPage() {
               template={blueprint.blueprint.template}
               metaLine={
                 blueprint.cached
-                  ? "Análisis previo (cacheado)."
-                  : "Análisis recién generado."
+                  ? t("Análisis previo (cacheado).")
+                  : t("Análisis recién generado.")
               }
               actions={
                 <>
                   <Button size="sm" variant="ghost" onClick={handleRegenerate}>
-                    Regenerar
+                    {t("Regenerar")}
                   </Button>
                   <Button size="sm" onClick={handleSave}>
                     <Icon name="bookmark" size={15} className="mr-1.5" />
-                    Guardar
+                    {t("Guardar")}
                   </Button>
                 </>
               }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { Spinner } from "@/components/ui/Spinner";
 import type { AdaptCopyResponse, Product, SavedCopy } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
 
 interface Props {
   /**
@@ -39,6 +40,7 @@ export function SavedCopiesBrowser({
   onPick,
   pickedId,
 }: Props) {
+  const t = useT();
   const [items, setItems] = useState<SavedCopy[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [usingId, setUsingId] = useState<string | null>(null);
@@ -81,7 +83,7 @@ export function SavedCopiesBrowser({
   const activeProduct = products?.find((p) => p.id === productId);
 
   async function handleDelete(id: string) {
-    if (!confirm("¿Eliminar este copy guardado?")) return;
+    if (!confirm(t("¿Eliminar este copy guardado?"))) return;
     try {
       await api.delete(`/ads/saved-copies/${id}`);
       setItems((prev) => prev?.filter((s) => s.id !== id) ?? null);
@@ -101,7 +103,7 @@ export function SavedCopiesBrowser({
   if (!items || items.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-muted">
-        Aún no has guardado ningún copy. Genera uno y presiona &quot;Guardar&quot;.
+        {t('Aún no has guardado ningún copy. Genera uno y presiona "Guardar".')}
       </p>
     );
   }
@@ -110,11 +112,13 @@ export function SavedCopiesBrowser({
     <div className="flex flex-col gap-3">
       {activeProduct && (
         <p className="text-xs text-muted">
-          Se usará con el producto:{" "}
-          <span className="font-semibold text-ink">{activeProduct.name ?? "(sin nombre)"}</span>
+          {t("Se usará con el producto:")}{" "}
+          <span className="font-semibold text-ink">
+            {activeProduct.name ?? t("(sin nombre)")}
+          </span>
         </p>
       )}
-      {error && <p className="text-xs text-error">{error}</p>}
+      {error && <p className="text-xs text-error">{t(error)}</p>}
       {items.map((s) => {
         const isPicked = pickedId === s.id;
         return (
@@ -128,7 +132,7 @@ export function SavedCopiesBrowser({
         >
           <div className="flex items-start justify-between gap-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-muted">
-              {s.label ?? "Copy guardado"}
+              {s.label ?? t("Copy guardado")}
               {s.product?.name ? ` · ${s.product.name}` : ""}
             </span>
             <div className="flex items-center gap-3">
@@ -139,19 +143,19 @@ export function SavedCopiesBrowser({
                 className="text-xs font-medium text-orange hover:opacity-90 disabled:opacity-60"
               >
                 {usingId === s.id
-                  ? "Cargando..."
+                  ? t("Cargando...")
                   : isPicked
-                    ? "Seleccionado ✓"
+                    ? t("Seleccionado ✓")
                     : onPick
-                      ? "Seleccionar"
-                      : "Usar este"}
+                      ? t("Seleccionar")
+                      : t("Usar este")}
               </button>
               <button
                 type="button"
                 onClick={() => handleDelete(s.id)}
                 className="text-xs font-medium text-muted hover:text-error"
               >
-                Eliminar
+                {t("Eliminar")}
               </button>
             </div>
           </div>

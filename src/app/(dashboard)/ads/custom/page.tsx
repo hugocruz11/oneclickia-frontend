@@ -31,6 +31,7 @@ import type {
   ReferenceImage,
   SavedCopy,
 } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
 
 const API_HOST = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -44,6 +45,7 @@ function domainFromUrl(url?: string | null): string | undefined {
   }
 }
 
+// Los textos en español son también sus claves de traducción (ver src/i18n).
 const FORMAT_OPTIONS = [
   { key: "feed", label: "Feed (1:1)", size: "1080x1080" },
   { key: "vertical", label: "Vertical (4:5)", size: "1080x1350" },
@@ -54,6 +56,7 @@ type Step = "copy" | "selectVariant" | "image" | "iterate" | "variants";
 
 export default function CustomAdPage() {
   const router = useRouter();
+  const t = useT();
 
   // Step tracking
   const [step, setStep] = useState<Step>("copy");
@@ -143,7 +146,10 @@ export default function CustomAdPage() {
   const isMultiTemplate =
     refMode === "template" && selectedTemplateIds.length > 1;
   const templateName = (id: string) =>
-    STATIC_TEMPLATES.find((t) => t.id === id)?.name ?? id;
+    {
+      const name = STATIC_TEMPLATES.find((tpl) => tpl.id === id)?.name;
+      return name ? t(name) : id;
+    };
 
   // Imagen con botón de lupa para ampliarla en el lightbox.
   const zoomableImg = (relativeUrl: string, alt: string) => {
@@ -155,7 +161,7 @@ export default function CustomAdPage() {
         <button
           type="button"
           onClick={() => setZoomUrl(full)}
-          aria-label="Ampliar imagen"
+          aria-label={t("Ampliar imagen")}
           className="absolute right-2 top-2 rounded-full bg-black/50 p-1.5 text-white transition-colors hover:bg-black/70"
         >
           <Icon name="search" size={16} />
@@ -650,13 +656,13 @@ export default function CustomAdPage() {
     <Card>
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-          Producto a pautar
+          {t("Producto a pautar")}
         </h3>
         <Link
           href="/products/new"
           className="text-xs font-medium text-orange hover:text-orange/80"
         >
-          + Nuevo producto
+          {t("+ Nuevo producto")}
         </Link>
       </div>
 
@@ -675,7 +681,7 @@ export default function CustomAdPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`${API_HOST}${p.imageUrl}`}
-              alt={p.name || "Producto"}
+              alt={p.name || t("Producto")}
               className="aspect-square w-full object-cover"
             />
             {p.name && (
@@ -699,14 +705,12 @@ export default function CustomAdPage() {
   const referencePickerCard = (
     <Card>
       <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-        Imagen de referencia (opcional)
+        {t("Imagen de referencia (opcional)")}
       </h3>
       <p className="mt-1 text-xs text-muted">
-        Elige hasta 5 tipos de anuncio o sube tu propia imagen como inspiración
-        visual. Cada template define el tipo de anuncio (la IA crea una
-        composición original con tu producto y tu marca, no copia la imagen de
-        ejemplo). Si eliges varios templates, el copy es uno solo y se genera
-        una imagen por template.
+        {t(
+          "Elige hasta 5 tipos de anuncio o sube tu propia imagen como inspiración visual. Cada template define el tipo de anuncio (la IA crea una composición original con tu producto y tu marca, no copia la imagen de ejemplo). Si eliges varios templates, el copy es uno solo y se genera una imagen por template.",
+        )}
       </p>
 
       <div className="mt-3 flex flex-wrap gap-3">
@@ -719,7 +723,7 @@ export default function CustomAdPage() {
               : "border-sand text-muted hover:border-orange/30"
           }`}
         >
-          Usar un template
+          {t("Usar un template")}
         </button>
         <button
           type="button"
@@ -730,7 +734,7 @@ export default function CustomAdPage() {
               : "border-sand text-muted hover:border-orange/30"
           }`}
         >
-          Subir nueva
+          {t("Subir nueva")}
         </button>
         {savedRefImages.length > 0 && (
           <button
@@ -742,7 +746,7 @@ export default function CustomAdPage() {
                 : "border-sand text-muted hover:border-orange/30"
             }`}
           >
-            Usar existente
+            {t("Usar existente")}
           </button>
         )}
       </div>
@@ -765,7 +769,7 @@ export default function CustomAdPage() {
                         : [...prev, tpl.id],
                   )
                 }
-                title={tpl.description}
+                title={t(tpl.description)}
                 className={`group relative flex flex-col overflow-hidden rounded-lg border-2 text-left transition-colors ${
                   isSelected
                     ? "border-orange ring-2 ring-orange/30"
@@ -775,7 +779,7 @@ export default function CustomAdPage() {
                 <div className="relative">
                   <img
                     src={`${API_HOST}${templateImageUrl(tpl.id)}`}
-                    alt={tpl.name}
+                    alt={t(tpl.name)}
                     className="aspect-[4/5] w-full object-cover"
                   />
                   {isSelected && (
@@ -785,9 +789,9 @@ export default function CustomAdPage() {
                   )}
                 </div>
                 <div className="p-2">
-                  <p className="text-xs font-semibold text-ink">{tpl.name}</p>
+                  <p className="text-xs font-semibold text-ink">{t(tpl.name)}</p>
                   <p className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-muted">
-                    {tpl.description}
+                    {t(tpl.description)}
                   </p>
                 </div>
               </button>
@@ -799,10 +803,10 @@ export default function CustomAdPage() {
       {refMode === "new" && (
         <div className="mt-3">
           <FileUpload
-            label="Imagen de referencia"
+            label={t("Imagen de referencia")}
             value={referenceImage}
             onChange={setReferenceImage}
-            helperText="La IA usará esta imagen como inspiración para el estilo visual."
+            helperText={t("La IA usará esta imagen como inspiración para el estilo visual.")}
           />
         </div>
       )}
@@ -822,7 +826,7 @@ export default function CustomAdPage() {
             >
               <img
                 src={`${API_HOST}${ref.imageUrl}`}
-                alt={ref.name || "Referencia"}
+                alt={ref.name || t("Referencia")}
                 className="aspect-square w-full object-cover"
               />
               {existingRefId === ref.id && (
@@ -840,10 +844,10 @@ export default function CustomAdPage() {
   // ── Step indicator ──
 
   const steps: { key: Step; label: string }[] = [
-    { key: "copy", label: "1. Copy" },
-    { key: "selectVariant", label: "2. Variante" },
-    { key: "image", label: "3. Imagen" },
-    { key: "iterate", label: "4. Revisar" },
+    { key: "copy", label: t("1. Copy") },
+    { key: "selectVariant", label: t("2. Variante") },
+    { key: "image", label: t("3. Imagen") },
+    { key: "iterate", label: t("4. Revisar") },
   ];
 
   const currentStepIndex = steps.findIndex((s) =>
@@ -889,19 +893,20 @@ export default function CustomAdPage() {
           href="/ads/search"
           className="text-sm text-muted hover:text-ink transition-colors"
         >
-          ← Volver a buscar ads
+          {t("← Volver a buscar ads")}
         </Link>
         <Card className="mt-6 text-center">
           <Icon name="box" size={36} className="mx-auto text-amber-700" />
           <h2 className="mt-2 text-lg font-semibold text-ink">
-            Primero necesitas un producto
+            {t("Primero necesitas un producto")}
           </h2>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted">
-            Para crear un anuncio personalizado necesitamos al menos un producto
-            con su información completa. Crea uno y vuelve a este paso.
+            {t(
+              "Para crear un anuncio personalizado necesitamos al menos un producto con su información completa. Crea uno y vuelve a este paso.",
+            )}
           </p>
           <Link href="/products/new" className="mt-4 inline-block">
-            <Button>Crear mi primer producto</Button>
+            <Button>{t("Crear mi primer producto")}</Button>
           </Link>
         </Card>
       </div>
@@ -915,21 +920,31 @@ export default function CustomAdPage() {
         onClick={goBack}
         className="text-sm text-muted hover:text-ink transition-colors"
       >
-        {step === "copy" ? "← Volver a buscar ads" : "← Paso anterior"}
+        {step === "copy" ? t("← Volver a buscar ads") : t("← Paso anterior")}
       </button>
 
       <h1 className="mt-4 text-2xl font-semibold text-ink">
-        {refreshCampaignId ? "Refrescar creativo" : "Crear anuncio personalizado"}
+        {refreshCampaignId
+          ? t("Refrescar creativo")
+          : t("Crear anuncio personalizado")}
       </h1>
       <p className="mt-1 text-sm text-muted">
         {refreshCampaignId
-          ? "Genera un creativo nuevo y publícalo como anuncio fresco en el grupo de tu campaña."
-          : "Describe lo que necesitas y la IA generará el copy e imágenes para tu campaña."}
+          ? t(
+              "Genera un creativo nuevo y publícalo como anuncio fresco en el grupo de tu campaña.",
+            )
+          : t(
+              "Describe lo que necesitas y la IA generará el copy e imágenes para tu campaña.",
+            )}
       </p>
 
       {/* Step indicator */}
       <p className="mt-6 text-xs font-semibold uppercase tracking-wide text-muted">
-        Paso {currentStepIndex + 1} de {steps.length}: {steps[currentStepIndex]?.label}
+        {t("Paso {step} de {total}: {label}", {
+          step: currentStepIndex + 1,
+          total: steps.length,
+          label: steps[currentStepIndex]?.label ?? "",
+        })}
       </p>
       <div className="mt-2 flex gap-2">
         {steps.map((s, i) => {
@@ -984,7 +999,7 @@ export default function CustomAdPage() {
                     : "border-sand text-muted hover:border-orange/30"
                 }`}
               >
-                Generar nuevo
+                {t("Generar nuevo")}
               </button>
               <button
                 type="button"
@@ -995,7 +1010,7 @@ export default function CustomAdPage() {
                     : "border-sand text-muted hover:border-orange/30"
                 }`}
               >
-                Usar copy guardado
+                {t("Usar copy guardado")}
               </button>
             </div>
           </Card>
@@ -1004,11 +1019,12 @@ export default function CustomAdPage() {
             <div className="mt-4 flex flex-col gap-4">
               <Card>
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-                  Elige un copy guardado
+                  {t("Elige un copy guardado")}
                 </h3>
                 <p className="mt-1 text-xs text-muted">
-                  Selecciona el copy que quieres reutilizar, luego configura el
-                  producto y la imagen de referencia antes de continuar.
+                  {t(
+                    "Selecciona el copy que quieres reutilizar, luego configura el producto y la imagen de referencia antes de continuar.",
+                  )}
                 </p>
                 <div className="mt-3">
                   <SavedCopiesBrowser
@@ -1028,7 +1044,7 @@ export default function CustomAdPage() {
 
                   {copyError && (
                     <div className="rounded-md border border-error/20 bg-error/10 p-3">
-                      <p className="text-sm text-error">{copyError}</p>
+                      <p className="text-sm text-error">{t(copyError)}</p>
                     </div>
                   )}
 
@@ -1039,13 +1055,15 @@ export default function CustomAdPage() {
                     size="lg"
                     className="w-full"
                   >
-                    Usar este copy
+                    {t("Usar este copy")}
                   </Button>
 
                   {copyLoading && (
                     <div className="flex flex-col items-center gap-3 py-4">
                       <Spinner size="lg" />
-                      <p className="text-sm text-muted">Cargando copy guardado...</p>
+                      <p className="text-sm text-muted">
+                        {t("Cargando copy guardado...")}
+                      </p>
                     </div>
                   )}
                 </>
@@ -1063,12 +1081,12 @@ export default function CustomAdPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-ink">
-                  Déjalo todo a la IA
+                  {t("Déjalo todo a la IA")}
                 </h3>
                 <p className="mt-1 text-xs text-muted">
-                  La IA crea el creativo con total libertad a partir de tu
-                  producto y de lo que describas. No se usan templates ni el
-                  contexto de tu marca (colores, logo, identidad).
+                  {t(
+                    "La IA crea el creativo con total libertad a partir de tu producto y de lo que describas. No se usan templates ni el contexto de tu marca (colores, logo, identidad).",
+                  )}
                 </p>
               </div>
               <button
@@ -1098,17 +1116,23 @@ export default function CustomAdPage() {
 
           <Card>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Describe tu anuncio {freeStyle ? "(obligatorio)" : "(opcional)"}
+              {freeStyle
+                ? t("Describe tu anuncio (obligatorio)")
+                : t("Describe tu anuncio (opcional)")}
             </h3>
             <p className="mt-1 text-xs text-muted">
               {freeStyle
-                ? "En modo “Déjalo todo a la IA” es obligatorio: cuéntale a la IA exactamente el anuncio que quieres (estilo, escena, mensaje, oferta…)."
-                : "Complemento opcional: si quieres algo más personalizado para tu template, cuéntale a la IA qué tipo de anuncio quieres. Si lo dejas vacío, la IA se basará en tu producto, marca y template."}
+                ? t(
+                    "En modo “Déjalo todo a la IA” es obligatorio: cuéntale a la IA exactamente el anuncio que quieres (estilo, escena, mensaje, oferta…).",
+                  )
+                : t(
+                    "Complemento opcional: si quieres algo más personalizado para tu template, cuéntale a la IA qué tipo de anuncio quieres. Si lo dejas vacío, la IA se basará en tu producto, marca y template.",
+                  )}
             </p>
             <Textarea
               className="mt-3"
               rows={5}
-              placeholder="Ej: Quiero un anuncio para promocionar nuestro nuevo kit de skincare natural. El tono debe ser fresco y juvenil, enfocado en ingredientes orgánicos. Incluir una oferta de lanzamiento del 20% de descuento."
+              placeholder={t("Ej: Quiero un anuncio para promocionar nuestro nuevo kit de skincare natural. El tono debe ser fresco y juvenil, enfocado en ingredientes orgánicos. Incluir una oferta de lanzamiento del 20% de descuento.")}
               value={copyPrompt}
               onChange={(e) => setCopyPrompt(e.target.value)}
               required={freeStyle}
@@ -1128,13 +1152,13 @@ export default function CustomAdPage() {
 
           <Card>
             <Select
-              label="Idioma del anuncio"
+              label={t("Idioma del anuncio")}
               value={targetLang}
               onChange={(e) => setTargetLang(e.target.value)}
               options={[
-                { value: "es", label: "Español" },
-                { value: "en", label: "Inglés" },
-                { value: "pt", label: "Portugués" },
+                { value: "es", label: t("Español") },
+                { value: "en", label: t("Inglés") },
+                { value: "pt", label: t("Portugués") },
               ]}
             />
           </Card>
@@ -1152,11 +1176,14 @@ export default function CustomAdPage() {
             disabled={freeStyle && !copyPrompt.trim()}
             className="w-full"
           >
-            Generar copy
+            {t("Generar copy")}
           </Button>
 
           {copyLoading && (
-            <AiProgress message="Generando copy con IA…" estimateSeconds={20} />
+            <AiProgress
+              message={t("Generando copy con IA…")}
+              estimateSeconds={20}
+            />
           )}
         </form>
       )}
@@ -1166,11 +1193,12 @@ export default function CustomAdPage() {
         <div className="mt-6 flex flex-col gap-6">
           <div>
             <h2 className="text-lg font-semibold text-ink">
-              Elige el copy de la imagen
+              {t("Elige el copy de la imagen")}
             </h2>
             <p className="text-sm text-muted">
-              Este es el headline y el CTA que irán sobre la imagen. El texto de
-              la publicación (título y descripción) se genera después.
+              {t(
+                "Este es el headline y el CTA que irán sobre la imagen. El texto de la publicación (título y descripción) se genera después.",
+              )}
             </p>
           </div>
 
@@ -1197,14 +1225,14 @@ export default function CustomAdPage() {
               }}
               className="flex-1"
             >
-              Regenerar copy
+              {t("Regenerar copy")}
             </Button>
             <Button
               onClick={() => setStep("image")}
               size="lg"
               className="flex-1"
             >
-              Continuar con imagen
+              {t("Continuar con imagen")}
             </Button>
           </div>
         </div>
@@ -1216,7 +1244,7 @@ export default function CustomAdPage() {
           {/* Show selected copy */}
           <Card>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Copy de la imagen — Variante {selectedVariant + 1}
+              {t("Copy de la imagen — Variante {n}", { n: selectedVariant + 1 })}
             </h3>
             <p className="mt-2 text-base font-semibold text-ink">
               {copyResult.variants[selectedVariant].headline}
@@ -1237,19 +1265,23 @@ export default function CustomAdPage() {
                     label: templateName(id),
                   }))
                 : referenceImageUrl
-                  ? [{ url: referenceImageUrl, label: "Imagen de referencia" }]
+                  ? [{ url: referenceImageUrl, label: t("Imagen de referencia") }]
                   : [];
             if (refImages.length === 0 && !copyResult.product?.imageUrl)
               return null;
             return (
               <Card>
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-                  Imágenes de referencia
+                  {t("Imágenes de referencia")}
                 </h3>
                 <p className="mt-1 text-xs text-muted">
                   {selectedTemplateIds.length > 1
-                    ? "Se generará una imagen por cada template elegido, usando estas referencias."
-                    : "La IA usará estas imágenes como base para generar tu creativo."}
+                    ? t(
+                        "Se generará una imagen por cada template elegido, usando estas referencias.",
+                      )
+                    : t(
+                        "La IA usará estas imágenes como base para generar tu creativo.",
+                      )}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-4">
                   {refImages.map((ref) => (
@@ -1266,10 +1298,12 @@ export default function CustomAdPage() {
                   ))}
                   {copyResult.product?.imageUrl && (
                     <div className="flex flex-col gap-1.5">
-                      <span className="text-xs font-medium text-muted">Tu producto</span>
+                      <span className="text-xs font-medium text-muted">
+                        {t("Tu producto")}
+                      </span>
                       <img
                         src={`${API_HOST}${copyResult.product.imageUrl}`}
-                        alt="Producto"
+                        alt={t("Producto")}
                         className="h-32 w-32 rounded-lg border border-sand object-cover"
                       />
                     </div>
@@ -1281,15 +1315,17 @@ export default function CustomAdPage() {
 
           <Card>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Dirección creativa de la imagen (opcional)
+              {t("Dirección creativa de la imagen (opcional)")}
             </h3>
             <p className="mt-1 text-xs text-muted">
-              Describe cómo quieres que se vea tu anuncio. Si lo dejas vacío, la IA usará un estilo limpio y acorde a tu marca.
+              {t(
+                "Describe cómo quieres que se vea tu anuncio. Si lo dejas vacío, la IA usará un estilo limpio y acorde a tu marca.",
+              )}
             </p>
             <Textarea
               className="mt-3"
               rows={4}
-              placeholder="Ej: Fondo blanco minimalista con el producto centrado. Luces tipo estudio profesional. Estilo limpio y moderno."
+              placeholder={t("Ej: Fondo blanco minimalista con el producto centrado. Luces tipo estudio profesional. Estilo limpio y moderno.")}
               value={imagePrompt}
               onChange={(e) => setImagePrompt(e.target.value)}
             />
@@ -1305,9 +1341,9 @@ export default function CustomAdPage() {
 
           <Card>
             <h3 className="text-sm font-semibold text-ink">
-              Formatos a generar
+              {t("Formatos a generar")}
             </h3>
-            <p className="text-xs text-muted">Selecciona al menos uno.</p>
+            <p className="text-xs text-muted">{t("Selecciona al menos uno.")}</p>
             <div className="mt-3 flex gap-3">
               {FORMAT_OPTIONS.map((fmt) => (
                 <button
@@ -1320,7 +1356,7 @@ export default function CustomAdPage() {
                       : "border-sand hover:border-orange/30"
                   }`}
                 >
-                  <p className="text-sm font-semibold text-ink">{fmt.label}</p>
+                  <p className="text-sm font-semibold text-ink">{t(fmt.label)}</p>
                   <p className="text-xs text-muted">{fmt.size}</p>
                 </button>
               ))}
@@ -1329,8 +1365,8 @@ export default function CustomAdPage() {
 
           <Card>
             <Input
-              label="Precio (opcional)"
-              placeholder="Ej: $49.900 COP"
+              label={t("Precio (opcional)")}
+              placeholder={t("Ej: $49.900 COP")}
               value={price}
               onChange={(e) => setPrice(e.target.value)}
             />
@@ -1338,7 +1374,7 @@ export default function CustomAdPage() {
 
           {imageError && (
             <div className="rounded-md border border-error/20 bg-error/10 p-3">
-              <p className="text-sm text-error">{imageError}</p>
+              <p className="text-sm text-error">{t(imageError)}</p>
             </div>
           )}
 
@@ -1348,7 +1384,7 @@ export default function CustomAdPage() {
               onClick={() => setStep("selectVariant")}
               className="flex-1"
             >
-              ← Cambiar variante
+              {t("← Cambiar variante")}
             </Button>
             {/* Si ya se generaron imágenes, se puede volver a revisarlas sin
                 regenerar (no perder las imágenes al retroceder). */}
@@ -1358,7 +1394,7 @@ export default function CustomAdPage() {
                 onClick={() => setStep("iterate")}
                 className="flex-1"
               >
-                Continuar a revisión →
+                {t("Continuar a revisión →")}
               </Button>
             )}
             <Button
@@ -1368,13 +1404,13 @@ export default function CustomAdPage() {
               disabled={formats.length === 0}
               className="flex-1"
             >
-              {imageResult ? "Regenerar imágenes" : "Generar imágenes"}
+              {imageResult ? t("Regenerar imágenes") : t("Generar imágenes")}
             </Button>
           </div>
 
           {imageLoading && (
             <AiProgress
-              message="Generando creativos con IA…"
+              message={t("Generando creativos con IA…")}
               estimateSeconds={45}
             />
           )}
@@ -1386,12 +1422,16 @@ export default function CustomAdPage() {
         <div className="mt-6 flex flex-col gap-6">
           <div>
             <h2 className="text-lg font-semibold text-ink">
-              Imágenes generadas
+              {t("Imágenes generadas")}
             </h2>
             <p className="text-sm text-muted">
               {templateImages.length > 1
-                ? "Se generó una imagen por template. Puedes pedir cambios; se publicarán como anuncios."
-                : "Revisa los creativos. Puedes pedir cambios o generar variantes."}
+                ? t(
+                    "Se generó una imagen por template. Puedes pedir cambios; se publicarán como anuncios.",
+                  )
+                : t(
+                    "Revisa los creativos. Puedes pedir cambios o generar variantes.",
+                  )}
             </p>
           </div>
 
@@ -1403,26 +1443,29 @@ export default function CustomAdPage() {
             <div key={img.generatedImageId} className="flex flex-col gap-2">
               {templateImages.length > 1 && (
                 <h3 className="text-sm font-semibold text-ink">
-                  {i + 1}. {templateName(selectedTemplateIds[i])}
+                  {t("{n}. {name}", {
+                    n: i + 1,
+                    name: templateName(selectedTemplateIds[i]),
+                  })}
                 </h3>
               )}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {img.feedImageUrl && (
                   <div className="flex flex-col gap-2">
-                    <Badge variant="default">Feed (1:1)</Badge>
-                    {zoomableImg(img.feedImageUrl, "Feed")}
+                    <Badge variant="default">{t("Feed (1:1)")}</Badge>
+                    {zoomableImg(img.feedImageUrl, t("Feed (1:1)"))}
                   </div>
                 )}
                 {img.verticalImageUrl && (
                   <div className="flex flex-col gap-2">
-                    <Badge variant="default">Vertical (4:5)</Badge>
-                    {zoomableImg(img.verticalImageUrl, "Vertical")}
+                    <Badge variant="default">{t("Vertical (4:5)")}</Badge>
+                    {zoomableImg(img.verticalImageUrl, t("Vertical (4:5)"))}
                   </div>
                 )}
                 {img.storyImageUrl && (
                   <div className="flex flex-col gap-2">
-                    <Badge variant="default">Story (9:16)</Badge>
-                    {zoomableImg(img.storyImageUrl, "Story")}
+                    <Badge variant="default">{t("Story (9:16)")}</Badge>
+                    {zoomableImg(img.storyImageUrl, t("Story (9:16)"))}
                   </div>
                 )}
               </div>
@@ -1432,7 +1475,7 @@ export default function CustomAdPage() {
           {zoomUrl && (
             <VariantLightbox
               imageUrl={zoomUrl}
-              label="Imagen generada"
+              label={t("Imagen generada")}
               onClose={() => setZoomUrl(null)}
             />
           )}
@@ -1440,42 +1483,46 @@ export default function CustomAdPage() {
           {/* Edit section */}
           <Card>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Editar imagen
+              {t("Editar imagen")}
             </h3>
             <p className="mt-1 text-xs text-muted">
-              Describe qué quieres cambiar. La IA editará la imagen manteniendo
-              el resto intacto.
+              {t(
+                "Describe qué quieres cambiar. La IA editará la imagen manteniendo el resto intacto.",
+              )}
             </p>
 
             <div className="mt-3 flex flex-col gap-3">
               {templateImages.length > 1 && (
                 <Select
-                  label="Imagen a editar"
+                  label={t("Imagen a editar")}
                   value={String(editImageIndex)}
                   onChange={(e) => setEditImageIndex(Number(e.target.value))}
                   options={templateImages.map((_, i) => ({
                     value: String(i),
-                    label: `${i + 1}. ${templateName(selectedTemplateIds[i])}`,
+                    label: t("{n}. {name}", {
+                      n: i + 1,
+                      name: templateName(selectedTemplateIds[i]),
+                    }),
                   }))}
                 />
               )}
               {getGeneratedFormats().length > 1 && (
                 <Select
-                  label="Formato a editar"
+                  label={t("Formato a editar")}
                   value={editFormat}
                   onChange={(e) => setEditFormat(e.target.value)}
                   options={[
-                    { value: "all", label: "Todos los formatos" },
+                    { value: "all", label: t("Todos los formatos") },
                     ...getGeneratedFormats().map((f) => ({
                       value: f,
                       label:
-                        FORMAT_OPTIONS.find((o) => o.key === f)?.label ?? f,
+                        t(FORMAT_OPTIONS.find((o) => o.key === f)?.label ?? f),
                     })),
                   ]}
                 />
               )}
               <Textarea
-                placeholder="Ej: Cambia el fondo a un degradado azul oscuro. Haz el texto más grande."
+                placeholder={t("Ej: Cambia el fondo a un degradado azul oscuro. Haz el texto más grande.")}
                 rows={3}
                 value={editInstructions}
                 onChange={(e) => setEditInstructions(e.target.value)}
@@ -1487,8 +1534,10 @@ export default function CustomAdPage() {
                 size="sm"
               >
                 {editFormat === "all"
-                  ? `Aplicar cambios a los ${getGeneratedFormats().length} formatos`
-                  : "Aplicar cambios"}
+                  ? t("Aplicar cambios a los {n} formatos", {
+                      n: getGeneratedFormats().length,
+                    })
+                  : t("Aplicar cambios")}
               </Button>
             </div>
           </Card>
@@ -1498,7 +1547,7 @@ export default function CustomAdPage() {
             <Card>
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-                  Texto de la publicación
+                  {t("Texto de la publicación")}
                 </h3>
                 <button
                   type="button"
@@ -1506,33 +1555,34 @@ export default function CustomAdPage() {
                   disabled={postCopyLoading}
                   className="text-xs font-medium text-orange hover:text-orange/80 disabled:opacity-60"
                 >
-                  {postCopyLoading ? "Generando…" : "Regenerar texto"}
+                  {postCopyLoading ? t("Generando…") : t("Regenerar texto")}
                 </button>
               </div>
               <p className="mt-1 text-xs text-muted">
-                El título aparece bajo la imagen y la descripción es el texto
-                principal del anuncio. Puedes editarlos.
+                {t(
+                  "El título aparece bajo la imagen y la descripción es el texto principal del anuncio. Puedes editarlos.",
+                )}
               </p>
 
               {postCopyLoading && !postTitle && !postDescription ? (
                 <div className="mt-4 flex items-center gap-3">
                   <Spinner size="sm" />
                   <p className="text-sm text-muted">
-                    Generando el texto de la publicación…
+                    {t("Generando el texto de la publicación…")}
                   </p>
                 </div>
               ) : (
                 <div className="mt-3 flex flex-col gap-3">
                   <Input
-                    label="Título"
-                    placeholder="Titular bajo la imagen"
+                    label={t("Título")}
+                    placeholder={t("Titular bajo la imagen")}
                     value={postTitle}
                     onChange={(e) => setPostTitle(e.target.value)}
                   />
                   <Textarea
-                    label="Descripción"
+                    label={t("Descripción")}
                     rows={3}
-                    placeholder="Texto principal del anuncio"
+                    placeholder={t("Texto principal del anuncio")}
                     value={postDescription}
                     onChange={(e) => setPostDescription(e.target.value)}
                   />
@@ -1540,19 +1590,19 @@ export default function CustomAdPage() {
               )}
 
               {postCopyError && (
-                <p className="mt-2 text-sm text-error">{postCopyError}</p>
+                <p className="mt-2 text-sm text-error">{t(postCopyError)}</p>
               )}
             </Card>
           )}
 
           {imageError && (
             <div className="rounded-md border border-error/20 bg-error/10 p-3">
-              <p className="text-sm text-error">{imageError}</p>
+              <p className="text-sm text-error">{t(imageError)}</p>
             </div>
           )}
           {refreshError && (
             <div role="alert" className="rounded-md border border-error/20 bg-error/10 p-3">
-              <p className="text-sm text-error">{refreshError}</p>
+              <p className="text-sm text-error">{t(refreshError)}</p>
             </div>
           )}
 
@@ -1566,11 +1616,12 @@ export default function CustomAdPage() {
                   onChange={(e) => setPauseOld(e.target.checked)}
                   className="h-4 w-4 accent-orange"
                 />
-                Pausar el anuncio anterior
+                {t("Pausar el anuncio anterior")}
               </label>
               <p className="-mt-2 text-xs text-muted">
-                Se publicará como anuncio nuevo en el mismo grupo. Si lo dejas sin
-                pausar, ambos correrán para comparar (A/B).
+                {t(
+                  "Se publicará como anuncio nuevo en el mismo grupo. Si lo dejas sin pausar, ambos correrán para comparar (A/B).",
+                )}
               </p>
               <div className="flex gap-4">
                 <Button
@@ -1582,7 +1633,7 @@ export default function CustomAdPage() {
                   }}
                   className="flex-1"
                 >
-                  Regenerar desde cero
+                  {t("Regenerar desde cero")}
                 </Button>
                 <Button
                   onClick={handleRefresh}
@@ -1590,7 +1641,7 @@ export default function CustomAdPage() {
                   size="lg"
                   className="flex-1"
                 >
-                  Refrescar creativo
+                  {t("Refrescar creativo")}
                 </Button>
               </div>
             </>
@@ -1606,7 +1657,7 @@ export default function CustomAdPage() {
                 }}
                 className="flex-1"
               >
-                Regenerar desde cero
+                {t("Regenerar desde cero")}
               </Button>
               {/* Con 2+ templates no se generan variantes: cada template ya es
                   una creatividad distinta que se publica como anuncio. */}
@@ -1616,7 +1667,7 @@ export default function CustomAdPage() {
                   onClick={() => setStep("variants")}
                   className="flex-1"
                 >
-                  Generar variantes
+                  {t("Generar variantes")}
                 </Button>
               )}
               <Button
@@ -1625,8 +1676,10 @@ export default function CustomAdPage() {
                 className="flex-1"
               >
                 {templateImages.length > 1
-                  ? `Crear campaña (${templateImages.length} anuncios)`
-                  : "Crear campaña"}
+                  ? t("Crear campaña ({n} anuncios)", {
+                      n: templateImages.length,
+                    })
+                  : t("Crear campaña")}
               </Button>
             </div>
           )}
@@ -1638,7 +1691,7 @@ export default function CustomAdPage() {
         <div className="mt-6 flex flex-col gap-6">
           <Card>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Imagen base aprobada
+              {t("Imagen base aprobada")}
             </h3>
             <div className="mt-3 flex justify-center">
               {getGeneratedFormats().map((fmt) => {
@@ -1647,7 +1700,7 @@ export default function CustomAdPage() {
                 return (
                   <div key={fmt} className="flex flex-col items-center gap-2">
                     <Badge variant="default">
-                      {FORMAT_OPTIONS.find((o) => o.key === fmt)?.label ?? fmt}
+                      {t(FORMAT_OPTIONS.find((o) => o.key === fmt)?.label ?? fmt)}
                     </Badge>
                     <img
                       src={url}
@@ -1662,22 +1715,24 @@ export default function CustomAdPage() {
 
           <Card>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Configurar variantes
+              {t("Configurar variantes")}
             </h3>
             <p className="mt-1 text-xs text-muted">
-              Genera hasta 10 variantes por formato para A/B testing. Cada variante respeta el tamaño del formato base.
+              {t(
+                "Genera hasta 10 variantes por formato para A/B testing. Cada variante respeta el tamaño del formato base.",
+              )}
             </p>
             <div className="mt-4 flex flex-wrap gap-4">
               {getGeneratedFormats().length > 1 && (
                 <div className="w-48">
                   <Select
-                    label="Formato"
+                    label={t("Formato")}
                     value={variantFormat}
                     onChange={(e) => setVariantFormat(e.target.value)}
                     options={getGeneratedFormats().map((f) => {
                       const has = imageVariants.some((v) => v.format === f);
                       const label =
-                        FORMAT_OPTIONS.find((o) => o.key === f)?.label ?? f;
+                        t(FORMAT_OPTIONS.find((o) => o.key === f)?.label ?? f);
                       return { value: f, label: has ? `${label} ✓` : label };
                     })}
                   />
@@ -1685,7 +1740,7 @@ export default function CustomAdPage() {
               )}
               <div className="w-32">
                 <Select
-                  label="Cantidad"
+                  label={t("Cantidad")}
                   value={String(variantCount)}
                   onChange={(e) => setVariantCount(Number(e.target.value))}
                   options={Array.from({ length: 10 }, (_, i) => ({
@@ -1703,12 +1758,19 @@ export default function CustomAdPage() {
                 size="lg"
                 className="flex-1"
               >
-                {imageVariants.some((v) => v.format === variantFormat)
-                  ? "Regenerar"
-                  : "Generar"}{" "}
-                {variantCount} variante{variantCount > 1 ? "s" : ""} para{" "}
-                {FORMAT_OPTIONS.find((o) => o.key === variantFormat)?.label ??
-                  variantFormat}
+                {t("{action} {count} para {format}", {
+                  action: imageVariants.some((v) => v.format === variantFormat)
+                    ? t("Regenerar")
+                    : t("Generar"),
+                  count:
+                    variantCount === 1
+                      ? t("1 variante")
+                      : t("{n} variantes", { n: variantCount }),
+                  format: t(
+                    FORMAT_OPTIONS.find((o) => o.key === variantFormat)?.label ??
+                      variantFormat,
+                  ),
+                })}
               </Button>
               {getGeneratedFormats().length > 1 && (
                 <Button
@@ -1719,13 +1781,15 @@ export default function CustomAdPage() {
                   size="lg"
                   className="flex-1"
                 >
-                  Generar para todos los formatos
+                  {t("Generar para todos los formatos")}
                 </Button>
               )}
             </div>
             {generatingVariants && (
               <AiProgress
-                message={`Generando ${Array.from(generatingFormats).join(", ")}…`}
+                message={t("Generando {formats}…", {
+                  formats: Array.from(generatingFormats).join(", "),
+                })}
                 estimateSeconds={45}
               />
             )}
@@ -1735,11 +1799,12 @@ export default function CustomAdPage() {
             <>
               <div>
                 <h2 className="text-lg font-semibold text-ink">
-                  Variantes generadas
+                  {t("Variantes generadas")}
                 </h2>
                 <p className="text-sm text-muted">
-                  Selecciona las que quieres usar. Cada imagen seleccionada se
-                  convierte en un anuncio independiente dentro de tu campaña.
+                  {t(
+                    "Selecciona las que quieres usar. Cada imagen seleccionada se convierte en un anuncio independiente dentro de tu campaña.",
+                  )}
                 </p>
               </div>
 
@@ -1748,7 +1813,7 @@ export default function CustomAdPage() {
                 .map((fmt) => {
                   const groupVariants = imageVariants.filter((v) => v.format === fmt);
                   const formatLabel =
-                    FORMAT_OPTIONS.find((o) => o.key === fmt)?.label ?? fmt;
+                    t(FORMAT_OPTIONS.find((o) => o.key === fmt)?.label ?? fmt);
                   return (
                     <div key={fmt} className="flex flex-col gap-3">
                       <div className="flex items-center gap-2">
@@ -1769,7 +1834,7 @@ export default function CustomAdPage() {
                             <AdPreviewCard
                               key={v.id}
                               imageUrl={`${API_HOST}${v.imageUrl}`}
-                              brandName={brand?.name || "Tu marca"}
+                              brandName={brand?.name || t("Tu marca")}
                               brandLogoUrl={
                                 brand?.logoUrl
                                   ? `${API_HOST}${brand.logoUrl}`
@@ -1777,9 +1842,12 @@ export default function CustomAdPage() {
                               }
                               primaryText={postDescription || copy?.description || ""}
                               headline={postTitle || copy?.headline || ""}
-                              ctaLabel={copy?.ctaTitle ?? "Más información"}
+                              ctaLabel={copy?.ctaTitle ?? t("Más información")}
                               domain={domainFromUrl(brand?.websiteUrl)}
-                              label={`Variante ${labelIndex} · ${formatLabel}`}
+                              label={t("Variante {n} · {format}", {
+                                n: labelIndex,
+                                format: formatLabel,
+                              })}
                               selected={selectedVariants.has(v.id)}
                               onToggle={() => toggleVariantSelection(v.id)}
                               onZoom={() => setLightboxIndex(globalIndex)}
@@ -1796,17 +1864,21 @@ export default function CustomAdPage() {
                   {selectedVariants.size > 0 ? (
                     <>
                       <span className="font-semibold text-ink">
-                        Se crearán {selectedVariants.size} anuncio
-                        {selectedVariants.size === 1 ? "" : "s"}
+                        {selectedVariants.size === 1
+                          ? t("Se creará 1 anuncio")
+                          : t("Se crearán {n} anuncios", {
+                              n: selectedVariants.size,
+                            })}
                       </span>{" "}
-                      — uno por cada imagen seleccionada ({selectedVariants.size}{" "}
-                      de {imageVariants.length}).
+                      {t("— uno por cada imagen seleccionada ({n} de {total}).", {
+                        n: selectedVariants.size,
+                        total: imageVariants.length,
+                      })}
                     </>
                   ) : (
-                    <>
-                      Selecciona al menos una imagen. Se creará un anuncio por
-                      cada una.
-                    </>
+                    t(
+                      "Selecciona al menos una imagen. Se creará un anuncio por cada una.",
+                    )
                   )}
                 </p>
               </div>
@@ -1814,7 +1886,7 @@ export default function CustomAdPage() {
               {lightboxIndex !== null && imageVariants[lightboxIndex] && (
                 <VariantLightbox
                   imageUrl={`${API_HOST}${imageVariants[lightboxIndex].imageUrl}`}
-                  label={`Variante ${lightboxIndex + 1}`}
+                  label={t("Variante {n}", { n: lightboxIndex + 1 })}
                   onClose={() => setLightboxIndex(null)}
                   onPrev={
                     lightboxIndex > 0
@@ -1833,7 +1905,7 @@ export default function CustomAdPage() {
 
           {imageError && (
             <div className="rounded-md border border-error/20 bg-error/10 p-3">
-              <p className="text-sm text-error">{imageError}</p>
+              <p className="text-sm text-error">{t(imageError)}</p>
             </div>
           )}
 
@@ -1847,7 +1919,7 @@ export default function CustomAdPage() {
               }}
               className="flex-1"
             >
-              ← Volver a editar
+              {t("← Volver a editar")}
             </Button>
             <Button
               onClick={handleContinueToCampaign}
@@ -1855,11 +1927,13 @@ export default function CustomAdPage() {
               className="flex-1"
               disabled={imageVariants.length > 0 && selectedVariants.size === 0}
             >
-              {selectedVariants.size > 0
-                ? `Crear campaña (${selectedVariants.size} anuncio${
-                    selectedVariants.size === 1 ? "" : "s"
-                  })`
-                : "Crear campaña"}
+              {selectedVariants.size === 0
+                ? t("Crear campaña")
+                : selectedVariants.size === 1
+                  ? t("Crear campaña (1 anuncio)")
+                  : t("Crear campaña ({n} anuncios)", {
+                      n: selectedVariants.size,
+                    })}
             </Button>
           </div>
         </div>

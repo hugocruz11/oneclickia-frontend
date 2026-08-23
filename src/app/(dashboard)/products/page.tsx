@@ -8,8 +8,10 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
 import type { Product } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
 
 export default function ProductsListPage() {
+  const t = useT();
   const [products, setProducts] = useState<Product[] | null>(null);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -29,7 +31,10 @@ export default function ProductsListPage() {
   }, []);
 
   async function handleDelete(id: string) {
-    if (!confirm("¿Eliminar este producto? No podrá usarse en futuros anuncios.")) return;
+    if (
+      !confirm(t("¿Eliminar este producto? No podrá usarse en futuros anuncios."))
+    )
+      return;
     setDeletingId(id);
     try {
       await api.delete(`/products/${id}`);
@@ -53,20 +58,21 @@ export default function ProductsListPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-ink">Mis productos</h1>
+          <h1 className="text-2xl font-semibold text-ink">{t("Mis productos")}</h1>
           <p className="mt-1 text-sm text-muted">
-            Cada producto que quieras pautar debe tener su perfil completo. La IA usa estas
-            respuestas para generar mejores anuncios.
+            {t(
+              "Cada producto que quieras pautar debe tener su perfil completo. La IA usa estas respuestas para generar mejores anuncios.",
+            )}
           </p>
         </div>
         <Link href="/products/new">
-          <Button size="md">+ Nuevo producto</Button>
+          <Button size="md">{t("+ Nuevo producto")}</Button>
         </Link>
       </div>
 
       {error && (
         <div className="rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
@@ -76,15 +82,16 @@ export default function ProductsListPage() {
             <Icon name="box" size={44} className="text-amber-700" />
             <div>
               <h2 className="text-lg font-semibold text-ink">
-                Todavía no tienes productos
+                {t("Todavía no tienes productos")}
               </h2>
               <p className="mt-1 text-sm text-muted">
-                Crea tu primer producto y completa las 10 preguntas del diagnóstico para que la
-                IA pueda generar anuncios con contexto real.
+                {t(
+                  "Crea tu primer producto y completa las 10 preguntas del diagnóstico para que la IA pueda generar anuncios con contexto real.",
+                )}
               </p>
             </div>
             <Link href="/products/new">
-              <Button size="lg">Crear mi primer producto</Button>
+              <Button size="lg">{t("Crear mi primer producto")}</Button>
             </Link>
           </div>
         </Card>
@@ -113,6 +120,7 @@ function ProductCard({
   onDelete: () => void;
   deleting: boolean;
 }) {
+  const t = useT();
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
   const srcOf = (url: string) =>
     url.startsWith("http") ? url : `${apiBase}${url}`;
@@ -124,34 +132,36 @@ function ProductCard({
     <Card padding="md" className="flex flex-col gap-3">
       <ImageCarousel
         images={images.map(srcOf)}
-        alt={product.name ?? "Producto"}
+        alt={product.name ?? t("Producto")}
       />
 
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-sm font-semibold text-ink line-clamp-2">
-          {product.name ?? "(sin nombre)"}
+          {product.name ?? t("(sin nombre)")}
         </h3>
         {product.isComplete ? (
           <span className="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success">
-            Listo
+            {t("Listo")}
           </span>
         ) : (
           <span className="shrink-0 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">
-            Incompleto
+            {t("Incompleto")}
           </span>
         )}
       </div>
 
       {!product.isComplete && (
         <p className="text-xs text-muted">
-          Faltan preguntas por contestar — no se podrá usar en anuncios hasta completar.
+          {t(
+            "Faltan preguntas por contestar — no se podrá usar en anuncios hasta completar.",
+          )}
         </p>
       )}
 
       <div className="mt-auto flex gap-2 border-t border-sand pt-3">
         <Link href={`/products/${product.id}`} className="flex-1">
           <Button variant="ghost" size="sm" className="w-full">
-            {product.isComplete ? "Editar" : "Completar"}
+            {product.isComplete ? t("Editar") : t("Completar")}
           </Button>
         </Link>
         <Button
@@ -161,7 +171,7 @@ function ProductCard({
           loading={deleting}
           className="text-error hover:bg-error/10"
         >
-          Eliminar
+          {t("Eliminar")}
         </Button>
       </div>
     </Card>
@@ -169,6 +179,7 @@ function ProductCard({
 }
 
 function ImageCarousel({ images, alt }: { images: string[]; alt: string }) {
+  const t = useT();
   const [index, setIndex] = useState(0);
   const count = images.length;
   const safe = Math.min(index, Math.max(0, count - 1));
@@ -194,7 +205,7 @@ function ImageCarousel({ images, alt }: { images: string[]; alt: string }) {
           <button
             type="button"
             onClick={() => go(-1)}
-            aria-label="Anterior"
+            aria-label={t("Anterior")}
             className="absolute left-1.5 top-1/2 -translate-y-1/2 rounded-full bg-ink/50 px-2 py-1 text-white opacity-0 transition-opacity hover:bg-ink/70 group-hover:opacity-100"
           >
             ‹
@@ -202,7 +213,7 @@ function ImageCarousel({ images, alt }: { images: string[]; alt: string }) {
           <button
             type="button"
             onClick={() => go(1)}
-            aria-label="Siguiente"
+            aria-label={t("Siguiente")}
             className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-ink/50 px-2 py-1 text-white opacity-0 transition-opacity hover:bg-ink/70 group-hover:opacity-100"
           >
             ›
@@ -213,7 +224,7 @@ function ImageCarousel({ images, alt }: { images: string[]; alt: string }) {
                 key={i}
                 type="button"
                 onClick={() => setIndex(i)}
-                aria-label={`Imagen ${i + 1}`}
+                aria-label={t("Imagen {n}", { n: i + 1 })}
                 className={`h-1.5 rounded-full transition-all ${
                   i === safe ? "w-4 bg-white" : "w-1.5 bg-white/60"
                 }`}
