@@ -21,7 +21,9 @@ import type {
   MetaPage,
   GenerateImageResponse,
 } from "@/lib/types";
+import { useI18n } from "@/contexts/I18nContext";
 
+// Los textos en español son también sus claves de traducción (ver src/i18n).
 const OBJECTIVES = [
   { value: "OUTCOME_AWARENESS", label: "Reconocimiento" },
   { value: "OUTCOME_TRAFFIC", label: "Tráfico" },
@@ -100,6 +102,7 @@ const CTA_OPTIONS = [
 
 export default function NewCampaignPage() {
   const router = useRouter();
+  const { t, localeTag } = useI18n();
 
   // Loading states
   const [loadingDefaults, setLoadingDefaults] = useState(true);
@@ -414,7 +417,7 @@ export default function NewCampaignPage() {
   function formatBudgetDisplay(value: string): string {
     const num = value.replace(/\D/g, "");
     if (!num) return "";
-    return Number(num).toLocaleString("es-CO");
+    return Number(num).toLocaleString(localeTag);
   }
 
   function handleBudgetChange(raw: string) {
@@ -436,11 +439,11 @@ export default function NewCampaignPage() {
     return (
       <Card className="max-w-lg">
         <p className="text-error">
-          Primero debes generar una imagen para crear una campaña.
+          {t("Primero debes generar una imagen para crear una campaña.")}
         </p>
         <Link href="/ads/search" className="mt-4 inline-block">
           <Button variant="ghost" size="sm">
-            Buscar Ads
+            {t("Buscar Ads")}
           </Button>
         </Link>
       </Card>
@@ -451,12 +454,13 @@ export default function NewCampaignPage() {
     return (
       <Card className="max-w-lg">
         <p className="text-error">
-          Necesitas conectar tu cuenta de Meta y tener al menos una cuenta
-          publicitaria y una página para crear campañas.
+          {t(
+            "Necesitas conectar tu cuenta de Meta y tener al menos una cuenta publicitaria y una página para crear campañas.",
+          )}
         </p>
         <Link href="/connections?tab=meta" className="mt-4 inline-block">
           <Button variant="ghost" size="sm">
-            Conectar Meta
+            {t("Conectar Meta")}
           </Button>
         </Link>
       </Card>
@@ -469,17 +473,17 @@ export default function NewCampaignPage() {
         href="/campaigns"
         className="text-sm text-muted hover:text-ink transition-colors"
       >
-        ← Volver a campañas
+        {t("← Volver a campañas")}
       </Link>
 
-      <h1 className="mt-4 text-2xl font-semibold text-ink">Nueva campaña</h1>
+      <h1 className="mt-4 text-2xl font-semibold text-ink">{t("Nueva campaña")}</h1>
       <p className="mt-1 text-sm text-muted">
-        Configura los detalles de tu campaña publicitaria.
+        {t("Configura los detalles de tu campaña publicitaria.")}
       </p>
 
       {error && (
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
@@ -487,14 +491,14 @@ export default function NewCampaignPage() {
         {/* Meta Resources */}
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Cuenta y página
+            {t("Cuenta y página")}
           </h3>
           <div className="mt-4 flex flex-col gap-4">
             <Select
-              label="Cuenta publicitaria"
+              label={t("Cuenta publicitaria")}
               value={adAccountId}
               onChange={(e) => setAdAccountId(e.target.value)}
-              placeholder="Selecciona una cuenta"
+              placeholder={t("Selecciona una cuenta")}
               options={adAccounts.map((a) => ({
                 value: a.id,
                 label: `${a.name} (${a.currency})`,
@@ -502,10 +506,10 @@ export default function NewCampaignPage() {
               required
             />
             <Select
-              label="Página de Facebook"
+              label={t("Página de Facebook")}
               value={pageId}
               onChange={(e) => setPageId(e.target.value)}
-              placeholder="Selecciona una página"
+              placeholder={t("Selecciona una página")}
               options={pages.map((p) => ({
                 value: p.id,
                 label: `${p.name} — ${p.category}`,
@@ -519,10 +523,12 @@ export default function NewCampaignPage() {
         {metaCampaigns.length > 0 && (
           <Card>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Campaña en Meta
+              {t("Campaña en Meta")}
             </h3>
             <p className="mt-1 text-xs text-muted">
-              Puedes crear una campaña nueva o agregar este anuncio a una campaña existente.
+              {t(
+                "Puedes crear una campaña nueva o agregar este anuncio a una campaña existente.",
+              )}
             </p>
             <div className="mt-3 flex gap-3">
               <button
@@ -534,7 +540,7 @@ export default function NewCampaignPage() {
                     : "border-sand text-muted hover:border-orange/30"
                 }`}
               >
-                Crear nueva
+                {t("Crear nueva")}
               </button>
               <button
                 type="button"
@@ -545,27 +551,27 @@ export default function NewCampaignPage() {
                     : "border-sand text-muted hover:border-orange/30"
                 }`}
               >
-                Usar existente
+                {t("Usar existente")}
               </button>
             </div>
             {campaignMode === "new" && (
               <div className="mt-4">
                 <Input
-                  label="Nombre de la campaña"
-                  placeholder="Ej: Campaña Verano 2026"
+                  label={t("Nombre de la campaña")}
+                  placeholder={t("Ej: Campaña Verano 2026")}
                   value={campaignName}
                   onChange={(e) => setCampaignName(e.target.value)}
-                  helperText="Si lo dejas vacío se usará el headline del copy."
+                  helperText={t("Si lo dejas vacío se usará el headline del copy.")}
                 />
               </div>
             )}
             {campaignMode === "existing" && (
               <div className="mt-4">
                 <Select
-                  label="Campaña existente"
+                  label={t("Campaña existente")}
                   value={selectedMetaCampaignId}
                   onChange={(e) => handleSelectMetaCampaign(e.target.value)}
-                  placeholder="Selecciona una campaña"
+                  placeholder={t("Selecciona una campaña")}
                   options={metaCampaigns.map((c) => ({
                     value: c.id,
                     label: `${c.name} (${c.status})`,
@@ -580,12 +586,12 @@ export default function NewCampaignPage() {
         {(campaignMode === "new" || (campaignMode === "existing" && selectedMetaCampaignId)) && (
           <Card>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Grupo de anuncios
+              {t("Grupo de anuncios")}
             </h3>
             {campaignMode === "existing" && (
               <>
                 <p className="mt-1 text-xs text-muted">
-                  Crea un grupo nuevo o agrega el anuncio a uno existente.
+                  {t("Crea un grupo nuevo o agrega el anuncio a uno existente.")}
                 </p>
                 <div className="mt-3 flex gap-3">
                   <button
@@ -597,7 +603,7 @@ export default function NewCampaignPage() {
                         : "border-sand text-muted hover:border-orange/30"
                     }`}
                   >
-                    Crear nuevo
+                    {t("Crear nuevo")}
                   </button>
                   {metaAdSets.length > 0 && (
                     <button
@@ -609,27 +615,29 @@ export default function NewCampaignPage() {
                           : "border-sand text-muted hover:border-orange/30"
                       }`}
                     >
-                      Usar existente
+                      {t("Usar existente")}
                     </button>
                   )}
                 </div>
                 {loadingAdSets && (
                   <div className="mt-4 flex items-center gap-2">
                     <Spinner size="sm" />
-                    <span className="text-sm text-muted">Cargando grupos...</span>
+                    <span className="text-sm text-muted">
+                      {t("Cargando grupos...")}
+                    </span>
                   </div>
                 )}
                 {adSetMode === "existing" && !loadingAdSets && (
                   <div className="mt-4">
                     <Select
-                      label="Grupo de anuncios existente"
+                      label={t("Grupo de anuncios existente")}
                       value={selectedMetaAdSetId}
                       onChange={(e) => {
                         setSelectedMetaAdSetId(e.target.value);
                         const adSet = metaAdSets.find((a) => a.id === e.target.value);
                         setSelectedMetaAdSetName(adSet?.name ?? "");
                       }}
-                      placeholder="Selecciona un grupo"
+                      placeholder={t("Selecciona un grupo")}
                       options={metaAdSets.map((a) => ({
                         value: a.id,
                         label: `${a.name} (${a.status})`,
@@ -642,11 +650,11 @@ export default function NewCampaignPage() {
             {adSetMode === "new" && (
               <div className="mt-4">
                 <Input
-                  label="Nombre del grupo de anuncios"
-                  placeholder="Ej: Mujeres 25-45 Colombia"
+                  label={t("Nombre del grupo de anuncios")}
+                  placeholder={t("Ej: Mujeres 25-45 Colombia")}
                   value={adSetName}
                   onChange={(e) => setAdSetName(e.target.value)}
-                  helperText="Si lo dejas vacío se generará automáticamente."
+                  helperText={t("Si lo dejas vacío se generará automáticamente.")}
                 />
               </div>
             )}
@@ -656,21 +664,21 @@ export default function NewCampaignPage() {
         {/* Ad name — always shown */}
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Anuncio
+            {t("Anuncio")}
           </h3>
           <div className="mt-4 flex flex-col gap-4">
             <Input
-              label="Nombre del anuncio"
-              placeholder="Ej: Variante A - Imagen principal"
+              label={t("Nombre del anuncio")}
+              placeholder={t("Ej: Variante A - Imagen principal")}
               value={adName}
               onChange={(e) => setAdName(e.target.value)}
-              helperText="Si lo dejas vacío se generará automáticamente."
+              helperText={t("Si lo dejas vacío se generará automáticamente.")}
             />
             <Select
-              label="Llamado a la acción"
+              label={t("Llamado a la acción")}
               value={ctaType}
               onChange={(e) => setCtaType(e.target.value)}
-              options={CTA_OPTIONS}
+              options={CTA_OPTIONS.map((o) => ({ ...o, label: t(o.label) }))}
               required
             />
           </div>
@@ -679,62 +687,67 @@ export default function NewCampaignPage() {
         {/* Objective & Budget */}
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Objetivo y presupuesto
+            {t("Objetivo y presupuesto")}
           </h3>
           <div className="mt-4 flex flex-col gap-4">
             <Select
-              label="Objetivo"
+              label={t("Objetivo")}
               value={objective}
               onChange={(e) => handleObjectiveChange(e.target.value)}
-              options={OBJECTIVES}
+              options={OBJECTIVES.map((o) => ({ ...o, label: t(o.label) }))}
             />
             <div>
               <Select
-                label="Objetivo de rendimiento"
+                label={t("Objetivo de rendimiento")}
                 value={performanceGoal}
                 onChange={(e) => setPerformanceGoal(e.target.value)}
                 options={goalsForObjective(objective).map((g) => ({
                   value: g,
                   label:
                     g === recommendedGoalForObjective(objective)
-                      ? `${PERFORMANCE_GOAL_LABELS[g]} (recomendado)`
-                      : PERFORMANCE_GOAL_LABELS[g],
+                      ? t("{goal} (recomendado)", {
+                          goal: t(PERFORMANCE_GOAL_LABELS[g]),
+                        })
+                      : t(PERFORMANCE_GOAL_LABELS[g]),
                 }))}
               />
               <p className="mt-1.5 text-xs text-muted">
-                Cómo mides el éxito de tus anuncios. Se recomienda según el
-                objetivo de la campaña.
+                {t(
+                  "Cómo mides el éxito de tus anuncios. Se recomienda según el objetivo de la campaña.",
+                )}
               </p>
             </div>
             <div className="flex gap-4">
               <div className="w-40">
                 <Select
-                  label="Tipo de presupuesto"
+                  label={t("Tipo de presupuesto")}
                   value={budgetType}
                   onChange={(e) => setBudgetType(e.target.value)}
                   options={[
-                    { value: "DAILY", label: "Diario" },
-                    { value: "LIFETIME", label: "Total" },
+                    { value: "DAILY", label: t("Diario") },
+                    { value: "LIFETIME", label: t("Total") },
                   ]}
                 />
               </div>
               <div className="flex-1">
                 <Input
-                  label={`Monto (${selectedCurrency})`}
+                  label={t("Monto ({currency})", { currency: selectedCurrency })}
                   type="text"
                   inputMode="numeric"
-                  placeholder="Ej: 5.000"
+                  placeholder={t("Ej: 5.000")}
                   value={formatBudgetDisplay(budgetAmount)}
                   onChange={(e) => handleBudgetChange(e.target.value)}
                   required
-                  helperText={`Mínimo recomendado: 5.000 ${selectedCurrency}`}
+                  helperText={t("Mínimo recomendado: 5.000 {currency}", {
+                    currency: selectedCurrency,
+                  })}
                 />
               </div>
             </div>
             {landingOptions.length > 0 && (
               <div className="mb-3">
                 <label className="mb-1 block text-sm font-medium text-charcoal">
-                  Usar una landing (opcional)
+                  {t("Usar una landing (opcional)")}
                 </label>
                 <select
                   className="w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-ink focus:border-orange focus:outline-none"
@@ -743,7 +756,7 @@ export default function NewCampaignPage() {
                     e.target.value && setDestinationUrl(e.target.value)
                   }
                 >
-                  <option value="">— Elegir landing publicada —</option>
+                  <option value="">{t("— Elegir landing publicada —")}</option>
                   {landingOptions.map((o) => (
                     <option key={o.url} value={o.url}>
                       {o.label}
@@ -753,12 +766,12 @@ export default function NewCampaignPage() {
               </div>
             )}
             <Input
-              label="URL de destino"
+              label={t("URL de destino")}
               type="url"
-              placeholder="https://tu-sitio.com"
+              placeholder={t("https://tu-sitio.com")}
               value={destinationUrl}
               onChange={(e) => setDestinationUrl(e.target.value)}
-              helperText="Elige una landing arriba o pega tu URL. Vacío = URL de tu marca."
+              helperText={t("Elige una landing arriba o pega tu URL. Vacío = URL de tu marca.")}
             />
           </div>
         </Card>
@@ -766,12 +779,12 @@ export default function NewCampaignPage() {
         {/* Schedule */}
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Duración
+            {t("Duración")}
           </h3>
           <div className="mt-4 flex gap-4">
             <div className="flex-1">
               <Input
-                label="Fecha de inicio"
+                label={t("Fecha de inicio")}
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
@@ -780,7 +793,11 @@ export default function NewCampaignPage() {
             </div>
             <div className="flex-1">
               <Input
-                label={`Fecha de fin${budgetType === "LIFETIME" ? " (requerida)" : " (opcional)"}`}
+                label={
+                  budgetType === "LIFETIME"
+                    ? t("Fecha de fin (requerida)")
+                    : t("Fecha de fin (opcional)")
+                }
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
@@ -793,7 +810,7 @@ export default function NewCampaignPage() {
         {/* Targeting */}
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Segmentación
+            {t("Segmentación")}
           </h3>
           <div className="mt-4 flex flex-col gap-4">
             <CountryPicker
@@ -806,7 +823,7 @@ export default function NewCampaignPage() {
             <div className="flex gap-4">
               <div className="flex-1">
                 <Input
-                  label="Edad mínima"
+                  label={t("Edad mínima")}
                   type="number"
                   min="18"
                   max="65"
@@ -816,7 +833,7 @@ export default function NewCampaignPage() {
               </div>
               <div className="flex-1">
                 <Input
-                  label="Edad máxima"
+                  label={t("Edad máxima")}
                   type="number"
                   min="18"
                   max="65"
@@ -827,13 +844,13 @@ export default function NewCampaignPage() {
             </div>
 
             <Select
-              label="Género"
+              label={t("Género")}
               value={String(genders[0])}
               onChange={(e) => setGenders([Number(e.target.value)])}
               options={[
-                { value: "0", label: "Todos" },
-                { value: "1", label: "Hombre" },
-                { value: "2", label: "Mujer" },
+                { value: "0", label: t("Todos") },
+                { value: "1", label: t("Hombre") },
+                { value: "2", label: t("Mujer") },
               ]}
             />
 
@@ -862,7 +879,7 @@ export default function NewCampaignPage() {
             targetCountries.length === 0
           }
         >
-          Crear borrador de campaña
+          {t("Crear borrador de campaña")}
         </Button>
       </form>
     </div>

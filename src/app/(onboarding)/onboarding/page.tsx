@@ -17,6 +17,7 @@ import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { api, ApiError } from "@/lib/api";
 import type { Brand, PricePositioning } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
 
 // ─── Wizard state ──────────────────────────────────────────────────
 
@@ -141,6 +142,7 @@ function resumeStep(state: WizardState, hasLogo: boolean): number {
 
 export default function OnboardingWizardPage() {
   const router = useRouter();
+  const t = useT();
   const [bootstrapped, setBootstrapped] = useState(false);
   const [state, setState] = useState<WizardState>(EMPTY_STATE);
   const [logo, setLogo] = useState<File | null>(null);
@@ -287,7 +289,7 @@ export default function OnboardingWizardPage() {
       <Card padding="lg">
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Paso {step} de {TOTAL_STEPS}
+            {t("Paso {step} de {total}", { step, total: TOTAL_STEPS })}
           </span>
         </div>
 
@@ -367,19 +369,21 @@ function StepHeader({
 }
 
 function ErrorBox({ error }: { error: string }) {
+  const t = useT();
   if (!error) return null;
   return (
     <div className="rounded-md border border-error/20 bg-error/10 p-3">
-      <p className="text-sm text-error">{error}</p>
+      <p className="text-sm text-error">{t(error)}</p>
     </div>
   );
 }
 
 function WarningsBox({ warnings }: { warnings: string[] }) {
+  const t = useT();
   if (!warnings.length) return null;
   return (
     <div className="rounded-md border border-warning/20 bg-warning/10 p-3">
-      <p className="text-sm font-medium text-warning">Avisos:</p>
+      <p className="text-sm font-medium text-warning">{t("Avisos:")}</p>
       {warnings.map((w, i) => (
         <p key={i} className="mt-1 text-sm text-warning">
           {w}
@@ -398,11 +402,13 @@ function StepFooter({
   saving: boolean;
   primaryLabel: string;
 }) {
+  const t = useT();
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sand pt-5">
       {onBack ? (
         <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-          ← Atrás
+          {t("← Atrás")}
         </Button>
       ) : (
         <span />
@@ -472,6 +478,8 @@ function Step1({
   hasLogo: boolean;
   warnings: string[];
 }) {
+  const t = useT();
+
   return (
     <>
       <StepHeader
@@ -480,28 +488,34 @@ function Step1({
       />
       <FormShell onSubmit={onSubmit}>
         <Input
-          label="Nombre comercial *"
-          placeholder="Ej: MUMU"
+          label={t("Nombre comercial *")}
+          placeholder={t("Ej: MUMU")}
           value={state.name}
           onChange={(e) => update("name", e.target.value)}
           required
         />
 
         <FileUpload
-          label={hasLogo ? "Logo de la marca (ya cargado)" : "Logo de la marca *"}
+          label={
+            hasLogo
+              ? t("Logo de la marca (ya cargado)")
+              : t("Logo de la marca *")
+          }
           value={logo}
           onChange={setLogo}
           helperText={
             hasLogo
-              ? "Ya tienes un logo guardado. Sube uno nuevo solo si quieres reemplazarlo."
-              : "Se usará en tus anuncios generados."
+              ? t(
+                  "Ya tienes un logo guardado. Sube uno nuevo solo si quieres reemplazarlo.",
+                )
+              : t("Se usará en tus anuncios generados.")
           }
         />
 
         <Input
-          label="URL del sitio web *"
+          label={t("URL del sitio web *")}
           type="url"
-          placeholder="https://www.tumarca.com"
+          placeholder={t("https://www.tumarca.com")}
           value={state.websiteUrl}
           onChange={(e) => update("websiteUrl", e.target.value)}
           required
@@ -509,53 +523,53 @@ function Step1({
 
         <div className="border-t border-sand pt-5">
           <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted">
-            Instagram (opcional)
+            {t("Instagram (opcional)")}
           </p>
           <div className="flex flex-col gap-5">
             <Input
-              label="URL de Instagram"
+              label={t("URL de Instagram")}
               type="url"
-              placeholder="https://instagram.com/tumarca"
+              placeholder={t("https://instagram.com/tumarca")}
               value={state.instagramUrl}
               onChange={(e) => update("instagramUrl", e.target.value)}
             />
             <Textarea
-              label="Descripción de Instagram"
-              placeholder="Qué publicas, qué vendes, a quién te diriges..."
+              label={t("Descripción de Instagram")}
+              placeholder={t("Qué publicas, qué vendes, a quién te diriges...")}
               value={state.instagramSummary}
               onChange={(e) => update("instagramSummary", e.target.value)}
-              helperText="Útil si no tienes web pública o quieres complementar."
+              helperText={t("Útil si no tienes web pública o quieres complementar.")}
             />
           </div>
         </div>
 
         <div className="border-t border-sand pt-5">
           <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted">
-            Identidad de marca
+            {t("Identidad de marca")}
           </p>
           <div className="flex flex-col gap-5">
             <Textarea
-              label="1. Nombre comercial, razón social, año y canal de venta *"
-              placeholder='Ej: MUMU — razón social Bienestar Natural SAS. Fundada en 2021 en Medellín, Colombia. Canal principal: e-commerce propio (Shopify) + Farmatodo.'
+              label={t("1. Nombre comercial, razón social, año y canal de venta *")}
+              placeholder={t('Ej: MUMU — razón social Bienestar Natural SAS. Fundada en 2021 en Medellín, Colombia. Canal principal: e-commerce propio (Shopify) + Farmatodo.')}
               value={state.identityContext}
               onChange={(e) => update("identityContext", e.target.value)}
-              helperText="Nombre legal si es distinto al comercial, año, país de origen, canal principal."
+              helperText={t("Nombre legal si es distinto al comercial, año, país de origen, canal principal.")}
               rows={4}
             />
             <Textarea
-              label="2. Mercados actuales y mercados meta *"
-              placeholder='Ej: Hoy: Colombia (80% e-commerce). Meta año 2: México y Chile. Año 3: distribución en farmacias latinoamericanas.'
+              label={t("2. Mercados actuales y mercados meta *")}
+              placeholder={t('Ej: Hoy: Colombia (80% e-commerce). Meta año 2: México y Chile. Año 3: distribución en farmacias latinoamericanas.')}
               value={state.markets}
               onChange={(e) => update("markets", e.target.value)}
-              helperText="Geografía actual y expansión planeada (países, ciudades, segmentos)."
+              helperText={t("Geografía actual y expansión planeada (países, ciudades, segmentos).")}
               rows={4}
             />
             <Textarea
-              label="3. Misión: ¿por qué existe tu marca más allá de vender? *"
-              placeholder='Ej: Demostrar que cuidarse bien no requiere ni sufrimiento ni una licenciatura en nutrición.'
+              label={t("3. Misión: ¿por qué existe tu marca más allá de vender? *")}
+              placeholder={t('Ej: Demostrar que cuidarse bien no requiere ni sufrimiento ni una licenciatura en nutrición.')}
               value={state.mission}
               onChange={(e) => update("mission", e.target.value)}
-              helperText="El propósito real, no el eslogan."
+              helperText={t("El propósito real, no el eslogan.")}
               rows={4}
             />
           </div>
@@ -563,13 +577,15 @@ function Step1({
 
         <ErrorBox error={error} />
         <WarningsBox warnings={warnings} />
-        <StepFooter saving={saving} primaryLabel="Guardar y continuar →" />
+        <StepFooter saving={saving} primaryLabel={t("Guardar y continuar →")} />
       </FormShell>
     </>
   );
 }
 
 function Step2({ state, update, onSubmit, onBack, saving, error }: StepProps) {
+  const t = useT();
+
   return (
     <>
       <StepHeader
@@ -578,42 +594,42 @@ function Step2({ state, update, onSubmit, onBack, saving, error }: StepProps) {
       />
       <FormShell onSubmit={onSubmit}>
         <Textarea
-          label="4. Si tu marca fuera una persona, ¿cómo sería? *"
-          placeholder='Ej: Mujer de 35 años, profesional, que se cuida sin obsesionarse. Vive en Medellín, va al pilates dos veces por semana, lee etiquetas antes de comprar pero no es extremista. Habla con honestidad, no promete milagros.'
+          label={t("4. Si tu marca fuera una persona, ¿cómo sería? *")}
+          placeholder={t('Ej: Mujer de 35 años, profesional, que se cuida sin obsesionarse. Vive en Medellín, va al pilates dos veces por semana, lee etiquetas antes de comprar pero no es extremista. Habla con honestidad, no promete milagros.')}
           value={state.brandPersona}
           onChange={(e) => update("brandPersona", e.target.value)}
-          helperText="Edad, perfil, carácter, qué hace, cómo se ve. Esta persona define el tono de todos los creativos."
+          helperText={t("Edad, perfil, carácter, qué hace, cómo se ve. Esta persona define el tono de todos los creativos.")}
           rows={5}
         />
         <Textarea
-          label="5. Tono de voz: 3-5 adjetivos + cómo se manifiesta en el copy *"
-          placeholder='Ej: Empático, honesto, directo, sin condescendencia. En la práctica: habla de tú a tú, no usa jerga wellness, nunca dice "babe" ni "sis", frases cortas, evita superlativos.'
+          label={t("5. Tono de voz: 3-5 adjetivos + cómo se manifiesta en el copy *")}
+          placeholder={t('Ej: Empático, honesto, directo, sin condescendencia. En la práctica: habla de tú a tú, no usa jerga wellness, nunca dice "babe" ni "sis", frases cortas, evita superlativos.')}
           value={state.toneOfVoice}
           onChange={(e) => update("toneOfVoice", e.target.value)}
-          helperText="3-5 adjetivos que describen el tono y un ejemplo de cómo se manifiesta."
+          helperText={t("3-5 adjetivos que describen el tono y un ejemplo de cómo se manifiesta.")}
           rows={5}
         />
         <Textarea
-          label="6. ¿Qué NUNCA diría, haría ni parecería tu marca? *"
-          placeholder='Ej: 1) Nunca lenguaje de vergüenza corporal. 2) Nunca prometer resultados sin esfuerzo. 3) Nunca testimonios falsos. 4) Nunca sonar desesperada. 5) Nunca comparar con estándares irreales.'
+          label={t("6. ¿Qué NUNCA diría, haría ni parecería tu marca? *")}
+          placeholder={t('Ej: 1) Nunca lenguaje de vergüenza corporal. 2) Nunca prometer resultados sin esfuerzo. 3) Nunca testimonios falsos. 4) Nunca sonar desesperada. 5) Nunca comparar con estándares irreales.')}
           value={state.communicationProhibitions}
           onChange={(e) => update("communicationProhibitions", e.target.value)}
-          helperText="Las 5 prohibiciones de tono y comunicación."
+          helperText={t("Las 5 prohibiciones de tono y comunicación.")}
           rows={5}
         />
         <Textarea
-          label="7. ¿Qué marcas admiras por su forma de comunicarse y qué replicarías? *"
-          placeholder='Ej: Patagonia por su honestidad radical. Oatly por su irreverencia sin perder credibilidad. Nubank por hablarle a adultos como adultos.'
+          label={t("7. ¿Qué marcas admiras por su forma de comunicarse y qué replicarías? *")}
+          placeholder={t('Ej: Patagonia por su honestidad radical. Oatly por su irreverencia sin perder credibilidad. Nubank por hablarle a adultos como adultos.')}
           value={state.admiredBrands}
           onChange={(e) => update("admiredBrands", e.target.value)}
-          helperText="De cualquier industria — lo importante es qué tiene esa comunicación que te gustaría replicar."
+          helperText={t("De cualquier industria — lo importante es qué tiene esa comunicación que te gustaría replicar.")}
           rows={4}
         />
         <ErrorBox error={error} />
         <StepFooter
           onBack={onBack}
           saving={saving}
-          primaryLabel="Guardar y continuar →"
+          primaryLabel={t("Guardar y continuar →")}
         />
       </FormShell>
     </>
@@ -621,6 +637,8 @@ function Step2({ state, update, onSubmit, onBack, saving, error }: StepProps) {
 }
 
 function Step3({ state, update, onSubmit, onBack, saving, error }: StepProps) {
+  const t = useT();
+
   return (
     <>
       <StepHeader
@@ -629,18 +647,18 @@ function Step3({ state, update, onSubmit, onBack, saving, error }: StepProps) {
       />
       <FormShell onSubmit={onSubmit}>
         <Textarea
-          label="8. ¿Cuál es la creencia central o filosofía de tu marca? *"
-          placeholder='Ej. calzado: "Creemos que un zapato puede ser elegante Y cómodo — la industria lleva 50 años diciéndote que tienes que elegir." Ej. ropa: "Creemos que el cuerpo no tiene que adaptarse a la talla — la ropa tiene que adaptarse al cuerpo."'
+          label={t("8. ¿Cuál es la creencia central o filosofía de tu marca? *")}
+          placeholder={t('Ej. calzado: "Creemos que un zapato puede ser elegante Y cómodo — la industria lleva 50 años diciéndote que tienes que elegir." Ej. ropa: "Creemos que el cuerpo no tiene que adaptarse a la talla — la ropa tiene que adaptarse al cuerpo."')}
           value={state.coreBelief}
           onChange={(e) => update("coreBelief", e.target.value)}
-          helperText="¿Qué cree tu marca que es verdad en su categoría que otros no dicen? Una creencia poderosa enfrenta el statu quo."
+          helperText={t("¿Qué cree tu marca que es verdad en su categoría que otros no dicen? Una creencia poderosa enfrenta el statu quo.")}
           rows={6}
         />
         <ErrorBox error={error} />
         <StepFooter
           onBack={onBack}
           saving={saving}
-          primaryLabel="Guardar y continuar →"
+          primaryLabel={t("Guardar y continuar →")}
         />
       </FormShell>
     </>
@@ -648,6 +666,8 @@ function Step3({ state, update, onSubmit, onBack, saving, error }: StepProps) {
 }
 
 function Step4({ state, update, onSubmit, onBack, saving, error }: StepProps) {
+  const t = useT();
+
   return (
     <>
       <StepHeader
@@ -656,18 +676,18 @@ function Step4({ state, update, onSubmit, onBack, saving, error }: StepProps) {
       />
       <FormShell onSubmit={onSubmit}>
         <Textarea
-          label="9. ¿Cuál es la identidad visual de tu marca? *"
-          placeholder='Ej: Colores: verde menta #A8D8B9 + negro carbón #1C1C1C + blanco hueso #F9F7F2. Tipografía: sans-serif geométrica (Neue Haas Grotesk), serif clásica para cuerpo (Freight Text). Estética: limpia, espacio en blanco, fotografía de producto sobre fondos neutros. Referencias: Aesop, Muji, Kinfolk.'
+          label={t("9. ¿Cuál es la identidad visual de tu marca? *")}
+          placeholder={t('Ej: Colores: verde menta #A8D8B9 + negro carbón #1C1C1C + blanco hueso #F9F7F2. Tipografía: sans-serif geométrica (Neue Haas Grotesk), serif clásica para cuerpo (Freight Text). Estética: limpia, espacio en blanco, fotografía de producto sobre fondos neutros. Referencias: Aesop, Muji, Kinfolk.')}
           value={state.visualIdentity}
           onChange={(e) => update("visualIdentity", e.target.value)}
-          helperText="Colores corporativos (con códigos si los tienes), tipografías, estética general, estilo fotográfico y referencias visuales. Si no tienes identidad definida, describe cómo quisieras que se vea."
+          helperText={t("Colores corporativos (con códigos si los tienes), tipografías, estética general, estilo fotográfico y referencias visuales. Si no tienes identidad definida, describe cómo quisieras que se vea.")}
           rows={8}
         />
         <ErrorBox error={error} />
         <StepFooter
           onBack={onBack}
           saving={saving}
-          primaryLabel="Guardar y continuar →"
+          primaryLabel={t("Guardar y continuar →")}
         />
       </FormShell>
     </>
@@ -675,10 +695,14 @@ function Step4({ state, update, onSubmit, onBack, saving, error }: StepProps) {
 }
 
 function Step5({ state, update, onSubmit, onBack, saving, error }: StepProps) {
+  const t = useT();
   const positioningOptions = useMemo(
     () =>
-      PRICE_POSITIONING_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
-    [],
+      PRICE_POSITIONING_OPTIONS.map((o) => ({
+        value: o.value,
+        label: t(o.label),
+      })),
+    [t],
   );
 
   return (
@@ -689,8 +713,8 @@ function Step5({ state, update, onSubmit, onBack, saving, error }: StepProps) {
       />
       <FormShell onSubmit={onSubmit}>
         <Select
-          label="10. Rango de precio y percepción *"
-          placeholder="Selecciona un rango"
+          label={t("10. Rango de precio y percepción *")}
+          placeholder={t("Selecciona un rango")}
           options={positioningOptions}
           value={state.pricePositioning}
           onChange={(e) =>
@@ -701,42 +725,42 @@ function Step5({ state, update, onSubmit, onBack, saving, error }: StepProps) {
           }
         />
         <Textarea
-          label="10. ¿Qué comunica ese posicionamiento? *"
-          placeholder='Ej: Premium accesible — por encima de marcas genéricas pero por debajo de marcas importadas de lujo. El precio comunica calidad real sin pagar por la etiqueta.'
+          label={t("10. ¿Qué comunica ese posicionamiento? *")}
+          placeholder={t('Ej: Premium accesible — por encima de marcas genéricas pero por debajo de marcas importadas de lujo. El precio comunica calidad real sin pagar por la etiqueta.')}
           value={state.positioningStatement}
           onChange={(e) => update("positioningStatement", e.target.value)}
-          helperText="Explica qué transmite tu rango de precio al cliente."
+          helperText={t("Explica qué transmite tu rango de precio al cliente.")}
           rows={4}
         />
         <Textarea
-          label="11. Competidores directos de tu MARCA *"
-          placeholder='Ej: Competidor 1: Totto — masiva, buena distribución, diseño genérico. Nos eligen cuando quieren más personalidad. Competidor 2: Osprey — importada premium, $800K+, sin servicio local.'
+          label={t("11. Competidores directos de tu MARCA *")}
+          placeholder={t('Ej: Competidor 1: Totto — masiva, buena distribución, diseño genérico. Nos eligen cuando quieren más personalidad. Competidor 2: Osprey — importada premium, $800K+, sin servicio local.')}
           value={state.competitors}
           onChange={(e) => update("competitors", e.target.value)}
-          helperText="Para cada competidor: nombre, posicionamiento y por qué un cliente te elegiría sobre ellos."
+          helperText={t("Para cada competidor: nombre, posicionamiento y por qué un cliente te elegiría sobre ellos.")}
           rows={6}
         />
         <Textarea
-          label="12. ¿En qué es notablemente mejor tu marca? *"
-          placeholder='Ej: Soporte postventa en español, tiempo de entrega en Colombia, adaptación del producto al clima tropical.'
+          label={t("12. ¿En qué es notablemente mejor tu marca? *")}
+          placeholder={t('Ej: Soporte postventa en español, tiempo de entrega en Colombia, adaptación del producto al clima tropical.')}
           value={state.competitiveEdge}
           onChange={(e) => update("competitiveEdge", e.target.value)}
-          helperText="Sé honesto y específico — no 'calidad' en abstracto."
+          helperText={t("Sé honesto y específico — no 'calidad' en abstracto.")}
           rows={4}
         />
         <Textarea
-          label="12. ¿Cuál es el hueco de mercado que ocupas? *"
-          placeholder='Ej: La única marca de accesorios técnicos diseñada para el contexto latinoamericano — el calor, las lluvias, el transporte público.'
+          label={t("12. ¿Cuál es el hueco de mercado que ocupas? *")}
+          placeholder={t('Ej: La única marca de accesorios técnicos diseñada para el contexto latinoamericano — el calor, las lluvias, el transporte público.')}
           value={state.marketGap}
           onChange={(e) => update("marketGap", e.target.value)}
-          helperText="El hueco que ningún competidor está llenando."
+          helperText={t("El hueco que ningún competidor está llenando.")}
           rows={4}
         />
         <ErrorBox error={error} />
         <StepFooter
           onBack={onBack}
           saving={saving}
-          primaryLabel="Terminar y empezar"
+          primaryLabel={t("Terminar y empezar")}
         />
       </FormShell>
     </>

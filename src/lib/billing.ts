@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import type { TranslateFn } from "@/i18n/translate";
 
 // Mirrors the backend billing contracts (src/billing in the API).
 
@@ -73,14 +74,15 @@ export interface InsufficientCreditsDetail {
   message?: string;
 }
 
-export function formatUsd(cents: number): string {
-  if (cents === 0) return "Gratis";
+// `t` traduce el único texto que devuelven ("Gratis"); sin él sale español.
+export function formatUsd(cents: number, t: TranslateFn = (s) => s): string {
+  if (cents === 0) return t("Gratis");
   return `$${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)}`;
 }
 
 /** Whole COP, e.g. 139900 → "$139.900 COP". */
-export function formatCop(pesos: number): string {
-  if (pesos === 0) return "Gratis";
+export function formatCop(pesos: number, t: TranslateFn = (s) => s): string {
+  if (pesos === 0) return t("Gratis");
   return `$${pesos.toLocaleString("es-CO")} COP`;
 }
 

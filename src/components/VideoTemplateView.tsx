@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { useT } from "@/contexts/I18nContext";
 
 interface Props {
   template: string;
@@ -24,6 +25,7 @@ interface Props {
  * for easy reuse.
  */
 export function VideoTemplateView({ template, metaLine, actions }: Props) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -40,11 +42,13 @@ export function VideoTemplateView({ template, metaLine, actions }: Props) {
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-ink">Template universal</h2>
+          <h2 className="text-lg font-semibold text-ink">
+            {t("Template universal")}
+          </h2>
           <p className="mt-1 text-xs text-muted">
-            Estructura neutra del anuncio, lista para copiar y adaptar a tu
-            producto. Las variables entre [CORCHETES] son los puntos que
-            reemplazás con tus propios datos.
+            {t(
+              "Estructura neutra del anuncio, lista para copiar y adaptar a tu producto. Las variables entre [CORCHETES] son los puntos que reemplazás con tus propios datos.",
+            )}
           </p>
           {metaLine && (
             <p className="mt-1 text-[10px] text-muted">{metaLine}</p>
@@ -52,7 +56,7 @@ export function VideoTemplateView({ template, metaLine, actions }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" onClick={handleCopy}>
-            {copied ? "✓ Copiado" : "Copiar"}
+            {copied ? t("✓ Copiado") : t("Copiar")}
           </Button>
           {actions}
         </div>

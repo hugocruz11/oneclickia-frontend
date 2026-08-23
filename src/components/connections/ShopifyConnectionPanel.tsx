@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Icon } from "@/components/ui/Icon";
 import { Pagination } from "@/components/ListControls";
 import { api, ApiError } from "@/lib/api";
+import { RichText } from "@/components/RichText";
+import { useT } from "@/contexts/I18nContext";
 
 // Cuántos productos por página en la lista de Shopify.
 const PRODUCTS_PAGE_SIZE = 8;
@@ -39,6 +41,7 @@ interface ShopifyProduct {
 
 /** Fila copiable: etiqueta + valor monoespaciado + botón "Copiar". */
 function CopyableField({ label, value }: { label: string; value: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   return (
     <div>
@@ -56,7 +59,7 @@ function CopyableField({ label, value }: { label: string; value: string }) {
           }}
           className="shrink-0 rounded-md border border-sand bg-cream px-2 py-1.5 text-xs font-medium text-charcoal transition-colors hover:bg-sand-light"
         >
-          {copied ? "✓ Copiado" : "Copiar"}
+          {copied ? t("✓ Copiado") : t("Copiar")}
         </button>
       </div>
     </div>
@@ -64,6 +67,7 @@ function CopyableField({ label, value }: { label: string; value: string }) {
 }
 
 export function ShopifyConnectionPanel() {
+  const t = useT();
   const [status, setStatus] = useState<ShopifyStatus | null>(null);
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
   const [productPage, setProductPage] = useState(0);
@@ -160,18 +164,21 @@ export function ShopifyConnectionPanel() {
   return (
     <div>
       <p className="text-sm text-muted">
-        Conecta tu tienda para crear landing pages por avatar bajo tu propio
-        dominio y enlazarlas a tus productos.
+        {t(
+          "Conecta tu tienda para crear landing pages por avatar bajo tu propio dominio y enlazarlas a tus productos.",
+        )}
       </p>
 
       {banner === "connected" && (
         <div className="mt-4 rounded-md border border-success/20 bg-success/10 p-3">
-          <p className="text-sm text-success-text">¡Tienda Shopify conectada!</p>
+          <p className="text-sm text-success-text">
+            {t("¡Tienda Shopify conectada!")}
+          </p>
         </div>
       )}
       {error && (
         <div role="alert" className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
@@ -179,17 +186,17 @@ export function ShopifyConnectionPanel() {
       <Card className="mt-6">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-ink">Conexión</h2>
+            <h2 className="text-lg font-semibold text-ink">{t("Conexión")}</h2>
             <Badge
               variant={
                 isConnected ? "success" : status?.pending ? "warning" : "muted"
               }
             >
               {isConnected
-                ? "Conectada"
+                ? t("Conectada")
                 : status?.pending
-                  ? "Instalación pendiente"
-                  : "Desconectada"}
+                  ? t("Instalación pendiente")
+                  : t("Desconectada")}
             </Badge>
           </div>
           {(isConnected || status?.pending) && (
@@ -199,21 +206,22 @@ export function ShopifyConnectionPanel() {
               loading={disconnecting}
               size="sm"
             >
-              Desconectar
+              {t("Desconectar")}
             </Button>
           )}
         </div>
 
         {isConnected && (
           <p className="mt-3 text-sm text-charcoal">
-            <span className="font-medium text-ink">Tienda:</span> {status?.shop}
+            <span className="font-medium text-ink">{t("Tienda:")}</span>{" "}
+            {status?.shop}
           </p>
         )}
         {status?.pending && (
           <p className="mt-3 text-sm text-charcoal">
-            Guardamos las credenciales de <strong>{status.shop}</strong>, pero
-            falta terminar de instalar la app. Vuelve a pulsar “Conectar” para
-            autorizar la instalación en tu tienda.
+            <RichText vars={{ shop: status.shop ?? "" }}>
+              {"Guardamos las credenciales de **{shop}**, pero falta terminar de instalar la app. Vuelve a pulsar “Conectar” para autorizar la instalación en tu tienda."}
+            </RichText>
           </p>
         )}
       </Card>
@@ -223,12 +231,12 @@ export function ShopifyConnectionPanel() {
         <>
           <Card className="mt-4">
             <h2 className="text-base font-semibold text-ink">
-              Paso 1 · Crea y configura tu app en Shopify
+              {t("Paso 1 · Crea y configura tu app en Shopify")}
             </h2>
 
             <ol className="mt-3 flex list-decimal flex-col gap-2 pl-5 text-sm text-charcoal">
               <li>
-                Entra a{" "}
+                {t("Entra a")}{" "}
                 <a
                   href="https://dev.shopify.com/dashboard"
                   target="_blank"
@@ -240,46 +248,48 @@ export function ShopifyConnectionPanel() {
                 → <strong>Apps</strong>.
               </li>
               <li>
-                Abajo a la derecha, haz clic en el botón{" "}
-                <strong>“Crear app”</strong> (en la barra “Obtén credenciales de
-                la API”). <em>No</em> uses la opción de CLI (
-                <code className="text-xs">npm init…</code>).
+                <RichText>
+                  {"Abajo a la derecha, haz clic en el botón **“Crear app”** (en la barra “Obtén credenciales de la API”). *No* uses la opción de CLI (`npm init…`)."}
+                </RichText>
               </li>
               <li>
-                Ponle un nombre a la app (ej. “OneClickIA”). Al crearla, Shopify
-                te lleva automáticamente a la página de configuración
-                (la <strong>“versión”</strong> de la app) — ahí va todo lo
-                siguiente.
+                <RichText>
+                  {"Ponle un nombre a la app (ej. “OneClickIA”). Al crearla, Shopify te lleva automáticamente a la página de configuración (la **“versión”** de la app) — ahí va todo lo siguiente."}
+                </RichText>
               </li>
               <li>
-                En <strong>URL de la app</strong> pon cualquier URL https válida
-                (no la usamos). Puedes pegar la misma URL del proxy de abajo.
+                <RichText>
+                  {"En **URL de la app** pon cualquier URL https válida (no la usamos). Puedes pegar la misma URL del proxy de abajo."}
+                </RichText>
               </li>
               <li>
-                <strong>Desmarca</strong> la casilla{" "}
-                <strong>“Incrustar la app en el panel de control de Shopify”</strong>{" "}
-                (nuestra app no va incrustada en el admin).
+                <RichText>
+                  {"**Desmarca** la casilla **“Incrustar la app en el panel de control de Shopify”** (nuestra app no va incrustada en el admin)."}
+                </RichText>
               </li>
               <li>
-                En <strong>Acceso → Alcances</strong> escribe:{" "}
-                <code className="rounded bg-sand-light px-1 py-0.5 text-xs">
-                  {setup.scopes}
-                </code>
-                .
+                <RichText vars={{ scopes: setup.scopes }}>
+                  {"En **Acceso → Alcances** escribe: `{scopes}`."}
+                </RichText>
               </li>
               <li>
-                <strong>Marca</strong> la casilla{" "}
-                <strong>“Usar flujo de instalación heredado”</strong>.{" "}
-                <Icon name="alert-triangle" size={14} className="inline align-text-bottom text-warning" /> Es
-                obligatoria: habilita el flujo OAuth con redirección que usamos.
+                <RichText>
+                  {"**Marca** la casilla **“Usar flujo de instalación heredado”**."}
+                </RichText>{" "}
+                <Icon name="alert-triangle" size={14} className="inline align-text-bottom text-warning" />{" "}
+                {t(
+                  "Es obligatoria: habilita el flujo OAuth con redirección que usamos.",
+                )}
               </li>
               <li>
-                En <strong>URLs de redireccionamiento</strong> pega:
+                <RichText>
+                  {"En **URLs de redireccionamiento** pega:"}
+                </RichText>
               </li>
             </ol>
             <div className="mt-3">
               <CopyableField
-                label="URL de redireccionamiento"
+                label={t("URL de redireccionamiento")}
                 value={setup.redirectUrl}
               />
             </div>
@@ -289,15 +299,18 @@ export function ShopifyConnectionPanel() {
               start={9}
             >
               <li>
-                Despliega <strong>Proxy de la app</strong> (al final del
-                formulario) y pon estos tres valores (así las landings se sirven
-                bajo tu dominio):
+                <RichText>
+                  {"Despliega **Proxy de la app** (al final del formulario) y pon estos tres valores (así las landings se sirven bajo tu dominio):"}
+                </RichText>
               </li>
             </ol>
             <div className="mt-3 flex flex-col gap-3">
-              <CopyableField label="Prefijo de subruta" value={setup.proxyPrefix} />
-              <CopyableField label="Subruta" value={setup.proxySubpath} />
-              <CopyableField label="URL de proxy" value={setup.proxyUrl} />
+              <CopyableField
+                label={t("Prefijo de subruta")}
+                value={setup.proxyPrefix}
+              />
+              <CopyableField label={t("Subruta")} value={setup.proxySubpath} />
+              <CopyableField label={t("URL de proxy")} value={setup.proxyUrl} />
             </div>
 
             <ol
@@ -305,59 +318,60 @@ export function ShopifyConnectionPanel() {
               start={10}
             >
               <li>
-                Haz clic en <strong>Publicar</strong>. Se abrirá la ventana
-                “¿Publicar esta versión nueva?” con dos campos{" "}
-                <strong>opcionales</strong> (solo etiquetas internas, no afectan
-                la conexión). Puedes dejarlos vacíos, o copiar estos:
+                <RichText>
+                  {"Haz clic en **Publicar**. Se abrirá la ventana “¿Publicar esta versión nueva?” con dos campos **opcionales** (solo etiquetas internas, no afectan la conexión). Puedes dejarlos vacíos, o copiar estos:"}
+                </RichText>
                 <div className="mt-2 flex flex-col gap-3">
                   <CopyableField
-                    label="Nombre de la versión"
+                    label={t("Nombre de la versión")}
                     value="oneclickia-v1"
                   />
                   <CopyableField
-                    label="Mensaje de la versión"
+                    label={t("Mensaje de la versión")}
                     value="OAuth y App Proxy (ofertas) para OneClickIA"
                   />
                 </div>
                 <span className="mt-1 block text-xs text-muted">
-                  El nombre solo admite letras, números y guiones (sin espacios
-                  ni acentos).
+                  {t(
+                    "El nombre solo admite letras, números y guiones (sin espacios ni acentos).",
+                  )}
                 </span>
-                Luego confirma con <strong>Publicar</strong>.
+                <RichText>{"Luego confirma con **Publicar**."}</RichText>
               </li>
               <li>
-                Tras publicar, en el <strong>menú lateral izquierdo</strong> de
-                la app haz clic en <strong>Configuración</strong>.
+                <RichText>
+                  {"Tras publicar, en el **menú lateral izquierdo** de la app haz clic en **Configuración**."}
+                </RichText>
               </li>
               <li>
-                En la sección <strong>Credenciales</strong>:
+                <RichText>{"En la sección **Credenciales**:"}</RichText>
                 <ul className="mt-1 list-disc pl-5 text-xs text-muted">
                   <li>
-                    <strong>ID de cliente</strong> → cópialo (es tu{" "}
-                    <strong>API key</strong>).
+                    <RichText>
+                      {"**ID de cliente** → cópialo (es tu **API key**)."}
+                    </RichText>
                   </li>
                   <li>
-                    <strong>Secreto</strong> → haz clic en el{" "}
-                    <strong>
-                      ojo{" "}
-                      <Icon name="eye" size={13} className="inline align-text-bottom" />
-                    </strong>{" "}
-                    para revelarlo y cópialo (es tu <strong>API secret</strong>).
+                    <RichText>{"**Secreto** → haz clic en el **ojo**"}</RichText>{" "}
+                    <Icon name="eye" size={13} className="inline align-text-bottom" />{" "}
+                    <RichText>
+                      {"para revelarlo y cópialo (es tu **API secret**)."}
+                    </RichText>
                   </li>
                 </ul>
-                Pega ambos en el <strong>Paso 2</strong>.
+                <RichText>{"Pega ambos en el **Paso 2**."}</RichText>
               </li>
             </ol>
           </Card>
 
           <Card className="mt-4">
             <h2 className="text-base font-semibold text-ink">
-              Paso 2 · Pega los datos de tu app
+              {t("Paso 2 · Pega los datos de tu app")}
             </h2>
             <div className="mt-4 flex flex-col gap-4">
               <div>
                 <label className="text-xs font-medium text-charcoal">
-                  Dominio de tu tienda
+                  {t("Dominio de tu tienda")}
                 </label>
                 <input
                   className="mt-1 w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-orange focus:outline-none"
@@ -366,27 +380,25 @@ export function ShopifyConnectionPanel() {
                   onChange={(e) => setShopInput(e.target.value)}
                 />
                 <p className="mt-1 text-xs text-muted">
-                  Es tu dominio <code className="text-xs">.myshopify.com</code>{" "}
-                  (no tu dominio personalizado). Lo encuentras en tu admin de
-                  Shopify → <strong>Configuración → Dominios</strong>, o en la
-                  URL <code className="text-xs">admin.shopify.com/store/&lt;nombre&gt;</code>{" "}
-                  (tu dominio es <code className="text-xs">&lt;nombre&gt;.myshopify.com</code>).
+                  <RichText>
+                    {"Es tu dominio `.myshopify.com` (no tu dominio personalizado). Lo encuentras en tu admin de Shopify → **Configuración → Dominios**, o en la URL `admin.shopify.com/store/<nombre>` (tu dominio es `<nombre>.myshopify.com`)."}
+                  </RichText>
                 </p>
               </div>
               <div>
                 <label className="text-xs font-medium text-charcoal">
-                  API key
+                  {t("API key")}
                 </label>
                 <input
                   className="mt-1 w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-orange focus:outline-none"
-                  placeholder="ej. 1a2b3c4d5e6f..."
+                  placeholder={t("ej. 1a2b3c4d5e6f...")}
                   value={apiKeyInput}
                   onChange={(e) => setApiKeyInput(e.target.value)}
                 />
               </div>
               <div>
                 <label className="text-xs font-medium text-charcoal">
-                  API secret key
+                  {t("API secret key")}
                 </label>
                 <input
                   type="password"
@@ -398,11 +410,12 @@ export function ShopifyConnectionPanel() {
               </div>
               <div>
                 <Button onClick={handleConnect} loading={connecting}>
-                  Conectar e instalar
+                  {t("Conectar e instalar")}
                 </Button>
                 <p className="mt-2 text-xs text-muted">
-                  Te llevaremos a tu tienda para autorizar la instalación de tu
-                  app. Al volver, la conexión quedará lista.
+                  {t(
+                    "Te llevaremos a tu tienda para autorizar la instalación de tu app. Al volver, la conexión quedará lista.",
+                  )}
                 </p>
               </div>
             </div>
@@ -414,11 +427,11 @@ export function ShopifyConnectionPanel() {
       {isConnected && (
         <Card className="mt-4">
           <h3 className="text-sm font-semibold text-ink">
-            Productos ({products.length})
+            {t("Productos ({count})", { count: products.length })}
           </h3>
           {products.length === 0 ? (
             <p className="mt-2 text-sm text-muted">
-              No se encontraron productos (o aún cargando).
+              {t("No se encontraron productos (o aún cargando).")}
             </p>
           ) : (
             <>

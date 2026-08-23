@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { useT } from "@/contexts/I18nContext";
 import {
   billingApi,
   type BillingSummary,
@@ -118,6 +119,8 @@ function OutOfCreditsModal({
   detail: InsufficientCreditsDetail;
   onClose: () => void;
 }) {
+  const t = useT();
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
@@ -127,21 +130,24 @@ function OutOfCreditsModal({
         {/* Stop the overlay's onClose from firing when clicking inside. */}
         <div onClick={(e) => e.stopPropagation()}>
           <h2 className="text-lg font-semibold text-ink">
-            Te quedaste sin créditos
+            {t("Te quedaste sin créditos")}
           </h2>
           <p className="mt-2 text-sm text-muted">
             {typeof detail.required === "number" &&
             typeof detail.available === "number"
-              ? `Esta acción necesita ${detail.required} créditos y te quedan ${detail.available}.`
-              : "No tienes créditos suficientes para esta acción."}{" "}
-            Sube de plan o compra un paquete de créditos para continuar.
+              ? t("Esta acción necesita {required} créditos y te quedan {available}.", {
+                  required: detail.required,
+                  available: detail.available,
+                })
+              : t("No tienes créditos suficientes para esta acción.")}{" "}
+            {t("Sube de plan o compra un paquete de créditos para continuar.")}
           </p>
           <div className="mt-6 flex gap-3">
             <Link href="/plans" className="flex-1" onClick={onClose}>
-              <Button className="w-full">Ver planes y créditos</Button>
+              <Button className="w-full">{t("Ver planes y créditos")}</Button>
             </Link>
             <Button variant="ghost" onClick={onClose}>
-              Ahora no
+              {t("Ahora no")}
             </Button>
           </div>
         </div>

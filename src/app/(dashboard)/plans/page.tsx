@@ -18,11 +18,14 @@ import {
   type CreditPack,
   type BillingPeriod,
 } from "@/lib/billing";
+import { useI18n } from "@/contexts/I18nContext";
+import { RichText } from "@/components/RichText";
 
 type Banner = "success" | "cancel" | "pending" | "subscribed" | null;
 
 export default function PlansPage() {
   const { summary, refresh } = useCredits();
+  const { t, localeTag } = useI18n();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [packs, setPacks] = useState<CreditPack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,7 +122,11 @@ export default function PlansPage() {
   }
 
   async function cancelPlan() {
-    if (!window.confirm("¿Cancelar tu suscripción? Conservas los créditos que ya pagaste.")) {
+    if (
+      !window.confirm(
+        t("¿Cancelar tu suscripción? Conservas los créditos que ya pagaste."),
+      )
+    ) {
       return;
     }
     setCanceling(true);
@@ -153,21 +160,25 @@ export default function PlansPage() {
 
   return (
     <div className="max-w-5xl">
-      <h1 className="text-2xl font-semibold text-ink">Planes y créditos</h1>
+      <h1 className="text-2xl font-semibold text-ink">{t("Planes y créditos")}</h1>
       <p className="mt-1 text-sm text-muted">
-        Los créditos se consumen al generar copys, imágenes y análisis de video.
-        Publicar campañas en Meta es gratis.
+        {t(
+          "Los créditos se consumen al generar copys, imágenes y análisis de video. Publicar campañas en Meta es gratis.",
+        )}
       </p>
 
       {summary && (
         <p className="mt-3 text-sm text-charcoal">
-          Plan actual: <span className="font-semibold">{summary.planName}</span> ·{" "}
+          {t("Plan actual:")}{" "}
+          <span className="font-semibold">{summary.planName}</span> ·{" "}
           <span className="font-semibold">
-            {summary.balance.total.toLocaleString("es")}
+            {summary.balance.total.toLocaleString(localeTag)}
           </span>{" "}
-          créditos disponibles
+          {t("créditos disponibles")}
           {summary.balance.topUpCredits > 0 &&
-            ` (incluye ${summary.balance.topUpCredits.toLocaleString("es")} comprados)`}
+            t(" (incluye {count} comprados)", {
+              count: summary.balance.topUpCredits.toLocaleString(localeTag),
+            })}
         </p>
       )}
 
@@ -179,10 +190,10 @@ export default function PlansPage() {
             loading={canceling}
             onClick={cancelPlan}
           >
-            Cancelar suscripción
+            {t("Cancelar suscripción")}
           </Button>
           <span className="ml-3 text-sm text-muted">
-            Al cancelar conservas los créditos que ya pagaste.
+            {t("Al cancelar conservas los créditos que ya pagaste.")}
           </span>
         </div>
       )}
@@ -190,42 +201,44 @@ export default function PlansPage() {
       {banner === "success" && (
         <div className="mt-4 rounded-md border border-success/20 bg-success/10 p-3">
           <p className="text-sm text-success-text">
-            ¡Pago confirmado! Tus créditos se actualizan en unos segundos.
+            {t("¡Pago confirmado! Tus créditos se actualizan en unos segundos.")}
           </p>
         </div>
       )}
       {banner === "subscribed" && (
         <div className="mt-4 rounded-md border border-success/20 bg-success/10 p-3">
           <p className="text-sm text-success-text">
-            ¡Suscripción autorizada! Tus créditos se acreditan cuando Mercado
-            Pago confirma el primer cobro (suele tardar unos segundos).
+            {t(
+              "¡Suscripción autorizada! Tus créditos se acreditan cuando Mercado Pago confirma el primer cobro (suele tardar unos segundos).",
+            )}
           </p>
         </div>
       )}
       {banner === "pending" && (
         <div className="mt-4 rounded-md border border-warning/30 bg-warning/10 p-3">
           <p className="text-sm text-charcoal">
-            Tu pago está en proceso. Los créditos se acreditan cuando Mercado
-            Pago lo apruebe.
+            {t(
+              "Tu pago está en proceso. Los créditos se acreditan cuando Mercado Pago lo apruebe.",
+            )}
           </p>
         </div>
       )}
       {banner === "cancel" && (
         <div className="mt-4 rounded-md border border-sand bg-sand-light p-3">
           <p className="text-sm text-charcoal">
-            Operación cancelada. No se cobró nada.
+            {t("Operación cancelada. No se cobró nada.")}
           </p>
         </div>
       )}
       {error && (
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
       {/* ── Subscription plans ── */}
       <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-ink">Suscripciones</h2>
+        <h2 className="text-lg font-semibold text-ink">{t("Suscripciones")}</h2>
         {/* Monthly / Annual toggle */}
         <div className="inline-flex items-center rounded-full border border-sand bg-sand-light p-1 text-sm">
           <button
@@ -235,7 +248,7 @@ export default function PlansPage() {
               period === "MONTHLY" ? "bg-ink text-white" : "text-muted"
             }`}
           >
-            Mensual
+            {t("Mensual")}
           </button>
           <button
             type="button"
@@ -244,7 +257,7 @@ export default function PlansPage() {
               period === "ANNUAL" ? "bg-ink text-white" : "text-muted"
             }`}
           >
-            Anual
+            {t("Anual")}
             {annualDiscountPct > 0 && (
               <span className="ml-1 text-orange">−{annualDiscountPct}%</span>
             )}
@@ -253,13 +266,15 @@ export default function PlansPage() {
       </div>
       {period === "ANNUAL" && (
         <p className="mt-2 text-xs text-muted">
-          Facturación anual: pagas una vez al año y ahorras {annualDiscountPct}%.
+          {t("Facturación anual: pagas una vez al año y ahorras {pct}%.", {
+            pct: annualDiscountPct,
+          })}
         </p>
       )}
       <div className="mt-4 rounded-md border border-success/20 bg-success/10 px-4 py-2.5 text-center text-sm text-charcoal">
-        <span className="font-semibold text-ink">Sin permanencia.</span> Pago
-        seguro con Mercado Pago · cancela cuando quieras · conservas los
-        créditos que ya pagaste.
+        <RichText>
+          {"**Sin permanencia.** Pago seguro con Mercado Pago · cancela cuando quieras · conservas los créditos que ya pagaste."}
+        </RichText>
       </div>
       <div className="mt-4 grid gap-4 lg:grid-cols-4">
         {plans.map((plan) => {
@@ -291,47 +306,54 @@ export default function PlansPage() {
             >
               {isPopular && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-orange px-3 py-0.5 text-xs font-semibold text-white shadow">
-                  ★ Más elegido
+                  {t("★ Más elegido")}
                 </span>
               )}
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-ink">{plan.name}</h3>
-                {isCurrent && <Badge variant="orange">Actual</Badge>}
+                {isCurrent && <Badge variant="orange">{t("Actual")}</Badge>}
               </div>
 
               <div className="mt-3">
                 <div className="flex items-baseline gap-1">
                   <span className="text-3xl font-extrabold tracking-tight text-ink">
-                    {formatUsd(perMonthUsdCents)}
+                    {formatUsd(perMonthUsdCents, t)}
                   </span>
                   {!isFree && (
-                    <span className="text-sm text-muted">USD/mes</span>
+                    <span className="text-sm text-muted">{t("USD/mes")}</span>
                   )}
                 </div>
                 {!isFree && isAnnual && annualSavingsUsdCents > 0 && (
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <span className="text-sm text-muted line-through">
-                      {formatUsd(plan.priceUsdCents)}
+                      {formatUsd(plan.priceUsdCents, t)}
                     </span>
                     <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success-text">
-                      Ahorras {formatUsd(annualSavingsUsdCents)}/año
+                      {t("Ahorras {amount}/año", {
+                        amount: formatUsd(annualSavingsUsdCents, t),
+                      })}
                     </span>
                   </div>
                 )}
                 {!isFree && (
                   <p className="mt-1 text-xs text-muted">
                     {isAnnual
-                      ? `${formatUsd(plan.annualPriceUsdCents)} USD/año · ≈ ${formatCop(copEstimate)}`
-                      : `≈ ${formatCop(copEstimate)}/mes`}
+                      ? t("{usd} USD/año · ≈ {cop}", {
+                          usd: formatUsd(plan.annualPriceUsdCents, t),
+                          cop: formatCop(copEstimate, t),
+                        })
+                      : t("≈ {cop}/mes", {
+                          cop: formatCop(copEstimate, t),
+                        })}
                   </p>
                 )}
               </div>
 
               <div className="mt-4 rounded-md bg-sand-light px-3 py-2 text-center">
                 <span className="text-lg font-bold text-ink">
-                  {plan.monthlyCredits.toLocaleString("es")}
+                  {plan.monthlyCredits.toLocaleString(localeTag)}
                 </span>
-                <span className="text-sm text-muted"> créditos/mes</span>
+                <span className="text-sm text-muted"> {t("créditos/mes")}</span>
               </div>
 
               <ul className="mt-4 flex-1 space-y-2">
@@ -343,7 +365,7 @@ export default function PlansPage() {
                     <span className="mt-0.5 flex h-4 w-4 flex-none items-center justify-center rounded-full bg-orange/15 text-[10px] font-bold text-orange">
                       ✓
                     </span>
-                    {f}
+                    {t(f)}
                   </li>
                 ))}
               </ul>
@@ -351,7 +373,7 @@ export default function PlansPage() {
               <div className="mt-6">
                 {isFree ? (
                   <Button variant="ghost" className="w-full" disabled>
-                    {isCurrent ? "Plan actual" : "Gratis"}
+                    {isCurrent ? t("Plan actual") : t("Gratis")}
                   </Button>
                 ) : (
                   <Button
@@ -361,13 +383,13 @@ export default function PlansPage() {
                     loading={pending === plan.tier}
                     onClick={() => subscribeTo(plan.tier)}
                   >
-                    {isCurrent ? "Plan actual" : "Suscribirme"}
+                    {isCurrent ? t("Plan actual") : t("Suscribirme")}
                   </Button>
                 )}
               </div>
               {!isFree && !isCurrent && (
                 <p className="mt-2 text-center text-[11px] text-muted">
-                  Cancela cuando quieras
+                  {t("Cancela cuando quieras")}
                 </p>
               )}
             </Card>
@@ -375,16 +397,21 @@ export default function PlansPage() {
         })}
       </div>
       <p className="mt-2 text-xs text-muted">
-        Precios en USD; se cobra en pesos a la tasa TRM del día. Pago seguro
-        procesado por Mercado Pago. La suscripción se renueva automáticamente
-        {period === "ANNUAL" ? " cada año" : " cada mes"}; puedes cancelarla
-        cuando quieras.
+        {t(
+          "Precios en USD; se cobra en pesos a la tasa TRM del día. Pago seguro procesado por Mercado Pago. La suscripción se renueva automáticamente {period}; puedes cancelarla cuando quieras.",
+          {
+            period:
+              period === "ANNUAL" ? t("cada año") : t("cada mes"),
+          },
+        )}
       </p>
 
       {/* ── One-off credit packs ── */}
-      <h2 className="mt-10 text-lg font-semibold text-ink">Packs de créditos</h2>
+      <h2 className="mt-10 text-lg font-semibold text-ink">
+        {t("Packs de créditos")}
+      </h2>
       <p className="mt-1 text-sm text-muted">
-        ¿Te quedaste corto este mes? Compra créditos extra que no caducan.
+        {t("¿Te quedaste corto este mes? Compra créditos extra que no caducan.")}
       </p>
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         {packs.map((pack) => (
@@ -394,14 +421,16 @@ export default function PlansPage() {
           >
             <h3 className="font-semibold text-ink">{pack.name}</h3>
             <p className="mt-2 text-2xl font-bold text-ink">
-              {formatUsd(pack.priceUsdCents)}
-              <span className="text-sm font-normal text-muted"> USD</span>
+              {formatUsd(pack.priceUsdCents, t)}
+              <span className="text-sm font-normal text-muted"> {t("USD")}</span>
             </p>
             <p className="mt-0.5 text-xs text-muted">
-              se cobra {formatCop(pack.priceCop)}
+              {t("se cobra {amount}", { amount: formatCop(pack.priceCop, t) })}
             </p>
             <p className="mt-1 flex-1 text-sm text-muted">
-              {pack.credits.toLocaleString("es")} créditos · no caducan
+              {t("{count} créditos · no caducan", {
+                count: pack.credits.toLocaleString(localeTag),
+              })}
             </p>
             <Button
               variant="dark"
@@ -410,7 +439,7 @@ export default function PlansPage() {
               disabled={pending !== null}
               onClick={() => buyPack(pack)}
             >
-              Comprar
+              {t("Comprar")}
             </Button>
           </Card>
         ))}

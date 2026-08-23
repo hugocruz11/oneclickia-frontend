@@ -8,8 +8,10 @@ import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Button } from "@/components/ui/Button";
 import { api, ApiError } from "@/lib/api";
 import type { AuthResponse } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
 
 export default function LoginPage() {
+  const t = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -39,14 +41,14 @@ export default function LoginPage() {
 
   return (
     <Card>
-      <h2 className="text-xl font-semibold text-ink">Iniciar sesión</h2>
+      <h2 className="text-xl font-semibold text-ink">{t("Iniciar sesión")}</h2>
       <p className="mt-2 text-sm text-muted">
-        Ingresa tu email y contraseña para continuar.
+        {t("Ingresa tu email y contraseña para continuar.")}
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
         <Input
-          label="Email"
+          label={t("Email")}
           type="email"
           placeholder="tu@email.com"
           value={email}
@@ -55,7 +57,7 @@ export default function LoginPage() {
           autoComplete="email"
         />
         <PasswordInput
-          label="Contraseña"
+          label={t("Contraseña")}
           placeholder="••••••••"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -64,18 +66,18 @@ export default function LoginPage() {
         />
         {error && (
           <div role="alert" className="rounded-md border border-error/20 bg-error/10 p-3">
-            <p className="text-sm text-error">{error}</p>
+            <p className="text-sm text-error">{t(error)}</p>
           </div>
         )}
         <Button type="submit" loading={loading} size="lg" className="w-full">
-          Iniciar sesión
+          {t("Iniciar sesión")}
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted">
-        ¿No tienes cuenta?{" "}
+        {t("¿No tienes cuenta?")}{" "}
         <Link href="/register" className="font-medium text-orange hover:text-orange/80">
-          Regístrate
+          {t("Regístrate")}
         </Link>
       </p>
     </Card>

@@ -1,6 +1,7 @@
 "use client";
 
 import { InputHTMLAttributes, forwardRef, useState } from "react";
+import { useT } from "@/contexts/I18nContext";
 import { Icon } from "@/components/ui/Icon";
 
 interface PasswordInputProps
@@ -15,6 +16,7 @@ interface PasswordInputProps
 // el Input base, más el toggle de visibilidad que pedían los formularios auth.
 const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
   ({ label, error, helperText, className = "", id, ...props }, ref) => {
+    const t = useT();
     const [visible, setVisible] = useState(false);
     const inputId = id || label?.toLowerCase().replace(/\s+/g, "-");
     const describedById = error
@@ -45,7 +47,9 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
           <button
             type="button"
             onClick={() => setVisible((v) => !v)}
-            aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
+            aria-label={
+              visible ? t("Ocultar contraseña") : t("Mostrar contraseña")
+            }
             className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-md text-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange"
           >
             <Icon name={visible ? "eye-off" : "eye"} size={18} />

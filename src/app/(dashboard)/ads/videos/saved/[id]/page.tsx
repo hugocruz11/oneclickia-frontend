@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Icon } from "@/components/ui/Icon";
 import { VideoTemplateView } from "@/components/VideoTemplateView";
 import { api } from "@/lib/api";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface BlueprintData {
   template: string;
@@ -29,6 +30,7 @@ interface SavedBlueprint {
 
 export default function SavedBlueprintDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { t, localeTag } = useI18n();
   const [item, setItem] = useState<SavedBlueprint | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -59,11 +61,11 @@ export default function SavedBlueprintDetailPage() {
           href="/ads/videos/saved"
           className="text-sm text-orange hover:text-orange/80"
         >
-          ← Volver a videos guardados
+          {t("← Volver a videos guardados")}
         </Link>
         {error && (
           <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-            <p className="text-sm text-error">{error}</p>
+            <p className="text-sm text-error">{t(error)}</p>
           </div>
         )}
       </div>
@@ -76,7 +78,7 @@ export default function SavedBlueprintDetailPage() {
         href="/ads/videos/saved"
         className="text-sm text-orange hover:text-orange/80"
       >
-        ← Volver a videos guardados
+        {t("← Volver a videos guardados")}
       </Link>
 
       <div className="mt-2 mb-4">
@@ -113,11 +115,13 @@ export default function SavedBlueprintDetailPage() {
                   href={`/ads/videos/${item.cachedVideoAdId}`}
                   className="mt-2 text-xs text-orange hover:text-orange/80"
                 >
-                  Ver video original →
+                  {t("Ver video original →")}
                 </Link>
               )}
               <p className="mt-2 text-[10px] text-muted">
-                Guardado el {new Date(item.createdAt).toLocaleString("es")}
+                {t("Guardado el {date}", {
+                  date: new Date(item.createdAt).toLocaleString(localeTag),
+                })}
               </p>
             </div>
           </Card>

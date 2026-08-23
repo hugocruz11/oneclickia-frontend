@@ -24,6 +24,8 @@ import type {
   EditImageResponse,
   ImageVariantsResponse,
 } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
+import type { TranslateFn } from "@/i18n/translate";
 
 /** "https://www.mumucol.com/x" → "mumucol.com" (best-effort). */
 function domainFromUrl(url?: string | null): string | undefined {
@@ -37,6 +39,7 @@ function domainFromUrl(url?: string | null): string | undefined {
 
 const API_HOST = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
+// Los textos en español son también sus claves de traducción (ver src/i18n).
 const FORMAT_OPTIONS = [
   { key: "feed", label: "Feed (1:1)", size: "1080x1080" },
   { key: "vertical", label: "Vertical (4:5)", size: "1080x1350" },
@@ -48,11 +51,15 @@ type Step = "generate" | "iterate" | "variants";
 /** Máximo de tipos de anuncio (templates) por tanda de variantes. */
 const MAX_VARIANT_TEMPLATES = 5;
 
-const formatLabel = (key: string) =>
-  FORMAT_OPTIONS.find((o) => o.key === key)?.label ?? key;
+const formatLabel = (key: string, t: TranslateFn) =>
+  {
+    const label = FORMAT_OPTIONS.find((o) => o.key === key)?.label;
+    return label ? t(label) : key;
+  };
 
 export default function GenerateImagePage() {
   const { cachedAdId } = useParams<{ cachedAdId: string }>();
+  const t = useT();
 
   const [adaptation, setAdaptation] = useState<AdaptCopyResponse | null>(null);
   const [ad, setAd] = useState<CachedAd | null>(null);
@@ -307,11 +314,11 @@ export default function GenerateImagePage() {
     return (
       <Card>
         <p className="text-error">
-          Primero debes adaptar el copy. Vuelve al anuncio.
+          {t("Primero debes adaptar el copy. Vuelve al anuncio.")}
         </p>
         <Link href={`/ads/${cachedAdId}/adapt`} className="mt-4 inline-block">
           <Button variant="ghost" size="sm">
-            Adaptar copy
+            {t("Adaptar copy")}
           </Button>
         </Link>
       </Card>
@@ -332,8 +339,8 @@ export default function GenerateImagePage() {
     for (const img of images) {
       lightboxImages.push({
         url: `${API_HOST}${img.imageUrl}`,
-        label: `${v.label ?? `Variante ${i + 1}`}${
-          img.format ? ` — ${formatLabel(img.format)}` : ""
+        label: `${v.label ?? t("Variante {n}", { n: i + 1 })}${
+          img.format ? ` — ${formatLabel(img.format, t)}` : ""
         }`,
       });
     }
@@ -345,20 +352,20 @@ export default function GenerateImagePage() {
         href={`/ads/${cachedAdId}/adapt`}
         className="text-sm text-muted hover:text-ink transition-colors"
       >
-        ← Volver a variantes
+        {t("← Volver a variantes")}
       </Link>
 
       <h1 className="mt-4 text-2xl font-semibold text-ink">
-        Generar imágenes
+        {t("Generar imágenes")}
       </h1>
       <p className="mt-1 text-sm text-muted">
-        Genera creativos publicitarios con IA.
+        {t("Genera creativos publicitarios con IA.")}
       </p>
 
       {/* Selected variant summary */}
       <Card className="mt-6">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-          Copy seleccionado — Variante {variantIndex + 1}
+          {t("Copy seleccionado — Variante {n}", { n: variantIndex + 1 })}
         </h3>
         <p className="mt-2 text-base font-semibold text-ink">
           {selectedCopyVariant.headline}
@@ -378,28 +385,34 @@ export default function GenerateImagePage() {
           {(ad?.imageUrl || ad?.thumbnailUrl || adaptation?.product?.imageUrl) && (
             <Card>
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-                Imágenes de referencia
+                {t("Imágenes de referencia")}
               </h3>
               <p className="mt-1 text-xs text-muted">
-                La IA usará estas imágenes como base para generar tu creativo.
+                {t(
+                  "La IA usará estas imágenes como base para generar tu creativo.",
+                )}
               </p>
               <div className="mt-3 flex gap-4">
                 {(ad?.imageUrl || ad?.thumbnailUrl) && (
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium text-muted">Ad original</span>
+                    <span className="text-xs font-medium text-muted">
+                      {t("Ad original")}
+                    </span>
                     <ZoomableImage
                       src={ad.imageUrl || ad.thumbnailUrl!}
-                      alt="Ad original"
+                      alt={t("Ad original")}
                       className="h-32 w-32 rounded-lg border border-sand object-cover"
                     />
                   </div>
                 )}
                 {adaptation?.product?.imageUrl && (
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium text-muted">Tu producto</span>
+                    <span className="text-xs font-medium text-muted">
+                      {t("Tu producto")}
+                    </span>
                     <ZoomableImage
                       src={`${API_HOST}${adaptation.product.imageUrl}`}
-                      alt="Producto"
+                      alt={t("Producto")}
                       className="h-32 w-32 rounded-lg border border-sand object-cover"
                     />
                   </div>
@@ -410,16 +423,17 @@ export default function GenerateImagePage() {
 
           <Card>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Dirección creativa de la imagen
+              {t("Dirección creativa de la imagen")}
             </h3>
             <p className="mt-1 text-xs text-muted">
-              Describe cómo quieres que se vea tu anuncio. Si lo dejas vacío, la
-              IA replicará el estilo del ad original.
+              {t(
+                "Describe cómo quieres que se vea tu anuncio. Si lo dejas vacío, la IA replicará el estilo del ad original.",
+              )}
             </p>
             <Textarea
               className="mt-3"
               rows={3}
-              placeholder="Ej: Fondo blanco minimalista con el producto centrado. Luces tipo estudio profesional. Estilo limpio y moderno."
+              placeholder={t("Ej: Fondo blanco minimalista con el producto centrado. Luces tipo estudio profesional. Estilo limpio y moderno.")}
               value={imagePrompt}
               onChange={(e) => setImagePrompt(e.target.value)}
             />
@@ -435,9 +449,9 @@ export default function GenerateImagePage() {
 
           <Card>
             <h3 className="text-sm font-semibold text-ink">
-              Formatos a generar
+              {t("Formatos a generar")}
             </h3>
-            <p className="text-xs text-muted">Selecciona al menos uno.</p>
+            <p className="text-xs text-muted">{t("Selecciona al menos uno.")}</p>
             <div className="mt-3 flex gap-3">
               {FORMAT_OPTIONS.map((fmt) => (
                 <button
@@ -450,7 +464,7 @@ export default function GenerateImagePage() {
                       : "border-sand hover:border-orange/30"
                   }`}
                 >
-                  <p className="text-sm font-semibold text-ink">{fmt.label}</p>
+                  <p className="text-sm font-semibold text-ink">{t(fmt.label)}</p>
                   <p className="text-xs text-muted">{fmt.size}</p>
                 </button>
               ))}
@@ -459,11 +473,11 @@ export default function GenerateImagePage() {
 
           <Card>
             <Input
-              label="Precio (opcional)"
-              placeholder="Ej: $49.900 COP"
+              label={t("Precio (opcional)")}
+              placeholder={t("Ej: $49.900 COP")}
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-              helperText="Si no pones precio, se eliminará cualquier precio que aparezca en el diseño original."
+              helperText={t("Si no pones precio, se eliminará cualquier precio que aparezca en el diseño original.")}
             />
           </Card>
 
@@ -477,7 +491,7 @@ export default function GenerateImagePage() {
                 size="lg"
                 className="flex-1"
               >
-                Continuar a revisión →
+                {t("Continuar a revisión →")}
               </Button>
             )}
             <Button
@@ -487,7 +501,7 @@ export default function GenerateImagePage() {
               disabled={formats.length === 0}
               className="flex-1"
             >
-              {result ? "Regenerar imágenes" : "Generar imágenes"}
+              {result ? t("Regenerar imágenes") : t("Generar imágenes")}
             </Button>
           </div>
         </div>
@@ -495,14 +509,14 @@ export default function GenerateImagePage() {
 
       {loading && (
         <AiProgress
-          message="Generando creativos con IA…"
+          message={t("Generando creativos con IA…")}
           estimateSeconds={45}
         />
       )}
 
       {error && (
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
@@ -511,10 +525,10 @@ export default function GenerateImagePage() {
         <div className="mt-6 flex flex-col gap-6">
           <div>
             <h2 className="text-lg font-semibold text-ink">
-              Imágenes generadas
+              {t("Imágenes generadas")}
             </h2>
             <p className="text-sm text-muted">
-              Revisa los creativos. Puedes pedir cambios o generar variantes.
+              {t("Revisa los creativos. Puedes pedir cambios o generar variantes.")}
             </p>
           </div>
 
@@ -522,33 +536,33 @@ export default function GenerateImagePage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {result.feedImageUrl && (
               <div className="flex flex-col gap-2">
-                <Badge variant="default">Feed (1:1)</Badge>
+                <Badge variant="default">{t("Feed (1:1)")}</Badge>
                 <ZoomableImage
                   src={`${API_HOST}${result.feedImageUrl}`}
                   alt="Feed"
-                  label="Feed (1:1)"
+                  label={t("Feed (1:1)")}
                   className="w-full rounded-lg border border-sand"
                 />
               </div>
             )}
             {result.verticalImageUrl && (
               <div className="flex flex-col gap-2">
-                <Badge variant="default">Vertical (4:5)</Badge>
+                <Badge variant="default">{t("Vertical (4:5)")}</Badge>
                 <ZoomableImage
                   src={`${API_HOST}${result.verticalImageUrl}`}
                   alt="Vertical"
-                  label="Vertical (4:5)"
+                  label={t("Vertical (4:5)")}
                   className="w-full rounded-lg border border-sand"
                 />
               </div>
             )}
             {result.storyImageUrl && (
               <div className="flex flex-col gap-2">
-                <Badge variant="default">Story (9:16)</Badge>
+                <Badge variant="default">{t("Story (9:16)")}</Badge>
                 <ZoomableImage
                   src={`${API_HOST}${result.storyImageUrl}`}
                   alt="Story"
-                  label="Story (9:16)"
+                  label={t("Story (9:16)")}
                   className="w-full rounded-lg border border-sand"
                 />
               </div>
@@ -558,28 +572,29 @@ export default function GenerateImagePage() {
           {/* Edit section */}
           <Card>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Editar imagen
+              {t("Editar imagen")}
             </h3>
             <p className="mt-1 text-xs text-muted">
-              Describe qué quieres cambiar. La IA editará la imagen manteniendo
-              el resto intacto.
+              {t(
+                "Describe qué quieres cambiar. La IA editará la imagen manteniendo el resto intacto.",
+              )}
             </p>
 
             <div className="mt-3 flex flex-col gap-3">
               {getGeneratedFormats().length > 1 && (
                 <Select
-                  label="Formato a editar"
+                  label={t("Formato a editar")}
                   value={editFormat}
                   onChange={(e) => setEditFormat(e.target.value)}
                   options={getGeneratedFormats().map((f) => ({
                     value: f,
                     label:
-                      FORMAT_OPTIONS.find((o) => o.key === f)?.label ?? f,
+                      formatLabel(f, t),
                   }))}
                 />
               )}
               <Textarea
-                placeholder="Ej: Quita las maletas del fondo, deja solo mi producto centrado. Cambia el color del banner a azul oscuro."
+                placeholder={t("Ej: Quita las maletas del fondo, deja solo mi producto centrado. Cambia el color del banner a azul oscuro.")}
                 rows={3}
                 value={editInstructions}
                 onChange={(e) => setEditInstructions(e.target.value)}
@@ -590,7 +605,7 @@ export default function GenerateImagePage() {
                 disabled={!editInstructions.trim()}
                 size="sm"
               >
-                Aplicar cambios
+                {t("Aplicar cambios")}
               </Button>
             </div>
           </Card>
@@ -602,18 +617,18 @@ export default function GenerateImagePage() {
               onClick={() => setStep("generate")}
               className="flex-1"
             >
-              ← Volver a generar
+              {t("← Volver a generar")}
             </Button>
             <Button
               variant="ghost"
               onClick={() => setStep("variants")}
               className="flex-1"
             >
-              Generar variantes
+              {t("Generar variantes")}
             </Button>
             <Link href="/campaigns/new" className="flex-1" onClick={handleContinueToCampaign}>
               <Button size="lg" className="w-full">
-                Crear campaña
+                {t("Crear campaña")}
               </Button>
             </Link>
           </div>
@@ -626,7 +641,7 @@ export default function GenerateImagePage() {
           {/* Show current approved image */}
           <Card>
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-              Imagen base aprobada
+              {t("Imagen base aprobada")}
             </h3>
             <div className="mt-3 flex justify-center">
               {getGeneratedFormats().map((fmt) => {
@@ -635,13 +650,13 @@ export default function GenerateImagePage() {
                 return (
                   <div key={fmt} className="flex flex-col items-center gap-2">
                     <Badge variant="default">
-                      {FORMAT_OPTIONS.find((o) => o.key === fmt)?.label ?? fmt}
+                      {formatLabel(fmt, t)}
                     </Badge>
                     <ZoomableImage
                       src={url}
                       alt={fmt}
                       label={
-                        FORMAT_OPTIONS.find((o) => o.key === fmt)?.label ?? fmt
+                        formatLabel(fmt, t)
                       }
                       className="max-h-64 rounded-lg border border-sand object-contain"
                     />
@@ -655,13 +670,18 @@ export default function GenerateImagePage() {
           {imageVariants.length === 0 && (
             <Card>
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-                Tipo de variantes
+                {t("Tipo de variantes")}
               </h3>
               <p className="mt-1 text-xs text-muted">
-                Elige hasta {MAX_VARIANT_TEMPLATES} tipos de anuncio para el A/B
-                testing. Se genera una variante por tipo, manteniendo tu
-                producto, tu marca y el mismo copy, en cada tamaño que generaste
-                ({getGeneratedFormats().map(formatLabel).join(", ")}).
+                {t(
+                  "Elige hasta {max} tipos de anuncio para el A/B testing. Se genera una variante por tipo, manteniendo tu producto, tu marca y el mismo copy, en cada tamaño que generaste ({formats}).",
+                  {
+                    max: MAX_VARIANT_TEMPLATES,
+                    formats: getGeneratedFormats()
+                      .map((f) => formatLabel(f, t))
+                      .join(", "),
+                  },
+                )}
               </p>
 
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -673,7 +693,7 @@ export default function GenerateImagePage() {
                       key={tpl.id}
                       type="button"
                       onClick={() => toggleVariantTemplate(tpl.id)}
-                      title={tpl.description}
+                      title={t(tpl.description)}
                       className={`group relative flex flex-col overflow-hidden rounded-lg border-2 text-left transition-colors ${
                         isSelected
                           ? "border-orange ring-2 ring-orange/30"
@@ -684,7 +704,7 @@ export default function GenerateImagePage() {
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={`${API_HOST}${templateImageUrl(tpl.id)}`}
-                          alt={tpl.name}
+                          alt={t(tpl.name)}
                           className="aspect-[4/5] w-full object-cover"
                         />
                         {isSelected && (
@@ -695,10 +715,10 @@ export default function GenerateImagePage() {
                       </div>
                       <div className="p-2">
                         <p className="text-xs font-semibold text-ink">
-                          {tpl.name}
+                          {t(tpl.name)}
                         </p>
                         <p className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-muted">
-                          {tpl.description}
+                          {t(tpl.description)}
                         </p>
                       </div>
                     </button>
@@ -714,21 +734,34 @@ export default function GenerateImagePage() {
                 className="mt-4 w-full"
               >
                 {variantTemplateIds.length === 0
-                  ? "Elige al menos un tipo de anuncio"
-                  : `Generar ${variantTemplateIds.length} variante${
-                      variantTemplateIds.length > 1 ? "s" : ""
-                    } × ${getGeneratedFormats().length} tamaño${
-                      getGeneratedFormats().length > 1 ? "s" : ""
-                    }`}
+                  ? t("Elige al menos un tipo de anuncio")
+                  : t("Generar {variants} × {formats}", {
+                      variants:
+                        variantTemplateIds.length === 1
+                          ? t("1 variante")
+                          : t("{n} variantes", {
+                              n: variantTemplateIds.length,
+                            }),
+                      formats:
+                        getGeneratedFormats().length === 1
+                          ? t("1 tamaño")
+                          : t("{n} tamaños", {
+                              n: getGeneratedFormats().length,
+                            }),
+                    })}
               </Button>
             </Card>
           )}
 
           {generatingVariants && (
             <AiProgress
-              message={`Generando ${variantTemplateIds.length} variantes en ${
-                getGeneratedFormats().length
-              } tamaño${getGeneratedFormats().length > 1 ? "s" : ""}…`}
+              message={t("Generando {n} variantes en {formats}…", {
+                n: variantTemplateIds.length,
+                formats:
+                  getGeneratedFormats().length === 1
+                    ? t("1 tamaño")
+                    : t("{n} tamaños", { n: getGeneratedFormats().length }),
+              })}
               estimateSeconds={
                 20 * variantTemplateIds.length * getGeneratedFormats().length
               }
@@ -740,13 +773,12 @@ export default function GenerateImagePage() {
             <>
               <div>
                 <h2 className="text-lg font-semibold text-ink">
-                  Variantes generadas
+                  {t("Variantes generadas")}
                 </h2>
                 <p className="text-sm text-muted">
-                  Una variante por tipo de anuncio, en cada tamaño que
-                  generaste. Selecciona las que quieres usar: cada variante
-                  seleccionada se convierte en un anuncio independiente dentro
-                  de tu campaña (con todos sus tamaños).
+                  {t(
+                    "Una variante por tipo de anuncio, en cada tamaño que generaste. Selecciona las que quieres usar: cada variante seleccionada se convierte en un anuncio independiente dentro de tu campaña (con todos sus tamaños).",
+                  )}
                 </p>
               </div>
 
@@ -755,7 +787,7 @@ export default function GenerateImagePage() {
                   <div key={v.id} className="flex flex-col gap-1.5">
                     <AdPreviewCard
                       imageUrl={`${API_HOST}${v.imageUrl}`}
-                      brandName={brand?.name || "Tu marca"}
+                      brandName={brand?.name || t("Tu marca")}
                       brandLogoUrl={
                         brand?.logoUrl ? `${API_HOST}${brand.logoUrl}` : null
                       }
@@ -763,7 +795,7 @@ export default function GenerateImagePage() {
                       headline={selectedCopyVariant.headline}
                       ctaLabel={selectedCopyVariant.ctaTitle}
                       domain={domainFromUrl(brand?.websiteUrl)}
-                      label={v.label ?? `Variante ${i + 1}`}
+                      label={v.label ?? t("Variante {n}", { n: i + 1 })}
                       selected={selectedVariants.has(i)}
                       onToggle={() => toggleVariantSelection(i)}
                       onZoom={() => setLightboxIndex(variantImageOffsets[i])}
@@ -779,7 +811,7 @@ export default function GenerateImagePage() {
                             }
                             className="rounded-full border border-sand px-2 py-0.5 text-[11px] text-muted transition-colors hover:border-orange/40 hover:text-ink"
                           >
-                            {formatLabel(img.format)}
+                            {formatLabel(img.format, t)}
                           </button>
                         ))}
                       </div>
@@ -793,17 +825,21 @@ export default function GenerateImagePage() {
                   {selectedVariants.size > 0 ? (
                     <>
                       <span className="font-semibold text-ink">
-                        Se crearán {selectedVariants.size} anuncio
-                        {selectedVariants.size === 1 ? "" : "s"}
+                        {selectedVariants.size === 1
+                          ? t("Se creará 1 anuncio")
+                          : t("Se crearán {n} anuncios", {
+                              n: selectedVariants.size,
+                            })}
                       </span>{" "}
-                      — uno por cada imagen seleccionada ({selectedVariants.size}{" "}
-                      de {imageVariants.length}).
+                      {t("— uno por cada imagen seleccionada ({n} de {total}).", {
+                        n: selectedVariants.size,
+                        total: imageVariants.length,
+                      })}
                     </>
                   ) : (
-                    <>
-                      Selecciona al menos una imagen. Se creará un anuncio por
-                      cada una.
-                    </>
+                    t(
+                      "Selecciona al menos una imagen. Se creará un anuncio por cada una.",
+                    )
                   )}
                 </p>
               </div>
@@ -839,7 +875,7 @@ export default function GenerateImagePage() {
               }}
               className="flex-1"
             >
-              ← Volver a editar
+              {t("← Volver a editar")}
             </Button>
             {imageVariants.length > 0 && (
               <Button
@@ -850,7 +886,7 @@ export default function GenerateImagePage() {
                 }}
                 className="flex-1"
               >
-                Regenerar variantes
+                {t("Regenerar variantes")}
               </Button>
             )}
             <Link href="/campaigns/new" className="flex-1" onClick={handleContinueToCampaign}>
@@ -859,11 +895,13 @@ export default function GenerateImagePage() {
                 className="w-full"
                 disabled={imageVariants.length > 0 && selectedVariants.size === 0}
               >
-                {selectedVariants.size > 0
-                  ? `Crear campaña (${selectedVariants.size} anuncio${
-                      selectedVariants.size === 1 ? "" : "s"
-                    })`
-                  : "Crear campaña"}
+                {selectedVariants.size === 0
+                  ? t("Crear campaña")
+                  : selectedVariants.size === 1
+                    ? t("Crear campaña (1 anuncio)")
+                    : t("Crear campaña ({n} anuncios)", {
+                        n: selectedVariants.size,
+                      })}
               </Button>
             </Link>
           </div>

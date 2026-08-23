@@ -16,7 +16,9 @@ import { CustomAudiencePicker } from "@/components/CustomAudiencePicker";
 import { api, ApiError } from "@/lib/api";
 import { OBJECTIVE_LABELS } from "@/lib/labels";
 import type { Campaign } from "@/lib/types";
+import { useI18n } from "@/contexts/I18nContext";
 
+// Los textos en español son también sus claves de traducción (ver src/i18n).
 const OBJECTIVE_OPTIONS = Object.entries(OBJECTIVE_LABELS).map(
   ([value, label]) => ({ value, label }),
 );
@@ -48,6 +50,7 @@ function gendersToValue(genders: number[]): string {
 export default function EditCampaignPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { t, localeTag } = useI18n();
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,7 +108,7 @@ export default function EditCampaignPage() {
   // Monto: solo dígitos, mostrado con separador de miles; vacío permitido.
   function formatBudgetDisplay(value: string): string {
     const num = value.replace(/\D/g, "");
-    return num ? Number(num).toLocaleString("es-CO") : "";
+    return num ? Number(num).toLocaleString(localeTag) : "";
   }
   function handleBudgetChange(raw: string) {
     setBudgetAmount(raw.replace(/\D/g, ""));
@@ -159,9 +162,9 @@ export default function EditCampaignPage() {
   if (!campaign) {
     return (
       <Card>
-        <p className="text-error">{error || "No se encontró la campaña."}</p>
+        <p className="text-error">{t(error || "No se encontró la campaña.")}</p>
         <Link href="/campaigns" className="mt-4 inline-block">
-          <Button variant="ghost" size="sm">Volver a campañas</Button>
+          <Button variant="ghost" size="sm">{t("Volver a campañas")}</Button>
         </Link>
       </Card>
     );
@@ -171,11 +174,12 @@ export default function EditCampaignPage() {
     return (
       <Card>
         <p className="text-charcoal">
-          No se puede editar mientras la campaña se está publicando. Espera a que
-          termine.
+          {t(
+            "No se puede editar mientras la campaña se está publicando. Espera a que termine.",
+          )}
         </p>
         <Link href={`/campaigns/${id}`} className="mt-4 inline-block">
-          <Button variant="ghost" size="sm">Volver a la campaña</Button>
+          <Button variant="ghost" size="sm">{t("Volver a la campaña")}</Button>
         </Link>
       </Card>
     );
@@ -187,24 +191,26 @@ export default function EditCampaignPage() {
         href={`/campaigns/${id}`}
         className="text-sm text-muted hover:text-ink transition-colors"
       >
-        ← Volver a la campaña
+        {t("← Volver a la campaña")}
       </Link>
 
-      <h1 className="mt-4 text-2xl font-semibold text-ink">Editar campaña</h1>
+      <h1 className="mt-4 text-2xl font-semibold text-ink">
+        {t("Editar campaña")}
+      </h1>
 
       {isLive && (
         <div className="mt-4 rounded-md border border-warning/20 bg-warning/10 p-3">
           <p className="text-sm text-warning">
-            Esta campaña está publicada en Meta. Los cambios de presupuesto,
-            segmentación y copy se sincronizan con Meta al guardar. El objetivo
-            no se puede cambiar.
+            {t(
+              "Esta campaña está publicada en Meta. Los cambios de presupuesto, segmentación y copy se sincronizan con Meta al guardar. El objetivo no se puede cambiar.",
+            )}
           </p>
         </div>
       )}
 
       {error && (
         <div role="alert" className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
@@ -212,33 +218,33 @@ export default function EditCampaignPage() {
         {/* Copy */}
         <Card>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Copy del anuncio
+            {t("Copy del anuncio")}
           </h2>
           <div className="mt-3 flex flex-col gap-4">
             <Input
-              label="Titular"
+              label={t("Titular")}
               value={headline}
               onChange={(e) => setHeadline(e.target.value)}
               required
             />
             <Textarea
-              label="Descripción"
+              label={t("Descripción")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
             />
             <Input
-              label="URL de destino"
+              label={t("URL de destino")}
               type="url"
               value={destinationUrl}
               onChange={(e) => setDestinationUrl(e.target.value)}
               required
             />
             <Select
-              label="Botón (CTA)"
+              label={t("Botón (CTA)")}
               value={ctaType}
               onChange={(e) => setCtaType(e.target.value)}
-              options={CTA_OPTIONS}
+              options={CTA_OPTIONS.map((o) => ({ ...o, label: t(o.label) }))}
             />
           </div>
         </Card>
@@ -246,30 +252,33 @@ export default function EditCampaignPage() {
         {/* Objective & budget */}
         <Card>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Objetivo y presupuesto
+            {t("Objetivo y presupuesto")}
           </h2>
           <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Select
-              label="Objetivo"
+              label={t("Objetivo")}
               value={objective}
               onChange={(e) => setObjective(e.target.value)}
-              options={OBJECTIVE_OPTIONS}
+              options={OBJECTIVE_OPTIONS.map((o) => ({
+                ...o,
+                label: t(o.label),
+              }))}
               disabled={isPublished}
             />
             <Select
-              label="Tipo de presupuesto"
+              label={t("Tipo de presupuesto")}
               value={budgetType}
               onChange={(e) => setBudgetType(e.target.value)}
               options={[
-                { value: "DAILY", label: "Diario" },
-                { value: "LIFETIME", label: "Total" },
+                { value: "DAILY", label: t("Diario") },
+                { value: "LIFETIME", label: t("Total") },
               ]}
             />
             <Input
-              label={`Monto (${campaign.currency})`}
+              label={t("Monto ({currency})", { currency: campaign.currency })}
               type="text"
               inputMode="numeric"
-              placeholder="Ej: 5.000"
+              placeholder={t("Ej: 5.000")}
               value={formatBudgetDisplay(budgetAmount)}
               onChange={(e) => handleBudgetChange(e.target.value)}
               required
@@ -277,7 +286,7 @@ export default function EditCampaignPage() {
           </div>
           {isPublished && (
             <p className="mt-2 text-xs text-muted">
-              El objetivo no se puede cambiar en una campaña ya publicada.
+              {t("El objetivo no se puede cambiar en una campaña ya publicada.")}
             </p>
           )}
         </Card>
@@ -285,17 +294,17 @@ export default function EditCampaignPage() {
         {/* Schedule */}
         <Card>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Fechas
+            {t("Fechas")}
           </h2>
           <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
-              label="Inicio"
+              label={t("Inicio")}
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
             />
             <Input
-              label="Fin (opcional)"
+              label={t("Fin (opcional)")}
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
@@ -306,14 +315,14 @@ export default function EditCampaignPage() {
         {/* Targeting */}
         <Card>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Segmentación
+            {t("Segmentación")}
           </h2>
           <div className="mt-3 flex flex-col gap-4">
             <CountryPicker selected={countries} onChange={setCountries} />
             <CityAutocomplete selected={cities} onChange={setCities} />
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <Input
-                label="Edad mín."
+                label={t("Edad mín.")}
                 type="number"
                 min={18}
                 max={65}
@@ -321,7 +330,7 @@ export default function EditCampaignPage() {
                 onChange={(e) => setAgeMin(Number(e.target.value))}
               />
               <Input
-                label="Edad máx."
+                label={t("Edad máx.")}
                 type="number"
                 min={18}
                 max={65}
@@ -329,13 +338,13 @@ export default function EditCampaignPage() {
                 onChange={(e) => setAgeMax(Number(e.target.value))}
               />
               <Select
-                label="Género"
+                label={t("Género")}
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
                 options={[
-                  { value: "all", label: "Todos" },
-                  { value: "male", label: "Hombres" },
-                  { value: "female", label: "Mujeres" },
+                  { value: "all", label: t("Todos") },
+                  { value: "male", label: t("Hombres") },
+                  { value: "female", label: t("Mujeres") },
                 ]}
               />
             </div>
@@ -350,11 +359,11 @@ export default function EditCampaignPage() {
 
         <div className="flex gap-3">
           <Button type="submit" loading={saving} size="lg" className="flex-1">
-            Guardar cambios
+            {t("Guardar cambios")}
           </Button>
           <Link href={`/campaigns/${id}`}>
             <Button type="button" variant="ghost" size="lg">
-              Cancelar
+              {t("Cancelar")}
             </Button>
           </Link>
         </div>

@@ -22,6 +22,8 @@ import {
   type DateRange,
 } from "@/components/ListControls";
 import type { Campaign } from "@/lib/types";
+import { useI18n, useT } from "@/contexts/I18nContext";
+import type { TranslateFn } from "@/i18n/translate";
 
 // Cuántas campañas por página en la lista de Meta Ads.
 const META_PAGE_SIZE = 25;
@@ -72,6 +74,7 @@ interface MetaAd {
   effective_status?: string;
 }
 
+// Los textos en español son también sus claves de traducción (ver src/i18n).
 const META_STATUS_MAP: Record<
   string,
   { label: string; variant: "success" | "muted" | "error" | "warning" | "default" }
@@ -99,9 +102,9 @@ const FORMAT_LABELS: Record<string, string> = {
   INSTAGRAM_STORY: "Instagram Story",
 };
 
-function statusBadge(status: string) {
+function statusBadge(status: string, t: TranslateFn) {
   const info = META_STATUS_MAP[status] || { label: status, variant: "default" as const };
-  return <Badge variant={info.variant}>{info.label}</Badge>;
+  return <Badge variant={info.variant}>{t(info.label)}</Badge>;
 }
 
 // Estado real de la entidad: preferimos effective_status (considera a
@@ -130,27 +133,28 @@ function sortByActiveFirst<T extends WithStatus>(items: T[]): T[] {
 
 function formatMetaBudget(
   minorUnits: string | null | undefined,
-  currency?: string | null,
+  currency: string | null | undefined,
+  localeTag: string,
 ) {
   if (!minorUnits) return "—";
-  return `$${fromMinorUnits(Number(minorUnits), currency).toLocaleString("es")}`;
+  return `$${fromMinorUnits(Number(minorUnits), currency).toLocaleString(localeTag)}`;
 }
 
 // Métricas: números/montos compactos para no romper la tarjeta con
 // cifras largas en pesos.
-function fmtNum(n: number): string {
+function fmtNum(n: number, localeTag: string): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString("es");
+  return n.toLocaleString(localeTag);
 }
-function fmtMoneyShort(n: number): string {
+function fmtMoneyShort(n: number, localeTag: string): string {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 10_000) return `$${(n / 1_000).toFixed(1)}K`;
-  return `$${n.toLocaleString("es", { maximumFractionDigits: 0 })}`;
+  return `$${n.toLocaleString(localeTag, { maximumFractionDigits: 0 })}`;
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("es", {
+function formatDate(dateStr: string, localeTag: string) {
+  return new Date(dateStr).toLocaleDateString(localeTag, {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -160,6 +164,7 @@ function formatDate(dateStr: string) {
 /* ── Main Page ── */
 
 export default function CampaignsPage() {
+  const { t, localeTag } = useI18n();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [metaCampaigns, setMetaCampaigns] = useState<MetaCampaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -207,7 +212,7 @@ export default function CampaignsPage() {
   }, [range]);
 
   async function handleDeleteDraft(id: string) {
-    if (!confirm("¿Estás seguro de eliminar esta campaña?")) return;
+    if (!confirm(t("¿Estás seguro de eliminar esta campaña?"))) return;
     try {
       await api.delete(`/campaigns/${id}`);
       setCampaigns((prev) => prev.filter((c) => c.id !== id));
@@ -263,7 +268,7 @@ export default function CampaignsPage() {
 
   function formatBudget(amount: number, currency: string) {
     // amount is stored in whole currency units (not cents).
-    return new Intl.NumberFormat("es", {
+    return new Intl.NumberFormat(localeTag, {
       style: "currency",
       currency,
       minimumFractionDigits: 0,
@@ -306,24 +311,24 @@ export default function CampaignsPage() {
     <div className="max-w-4xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-ink">Campañas</h1>
+          <h1 className="text-2xl font-semibold text-ink">{t("Campañas")}</h1>
           <p className="mt-1 text-sm text-muted">
-            Gestiona tus campañas de Meta Ads.
+            {t("Gestiona tus campañas de Meta Ads.")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/ads/search">
-            <Button variant="ghost">Buscar Ads</Button>
+            <Button variant="ghost">{t("Buscar Ads")}</Button>
           </Link>
           <Link href="/ads/custom">
-            <Button>Nueva campaña</Button>
+            <Button>{t("Nueva campaña")}</Button>
           </Link>
         </div>
       </div>
 
       {error && (
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
@@ -338,7 +343,7 @@ export default function CampaignsPage() {
               : "text-muted hover:text-ink"
           }`}
         >
-          OneClickIA ({campaigns.length})
+          {t("OneClickIA ({count})", { count: campaigns.length })}
         </button>
         <button
           type="button"
@@ -349,7 +354,9 @@ export default function CampaignsPage() {
               : "text-muted hover:text-ink"
           }`}
         >
-          Meta Ads {loadingMeta ? "" : `(${metaCampaigns.length})`}
+          {loadingMeta
+            ? t("Meta Ads")
+            : t("Meta Ads ({count})", { count: metaCampaigns.length })}
         </button>
       </div>
 
@@ -360,10 +367,12 @@ export default function CampaignsPage() {
             <div className="mt-12 text-center">
               <Icon name="megaphone" size={36} className="mx-auto text-orange-500" />
               <p className="mt-2 text-sm text-muted">
-                Aún no tienes campañas creadas desde OneClickIA.
+                {t("Aún no tienes campañas creadas desde OneClickIA.")}
               </p>
               <Link href="/ads/search" className="mt-4 inline-block">
-                <Button variant="ghost" size="sm">Buscar Ads</Button>
+                <Button variant="ghost" size="sm">
+                  {t("Buscar Ads")}
+                </Button>
               </Link>
             </div>
           )}
@@ -386,16 +395,26 @@ export default function CampaignsPage() {
                       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
                         <span>
                           {formatBudget(campaign.budgetAmount, campaign.currency)}{" "}
-                          {campaign.budgetType === "DAILY" ? "/ día" : "total"}
+                          {campaign.budgetType === "DAILY"
+                            ? t("/ día")
+                            : t("total")}
                         </span>
-                        <span>{objectiveLabel(campaign.objective)}</span>
-                        {locationSummary(campaign.targetCountries, campaign.targetCities) && (
+                        <span>{objectiveLabel(campaign.objective, t)}</span>
+                        {locationSummary(
+                          campaign.targetCountries,
+                          campaign.targetCities,
+                          t,
+                        ) && (
                           <span className="inline-flex items-center gap-1">
                             <Icon name="map-pin" size={13} className="text-rose-500" />
-                            {locationSummary(campaign.targetCountries, campaign.targetCities)}
+                            {locationSummary(
+                              campaign.targetCountries,
+                              campaign.targetCities,
+                              t,
+                            )}
                           </span>
                         )}
-                        <span>{formatDate(campaign.createdAt)}</span>
+                        <span>{formatDate(campaign.createdAt, localeTag)}</span>
                       </div>
                     </Link>
                     {["DRAFT", "PUBLISHING", "ERROR"].includes(campaign.status) && (
@@ -404,7 +423,7 @@ export default function CampaignsPage() {
                         onClick={() => handleDeleteDraft(campaign.id)}
                         className="ml-3 rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-error/10 hover:text-error"
                       >
-                        Eliminar
+                        {t("Eliminar")}
                       </button>
                     )}
                   </div>
@@ -445,7 +464,7 @@ export default function CampaignsPage() {
                 <div className="mt-12 text-center">
                   <Icon name="smartphone" size={36} className="mx-auto text-slate-500" />
                   <p className="mt-2 text-sm text-muted">
-                    No se encontraron campañas en tu cuenta de Meta Ads.
+                    {t("No se encontraron campañas en tu cuenta de Meta Ads.")}
                   </p>
                 </div>
               )}
@@ -466,14 +485,14 @@ export default function CampaignsPage() {
                       setMetaQuery(v);
                       setMetaPage(0);
                     }}
-                    placeholder="Buscar campaña…"
+                    placeholder={t("Buscar campaña…")}
                   />
                 </div>
               )}
 
               {metaCampaigns.length > 0 && filteredMeta.length === 0 && (
                 <p className="mt-8 text-center text-sm text-muted">
-                  No hay campañas que coincidan con el filtro.
+                  {t("No hay campañas que coincidan con el filtro.")}
                 </p>
               )}
 
@@ -493,41 +512,53 @@ export default function CampaignsPage() {
                               <h3 className="text-sm font-semibold text-ink line-clamp-1">
                                 {mc.name}
                               </h3>
-                              {statusBadge(effStatus(mc))}
+                              {statusBadge(effStatus(mc), t)}
                             </div>
                             <div className="mt-2 flex items-center gap-4 text-xs text-muted">
-                              <span>{objectiveLabel(mc.objective)}</span>
+                              <span>{objectiveLabel(mc.objective, t)}</span>
                               <span>
                                 {mc.dailyBudget
-                                  ? `${formatMetaBudget(mc.dailyBudget, mc.currency)} / día`
+                                  ? t("{amount} / día", {
+                                      amount: formatMetaBudget(
+                                        mc.dailyBudget,
+                                        mc.currency,
+                                        localeTag,
+                                      ),
+                                    })
                                   : mc.lifetimeBudget
-                                    ? `${formatMetaBudget(mc.lifetimeBudget, mc.currency)} total`
-                                    : "Sin presupuesto"}
+                                    ? t("{amount} total", {
+                                        amount: formatMetaBudget(
+                                          mc.lifetimeBudget,
+                                          mc.currency,
+                                          localeTag,
+                                        ),
+                                      })
+                                    : t("Sin presupuesto")}
                               </span>
-                              <span>{formatDate(mc.createdTime)}</span>
+                              <span>{formatDate(mc.createdTime, localeTag)}</span>
                             </div>
                             {/* Métricas del rango de fechas seleccionado */}
                             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                               <span>
-                                <span className="text-muted">Gasto </span>
+                                <span className="text-muted">{t("Gasto")} </span>
                                 <span className="font-semibold text-ink">
-                                  {fmtMoneyShort(mc.spend ?? 0)}
+                                  {fmtMoneyShort(mc.spend ?? 0, localeTag)}
                                 </span>
                               </span>
                               <span>
-                                <span className="text-muted">Impr. </span>
+                                <span className="text-muted">{t("Impr.")} </span>
                                 <span className="font-medium text-charcoal">
-                                  {fmtNum(mc.impressions ?? 0)}
+                                  {fmtNum(mc.impressions ?? 0, localeTag)}
                                 </span>
                               </span>
                               <span>
-                                <span className="text-muted">Clics </span>
+                                <span className="text-muted">{t("Clics")} </span>
                                 <span className="font-medium text-charcoal">
-                                  {fmtNum(mc.clicks ?? 0)}
+                                  {fmtNum(mc.clicks ?? 0, localeTag)}
                                 </span>
                               </span>
                               <span>
-                                <span className="text-muted">CTR </span>
+                                <span className="text-muted">{t("CTR")} </span>
                                 <span className="font-medium text-charcoal">
                                   {(mc.ctr ?? 0).toFixed(2)}%
                                 </span>
@@ -562,15 +593,15 @@ export default function CampaignsPage() {
                   onClick={goBackToCampaigns}
                   className="text-sm text-muted hover:text-ink transition-colors"
                 >
-                  ← Volver a campañas
+                  {t("← Volver a campañas")}
                 </button>
                 <div className="mt-2 flex items-center gap-3">
                   <h2 className="text-lg font-semibold text-ink">
                     {selectedCampaign.name}
                   </h2>
-                  {statusBadge(effStatus(selectedCampaign))}
+                  {statusBadge(effStatus(selectedCampaign), t)}
                 </div>
-                <p className="text-sm text-muted">Grupos de anuncios</p>
+                <p className="text-sm text-muted">{t("Grupos de anuncios")}</p>
               </div>
 
               {loadingAdSets && (
@@ -582,7 +613,7 @@ export default function CampaignsPage() {
               {!loadingAdSets && adSets.length === 0 && (
                 <div className="mt-8 text-center">
                   <p className="text-sm text-muted">
-                    Esta campaña no tiene grupos de anuncios.
+                    {t("Esta campaña no tiene grupos de anuncios.")}
                   </p>
                 </div>
               )}
@@ -603,7 +634,7 @@ export default function CampaignsPage() {
                               <h3 className="text-sm font-semibold text-ink line-clamp-1">
                                 {adSet.name}
                               </h3>
-                              {statusBadge(effStatus(adSet))}
+                              {statusBadge(effStatus(adSet), t)}
                             </div>
                             <div className="mt-2 flex items-center gap-4 text-xs text-muted">
                               {adSet.optimization_goal && (
@@ -611,10 +642,22 @@ export default function CampaignsPage() {
                               )}
                               <span>
                                 {adSet.daily_budget
-                                  ? `${formatMetaBudget(adSet.daily_budget, selectedCampaign?.currency)} / día`
+                                  ? t("{amount} / día", {
+                                      amount: formatMetaBudget(
+                                        adSet.daily_budget,
+                                        selectedCampaign?.currency,
+                                        localeTag,
+                                      ),
+                                    })
                                   : adSet.lifetime_budget
-                                    ? `${formatMetaBudget(adSet.lifetime_budget, selectedCampaign?.currency)} total`
-                                    : "Sin presupuesto"}
+                                    ? t("{amount} total", {
+                                        amount: formatMetaBudget(
+                                          adSet.lifetime_budget,
+                                          selectedCampaign?.currency,
+                                          localeTag,
+                                        ),
+                                      })
+                                    : t("Sin presupuesto")}
                               </span>
                             </div>
                           </div>
@@ -637,15 +680,15 @@ export default function CampaignsPage() {
                   onClick={goBackToAdSets}
                   className="text-sm text-muted hover:text-ink transition-colors"
                 >
-                  ← Volver a {selectedCampaign?.name}
+                  {t("← Volver a {name}", { name: selectedCampaign?.name ?? "" })}
                 </button>
                 <div className="mt-2 flex items-center gap-3">
                   <h2 className="text-lg font-semibold text-ink">
                     {selectedAdSet.name}
                   </h2>
-                  {statusBadge(effStatus(selectedAdSet))}
+                  {statusBadge(effStatus(selectedAdSet), t)}
                 </div>
-                <p className="text-sm text-muted">Anuncios</p>
+                <p className="text-sm text-muted">{t("Anuncios")}</p>
               </div>
 
               {loadingAds && (
@@ -657,7 +700,7 @@ export default function CampaignsPage() {
               {!loadingAds && ads.length === 0 && (
                 <div className="mt-8 text-center">
                   <p className="text-sm text-muted">
-                    Este grupo de anuncios no tiene anuncios.
+                    {t("Este grupo de anuncios no tiene anuncios.")}
                   </p>
                 </div>
               )}
@@ -680,6 +723,7 @@ export default function CampaignsPage() {
 /* ── Ad card with toggle preview ── */
 
 function AdWithPreview({ ad }: { ad: MetaAd }) {
+  const t = useT();
   const [previews, setPreviews] = useState<{ format: string; html: string }[]>([]);
   const [showPreviews, setShowPreviews] = useState(false);
   const [loadingPreviews, setLoadingPreviews] = useState(false);
@@ -706,7 +750,7 @@ function AdWithPreview({ ad }: { ad: MetaAd }) {
           <h3 className="text-sm font-semibold text-ink line-clamp-1">
             {ad.name}
           </h3>
-          {statusBadge(effStatus(ad))}
+          {statusBadge(effStatus(ad), t)}
         </div>
         <Button
           variant="ghost"
@@ -717,7 +761,7 @@ function AdWithPreview({ ad }: { ad: MetaAd }) {
           }}
           loading={loadingPreviews}
         >
-          {showPreviews ? "Ocultar preview" : "Ver preview"}
+          {showPreviews ? t("Ocultar preview") : t("Ver preview")}
         </Button>
       </div>
 
@@ -726,7 +770,9 @@ function AdWithPreview({ ad }: { ad: MetaAd }) {
           {previews.map((preview) => (
             <div key={preview.format} className="flex flex-col gap-2">
               <Badge variant="orange">
-                {FORMAT_LABELS[preview.format] || preview.format}
+                {FORMAT_LABELS[preview.format]
+                  ? t(FORMAT_LABELS[preview.format])
+                  : preview.format}
               </Badge>
               <div
                 className="rounded-lg border border-sand [&_iframe]:!w-full [&_iframe]:!max-w-full"

@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useI18n } from "@/contexts/I18nContext";
+import type { TranslateFn } from "@/i18n/translate";
 
 // ── Shapes returned by /admin/ai-usage/* ──
 
@@ -45,6 +47,7 @@ interface ModelRow {
 }
 
 // Spanish labels for the logical service keys recorded by the backend.
+// Los textos en español son también sus claves de traducción (ver src/i18n).
 const SERVICE_LABELS: Record<string, string> = {
   copy: "Copy (texto de anuncios)",
   landing: "Landing pages",
@@ -57,8 +60,9 @@ const SERVICE_LABELS: Record<string, string> = {
   image_custom: "Imágenes personalizadas",
 };
 
-function serviceLabel(key: string): string {
-  return SERVICE_LABELS[key] ?? key;
+function serviceLabel(key: string, t: TranslateFn): string {
+  const label = SERVICE_LABELS[key];
+  return label ? t(label) : key;
 }
 
 // Los costos se calculan y guardan en USD (lo que cobra Google). El panel los
@@ -72,8 +76,8 @@ interface UsdCopRate {
   source: "trm" | "fallback";
 }
 
-function fmtNum(n: number): string {
-  return n.toLocaleString("es");
+function fmtNum(n: number, localeTag: string): string {
+  return n.toLocaleString(localeTag);
 }
 
 // Default range: last 30 days, as yyyy-mm-dd for <input type="date">.
@@ -83,6 +87,7 @@ function isoDate(d: Date): string {
 
 export default function AdminCostosPage() {
   const { user, isLoading: authLoading } = useAuth();
+  const { t, localeTag } = useI18n();
 
   const [from, setFrom] = useState(() =>
     isoDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
@@ -217,10 +222,10 @@ export default function AdminCostosPage() {
   if (user?.role !== "ADMIN") {
     return (
       <div className="max-w-2xl">
-        <h1 className="text-2xl font-semibold text-ink">Costos de IA</h1>
+        <h1 className="text-2xl font-semibold text-ink">{t("Costos de IA")}</h1>
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
           <p className="text-sm text-error">
-            Acceso restringido a administradores.
+            {t("Acceso restringido a administradores.")}
           </p>
         </div>
       </div>
@@ -231,20 +236,23 @@ export default function AdminCostosPage() {
     <div className="max-w-6xl">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-ink">Costos de IA</h1>
+          <h1 className="text-2xl font-semibold text-ink">{t("Costos de IA")}</h1>
           <p className="mt-1 text-sm text-muted">
-            Gasto real en Gemini por usuario y por servicio, en USD (lo que
-            cobra Google) y su equivalente en pesos colombianos a{" "}
-            {fmtNum(Math.round(fx.rate))} COP/USD
-            {fx.source === "trm"
-              ? ` (TRM ${fx.date})`
-              : " (tasa de respaldo)"}
-            .
+            {t(
+              "Gasto real en Gemini por usuario y por servicio, en USD (lo que cobra Google) y su equivalente en pesos colombianos a {rate} COP/USD{source}.",
+              {
+                rate: fmtNum(Math.round(fx.rate), localeTag),
+                source:
+                  fx.source === "trm"
+                    ? t(" (TRM {date})", { date: fx.date })
+                    : t(" (tasa de respaldo)"),
+              },
+            )}
           </p>
         </div>
         <div className="flex items-end gap-2">
           <label className="flex flex-col text-xs text-muted">
-            Desde
+            {t("Desde")}
             <input
               type="date"
               value={from}
@@ -254,7 +262,7 @@ export default function AdminCostosPage() {
             />
           </label>
           <label className="flex flex-col text-xs text-muted">
-            Hasta
+            {t("Hasta")}
             <input
               type="date"
               value={to}
@@ -268,7 +276,7 @@ export default function AdminCostosPage() {
 
       {error && (
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
@@ -281,50 +289,50 @@ export default function AdminCostosPage() {
           {/* Summary cards */}
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <SummaryCard
-              label="Costo total"
+              label={t("Costo total")}
               value={summary ? fmtCop(summary.totalCostUsd) : "—"}
               sub={summary ? fmtUsd(summary.totalCostUsd) : undefined}
               highlight
             />
             <SummaryCard
-              label="Costo tokens"
+              label={t("Costo tokens")}
               value={summary ? fmtCop(summary.tokenCostUsd) : "—"}
               sub={summary ? fmtUsd(summary.tokenCostUsd) : undefined}
             />
             <SummaryCard
-              label="Costo grounding"
+              label={t("Costo grounding")}
               value={summary ? fmtCop(summary.groundingCostUsd) : "—"}
               sub={summary ? fmtUsd(summary.groundingCostUsd) : undefined}
             />
             <SummaryCard
-              label="Llamadas"
-              value={summary ? fmtNum(summary.calls) : "—"}
+              label={t("Llamadas")}
+              value={summary ? fmtNum(summary.calls, localeTag) : "—"}
             />
             <SummaryCard
-              label="Tokens totales"
-              value={summary ? fmtNum(summary.totalTokens) : "—"}
+              label={t("Tokens totales")}
+              value={summary ? fmtNum(summary.totalTokens, localeTag) : "—"}
             />
           </div>
 
           {/* By model */}
           <Card className="mt-6 overflow-x-auto">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Costo por modelo
+              {t("Costo por modelo")}
             </h3>
             {byModel.length === 0 ? (
               <p className="mt-4 text-sm text-muted">
-                No hay consumo registrado en este rango.
+                {t("No hay consumo registrado en este rango.")}
               </p>
             ) : (
               <table className="mt-4 w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-sand text-xs font-semibold uppercase tracking-wide text-muted">
-                    <th className="pb-3 pr-4">Modelo</th>
-                    <th className="pb-3 pr-4 text-right">Costo</th>
-                    <th className="pb-3 pr-4 text-right">Llamadas</th>
-                    <th className="pb-3 pr-4 text-right">Tokens entrada</th>
-                    <th className="pb-3 pr-4 text-right">Tokens texto sal.</th>
-                    <th className="pb-3 text-right">Tokens img sal.</th>
+                    <th className="pb-3 pr-4">{t("Modelo")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Costo")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Llamadas")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Tokens entrada")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Tokens texto sal.")}</th>
+                    <th className="pb-3 text-right">{t("Tokens img sal.")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -340,16 +348,16 @@ export default function AdminCostosPage() {
                         {money(r.costUsd, true)}
                       </td>
                       <td className="py-3 pr-4 text-right text-charcoal">
-                        {fmtNum(r.calls)}
+                        {fmtNum(r.calls, localeTag)}
                       </td>
                       <td className="py-3 pr-4 text-right text-charcoal">
-                        {fmtNum(r.inputTokens)}
+                        {fmtNum(r.inputTokens, localeTag)}
                       </td>
                       <td className="py-3 pr-4 text-right text-charcoal">
-                        {fmtNum(r.outputTextTokens)}
+                        {fmtNum(r.outputTextTokens, localeTag)}
                       </td>
                       <td className="py-3 text-right text-charcoal">
-                        {r.outputImageTokens > 0 ? fmtNum(r.outputImageTokens) : "—"}
+                        {r.outputImageTokens > 0 ? fmtNum(r.outputImageTokens, localeTag) : "—"}
                       </td>
                     </tr>
                   ))}
@@ -361,25 +369,25 @@ export default function AdminCostosPage() {
           {/* By user */}
           <Card className="mt-6 overflow-x-auto">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Costo por usuario
+              {t("Costo por usuario")}
             </h3>
             {byUser.length === 0 ? (
               <p className="mt-4 text-sm text-muted">
-                No hay consumo registrado en este rango.
+                {t("No hay consumo registrado en este rango.")}
               </p>
             ) : (
               <>
               <p className="mt-1 text-xs text-muted">
-                Haz clic en un usuario para ver su desglose por servicio.
+                {t("Haz clic en un usuario para ver su desglose por servicio.")}
               </p>
               <table className="mt-3 w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-sand text-xs font-semibold uppercase tracking-wide text-muted">
-                    <th className="pb-3 pr-4">Usuario</th>
-                    <th className="pb-3 pr-4 text-right">Costo</th>
-                    <th className="pb-3 pr-4 text-right">Llamadas</th>
-                    <th className="pb-3 pr-4 text-right">Tokens</th>
-                    <th className="pb-3 text-right">Grounding</th>
+                    <th className="pb-3 pr-4">{t("Usuario")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Costo")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Llamadas")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Tokens")}</th>
+                    <th className="pb-3 text-right">{t("Grounding")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -413,13 +421,13 @@ export default function AdminCostosPage() {
                             {money(r.costUsd, true)}
                           </td>
                           <td className="py-3 pr-4 text-right text-charcoal">
-                            {fmtNum(r.calls)}
+                            {fmtNum(r.calls, localeTag)}
                           </td>
                           <td className="py-3 pr-4 text-right text-charcoal">
-                            {fmtNum(r.totalTokens)}
+                            {fmtNum(r.totalTokens, localeTag)}
                           </td>
                           <td className="py-3 text-right text-charcoal">
-                            {fmtNum(r.groundingRequests)}
+                            {fmtNum(r.groundingRequests, localeTag)}
                           </td>
                         </tr>
                         {isExpanded &&
@@ -429,7 +437,7 @@ export default function AdminCostosPage() {
                                 <div className="flex items-center gap-2">
                                   <Spinner size="sm" />
                                   <span className="text-xs text-muted">
-                                    Cargando desglose…
+                                    {t("Cargando desglose…")}
                                   </span>
                                 </div>
                               </td>
@@ -437,7 +445,7 @@ export default function AdminCostosPage() {
                           ) : breakdown.length === 0 ? (
                             <tr className="bg-cream">
                               <td colSpan={5} className="px-4 py-3 text-xs text-muted">
-                                Sin consumo en este rango.
+                                {t("Sin consumo en este rango.")}
                               </td>
                             </tr>
                           ) : (
@@ -447,22 +455,22 @@ export default function AdminCostosPage() {
                                   colSpan={5}
                                   className="px-4 pt-3 pb-1 pl-9 text-xs font-semibold uppercase tracking-wide text-muted"
                                 >
-                                  Desglose por servicio
+                                  {t("Desglose por servicio")}
                                 </td>
                               </tr>
                               {breakdown.map((s) => (
                                 <tr key={s.service} className="bg-cream">
                                   <td className="py-2 pl-9 pr-4 text-charcoal">
-                                    {serviceLabel(s.service)}
+                                    {serviceLabel(s.service, t)}
                                   </td>
                                   <td className="py-2 pr-4 text-right font-medium text-ink">
                                     {money(s.costUsd, true)}
                                   </td>
                                   <td className="py-2 pr-4 text-right text-muted">
-                                    {fmtNum(s.calls)}
+                                    {fmtNum(s.calls, localeTag)}
                                   </td>
                                   <td className="py-2 pr-4 text-right text-muted">
-                                    {fmtNum(s.totalTokens)}
+                                    {fmtNum(s.totalTokens, localeTag)}
                                   </td>
                                   <td className="py-2 text-right text-muted">—</td>
                                 </tr>
@@ -481,20 +489,20 @@ export default function AdminCostosPage() {
           {/* By service */}
           <Card className="mt-6 overflow-x-auto">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Costo por servicio
+              {t("Costo por servicio")}
             </h3>
             {byService.length === 0 ? (
               <p className="mt-4 text-sm text-muted">
-                No hay consumo registrado en este rango.
+                {t("No hay consumo registrado en este rango.")}
               </p>
             ) : (
               <table className="mt-4 w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-sand text-xs font-semibold uppercase tracking-wide text-muted">
-                    <th className="pb-3 pr-4">Servicio</th>
-                    <th className="pb-3 pr-4 text-right">Costo</th>
-                    <th className="pb-3 pr-4 text-right">Llamadas</th>
-                    <th className="pb-3 text-right">Tokens</th>
+                    <th className="pb-3 pr-4">{t("Servicio")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Costo")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Llamadas")}</th>
+                    <th className="pb-3 text-right">{t("Tokens")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -504,16 +512,16 @@ export default function AdminCostosPage() {
                       className="border-b border-sand/50 last:border-0 hover:bg-sand/10 transition-colors"
                     >
                       <td className="py-3 pr-4 font-medium text-ink">
-                        {serviceLabel(r.service)}
+                        {serviceLabel(r.service, t)}
                       </td>
                       <td className="py-3 pr-4 text-right font-semibold text-ink">
                         {money(r.costUsd, true)}
                       </td>
                       <td className="py-3 pr-4 text-right text-charcoal">
-                        {fmtNum(r.calls)}
+                        {fmtNum(r.calls, localeTag)}
                       </td>
                       <td className="py-3 text-right text-charcoal">
-                        {fmtNum(r.totalTokens)}
+                        {fmtNum(r.totalTokens, localeTag)}
                       </td>
                     </tr>
                   ))}

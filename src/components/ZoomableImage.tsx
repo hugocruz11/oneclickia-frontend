@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { VariantLightbox } from "@/components/VariantLightbox";
+import { useT } from "@/contexts/I18nContext";
 
 interface Props {
   src: string;
@@ -20,6 +21,7 @@ export function ZoomableImage({
   className,
   wrapperClassName,
 }: Props) {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   return (
@@ -39,7 +41,7 @@ export function ZoomableImage({
             e.stopPropagation();
             setOpen(true);
           }}
-          aria-label={`Ver ${label ?? alt} en grande`}
+          aria-label={t("Ver {label} en grande", { label: label ?? alt })}
           className="absolute left-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100 focus:opacity-100"
         >
           <svg

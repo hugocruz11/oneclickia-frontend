@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/contexts/I18nContext";
 
 interface AiProgressProps {
   // Mensaje principal (ej. "Generando copy con IA…").
@@ -14,6 +15,7 @@ interface AiProgressProps {
 // transcurrido y un texto que tranquiliza. El progreso es "simulado" (no
 // real, porque el backend no reporta avance) pero comunica que algo pasa.
 export function AiProgress({ message, estimateSeconds = 30 }: AiProgressProps) {
+  const t = useT();
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -43,8 +45,13 @@ export function AiProgress({ message, estimateSeconds = 30 }: AiProgressProps) {
       </div>
       <p className="text-xs text-muted">
         {elapsed < estimateSeconds * 1.5
-          ? `Esto suele tardar ~${estimateSeconds}s · ${Math.floor(elapsed)}s`
-          : `Tardando un poco más de lo normal… ${Math.floor(elapsed)}s`}
+          ? t("Esto suele tardar ~{estimate}s · {elapsed}s", {
+              estimate: estimateSeconds,
+              elapsed: Math.floor(elapsed),
+            })
+          : t("Tardando un poco más de lo normal… {elapsed}s", {
+              elapsed: Math.floor(elapsed),
+            })}
       </p>
     </div>
   );

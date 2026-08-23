@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { Icon } from "@/components/ui/Icon";
 import { api, ApiError } from "@/lib/api";
+import { useT } from "@/contexts/I18nContext";
 import type {
   MetaAdAccount,
   MetaCustomAudience,
@@ -33,6 +34,7 @@ function formatDate(ts?: number): string {
 }
 
 export default function AudiencesPage() {
+  const t = useT();
   const [adAccounts, setAdAccounts] = useState<MetaAdAccount[]>([]);
   const [adAccountId, setAdAccountId] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -146,7 +148,9 @@ export default function AudiencesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("¿Eliminar este público? Esta acción es irreversible en Meta.")) {
+    if (
+      !confirm(t("¿Eliminar este público? Esta acción es irreversible en Meta."))
+    ) {
       return;
     }
     try {
@@ -174,17 +178,21 @@ export default function AudiencesPage() {
 
   return (
     <div className="max-w-5xl">
-      <h1 className="text-2xl font-semibold text-ink">Públicos personalizados</h1>
+      <h1 className="text-2xl font-semibold text-ink">
+        {t("Públicos personalizados")}
+      </h1>
       <p className="mt-1 text-sm text-muted">
-        Crea públicos en Meta subiendo un CSV con correos de tus clientes. Los
-        datos se hashean (SHA-256) antes de enviarse.
+        {t(
+          "Crea públicos en Meta subiendo un CSV con correos de tus clientes. Los datos se hashean (SHA-256) antes de enviarse.",
+        )}
       </p>
 
       {adAccounts.length === 0 && (
         <Card className="mt-6">
           <p className="text-sm text-muted">
-            No hay cuentas publicitarias de Meta conectadas. Conectá Meta
-            primero desde la sección Meta Ads.
+            {t(
+              "No hay cuentas publicitarias de Meta conectadas. Conectá Meta primero desde la sección Meta Ads.",
+            )}
           </p>
         </Card>
       )}
@@ -194,7 +202,7 @@ export default function AudiencesPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="w-full sm:w-80">
               <Select
-                label="Cuenta publicitaria"
+                label={t("Cuenta publicitaria")}
                 value={adAccountId}
                 onChange={(e) => setAdAccountId(e.target.value)}
                 options={adAccounts.map((a) => ({
@@ -204,26 +212,26 @@ export default function AudiencesPage() {
               />
             </div>
             <Button onClick={() => setShowCreate((s) => !s)}>
-              {showCreate ? "Cancelar" : "+ Crear público"}
+              {showCreate ? t("Cancelar") : t("+ Crear público")}
             </Button>
           </div>
 
           {showCreate && (
             <div className="mt-4 flex flex-col gap-3 rounded-md border border-sand bg-sand-light p-4">
               <Input
-                label="Nombre del público"
+                label={t("Nombre del público")}
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="Ej: Clientes VIP Q1 2026"
+                placeholder={t("Ej: Clientes VIP Q1 2026")}
               />
               <Textarea
-                label="Descripción (opcional)"
+                label={t("Descripción (opcional)")}
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
                 rows={2}
               />
               <Select
-                label="Origen de los datos"
+                label={t("Origen de los datos")}
                 value={newSource}
                 onChange={(e) =>
                   setNewSource(e.target.value as CustomerFileSource)
@@ -231,15 +239,15 @@ export default function AudiencesPage() {
                 options={[
                   {
                     value: "USER_PROVIDED_ONLY",
-                    label: "Datos recolectados directo del cliente",
+                    label: t("Datos recolectados directo del cliente"),
                   },
                   {
                     value: "PARTNER_PROVIDED_ONLY",
-                    label: "Datos de un partner / agencia",
+                    label: t("Datos de un partner / agencia"),
                   },
                   {
                     value: "BOTH_USER_AND_PARTNER_PROVIDED",
-                    label: "Ambos",
+                    label: t("Ambos"),
                   },
                 ]}
               />
@@ -249,7 +257,7 @@ export default function AudiencesPage() {
                   loading={creating}
                   disabled={!newName.trim()}
                 >
-                  Crear
+                  {t("Crear")}
                 </Button>
               </div>
             </div>
@@ -259,19 +267,26 @@ export default function AudiencesPage() {
 
       {error && (
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
       {uploadResult && (
         <div className="mt-4 rounded-md border border-success/20 bg-success/10 p-3 text-sm">
           <p className="font-semibold text-ink">
-            Subida enviada a Meta ({uploadResult.uploaded} correos).
+            {t("Subida enviada a Meta ({count} correos).", {
+              count: uploadResult.uploaded,
+            })}
           </p>
           <p className="mt-1 text-muted">
-            Total leídos: {uploadResult.total} · Inválidos:{" "}
-            {uploadResult.invalid} · Duplicados: {uploadResult.duplicates}.
-            Meta tarda unos minutos en actualizar el tamaño.
+            {t(
+              "Total leídos: {total} · Inválidos: {invalid} · Duplicados: {duplicates}. Meta tarda unos minutos en actualizar el tamaño.",
+              {
+                total: uploadResult.total,
+                invalid: uploadResult.invalid,
+                duplicates: uploadResult.duplicates,
+              },
+            )}
           </p>
         </div>
       )}
@@ -284,10 +299,10 @@ export default function AudiencesPage() {
         <Card className="mt-6 text-center">
           <Icon name="target" size={36} className="mx-auto text-red-600" />
           <p className="mt-2 text-sm font-medium text-ink">
-            Aún no hay públicos en esta cuenta.
+            {t("Aún no hay públicos en esta cuenta.")}
           </p>
           <p className="mt-1 text-sm text-muted">
-            Creá el primero con el botón de arriba.
+            {t("Creá el primero con el botón de arriba.")}
           </p>
         </Card>
       ) : (
@@ -300,7 +315,7 @@ export default function AudiencesPage() {
                     <h3 className="text-base font-semibold text-ink">{a.name}</h3>
                     <Badge variant="muted">{a.subtype}</Badge>
                     {a.operation_status?.code === 471 && (
-                      <Badge variant="default">Restringido</Badge>
+                      <Badge variant="default">{t("Restringido")}</Badge>
                     )}
                   </div>
                   {a.description && (
@@ -308,20 +323,24 @@ export default function AudiencesPage() {
                   )}
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
                     <span>
-                      Tamaño aprox:{" "}
+                      {t("Tamaño aprox:")}{" "}
                       {formatSize(
                         a.approximate_count_lower_bound,
                         a.approximate_count_upper_bound,
                       )}
                     </span>
-                    <span>Actualizado: {formatDate(a.time_updated)}</span>
+                    <span>
+                      {t("Actualizado: {date}", {
+                        date: formatDate(a.time_updated),
+                      })}
+                    </span>
                     <span className="font-mono">{a.id}</span>
                   </div>
                 </div>
                 <div className="flex shrink-0 gap-2">
                   {a.subtype === "CUSTOM" && (
                     <label className="inline-flex cursor-pointer items-center rounded-md border border-sand px-3 py-1.5 text-xs font-medium text-ink hover:border-orange">
-                      {uploadingId === a.id ? "Subiendo..." : "Subir CSV"}
+                      {uploadingId === a.id ? t("Subiendo...") : t("Subir CSV")}
                       <input
                         type="file"
                         accept=".csv,text/csv"
@@ -336,7 +355,7 @@ export default function AudiencesPage() {
                     onClick={() => handleDelete(a.id)}
                     className="rounded-md border border-sand px-3 py-1.5 text-xs font-medium text-muted hover:border-error hover:text-error"
                   >
-                    Eliminar
+                    {t("Eliminar")}
                   </button>
                 </div>
               </div>

@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Icon } from "@/components/ui/Icon";
 import { api } from "@/lib/api";
 import type { CachedAd } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
+import type { TranslateFn } from "@/i18n/translate";
 
 interface AdCardProps {
   ad: CachedAd;
@@ -14,11 +16,19 @@ interface AdCardProps {
   onFavoriteChange?: (adId: string, favorited: boolean) => void;
 }
 
-function formatDuration(days: number | null): string | null {
+// Abreviaturas de duración: "2a 3m" / "5 meses" / "12 días". Las unidades
+// cambian de idioma, así que recibe `t`.
+function formatDuration(days: number | null, t: TranslateFn): string | null {
   if (!days) return null;
-  if (days >= 365) return `${Math.floor(days / 365)}a ${days % 365 > 30 ? Math.floor((days % 365) / 30) + "m" : ""}`;
-  if (days >= 30) return `${Math.floor(days / 30)} meses`;
-  return `${days} días`;
+  if (days >= 365) {
+    const years = Math.floor(days / 365);
+    const months = days % 365 > 30 ? Math.floor((days % 365) / 30) : 0;
+    return months
+      ? t("{years}a {months}m", { years, months })
+      : t("{years}a", { years });
+  }
+  if (days >= 30) return t("{months} meses", { months: Math.floor(days / 30) });
+  return t("{days} días", { days });
 }
 
 export function AdCard({
@@ -27,6 +37,7 @@ export function AdCard({
   isFavorite = false,
   onFavoriteChange,
 }: AdCardProps) {
+  const t = useT();
   const [favorited, setFavorited] = useState(isFavorite);
   const [saving, setSaving] = useState(false);
 
@@ -52,7 +63,7 @@ export function AdCard({
     }
   }
 
-  const duration = formatDuration(ad.runningDurationDays);
+  const duration = formatDuration(ad.runningDurationDays, t);
 
   return (
     <Link
@@ -67,7 +78,9 @@ export function AdCard({
       <button
         type="button"
         onClick={toggleFavorite}
-        aria-label={favorited ? "Quitar de favoritos" : "Guardar en favoritos"}
+        aria-label={
+          favorited ? t("Quitar de favoritos") : t("Guardar en favoritos")
+        }
         className={`absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-sm transition-colors ${
           favorited
             ? "bg-orange text-white hover:bg-orange/90"
@@ -101,7 +114,7 @@ export function AdCard({
             >
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
             </svg>
-            Top para tu marca
+            {t("Top para tu marca")}
           </span>
         </div>
       )}
@@ -110,7 +123,7 @@ export function AdCard({
         <div className="aspect-square w-full overflow-hidden bg-sand-light">
           <img
             src={ad.imageUrl}
-            alt={ad.headline || "Ad"}
+            alt={ad.headline || t("Anuncio")}
             className="h-full w-full object-cover transition-transform group-hover:scale-105"
           />
         </div>
@@ -160,13 +173,13 @@ export function AdCard({
           )}
           {duration && (
             <Badge variant="success">
-              {duration} activo
+              {t("{duration} activo", { duration })}
             </Badge>
           )}
           {ad.isLive && (
             <span className="inline-flex items-center gap-1 text-xs text-success">
               <span className="h-1.5 w-1.5 rounded-full bg-success" />
-              Live
+              {t("Live")}
             </span>
           )}
         </div>

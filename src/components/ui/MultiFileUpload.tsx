@@ -7,6 +7,7 @@ import {
   type ChangeEvent,
   type DragEvent,
 } from "react";
+import { useT } from "@/contexts/I18nContext";
 
 interface MultiFileUploadProps {
   label?: string;
@@ -31,6 +32,7 @@ export function MultiFileUpload({
   value,
   onChange,
 }: MultiFileUploadProps) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [previews, setPreviews] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -102,14 +104,14 @@ export function MultiFileUpload({
             )}
             {i === 0 && (
               <span className="absolute left-1 top-1 rounded bg-orange px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                Principal
+                {t("Principal")}
               </span>
             )}
             <button
               type="button"
               onClick={() => removeAt(i)}
               className="absolute right-1 top-1 rounded-full bg-ink/70 px-1.5 text-xs text-white hover:bg-error"
-              aria-label="Quitar imagen"
+              aria-label={t("Quitar imagen")}
             >
               ×
             </button>
@@ -135,7 +137,7 @@ export function MultiFileUpload({
             }`}
           >
             <span className="text-2xl leading-none text-orange">+</span>
-            <span className="mt-1 text-xs text-muted">Agregar</span>
+            <span className="mt-1 text-xs text-muted">{t("Agregar")}</span>
           </button>
         )}
       </div>
@@ -152,7 +154,8 @@ export function MultiFileUpload({
       {error && <p className="text-sm text-error">{error}</p>}
       {helperText && !error && (
         <p className="text-sm text-muted">
-          {helperText} Máx. {max} · La primera es la principal.
+          {helperText}{" "}
+          {t("Máx. {max} · La primera es la principal.", { max })}
         </p>
       )}
     </div>
