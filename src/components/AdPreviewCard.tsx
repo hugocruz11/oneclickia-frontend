@@ -9,6 +9,8 @@
  * button opens the full-size lightbox.
  */
 
+import { useT } from "@/contexts/I18nContext";
+
 interface Props {
   /** Full image URL (already host-prefixed). */
   imageUrl: string;
@@ -43,6 +45,8 @@ export function AdPreviewCard({
   onToggle,
   onZoom,
 }: Props) {
+  const t = useT();
+
   return (
     <div
       className={`group relative flex flex-col overflow-hidden rounded-xl border-2 bg-white transition-colors ${
@@ -67,7 +71,7 @@ export function AdPreviewCard({
         )}
         <div className="min-w-0 flex-1 leading-tight">
           <p className="truncate text-sm font-semibold text-ink">{brandName}</p>
-          <p className="text-xs text-muted">Patrocinado</p>
+          <p className="text-xs text-muted">{t("Patrocinado")}</p>
         </div>
         <span className="text-muted">⋯</span>
       </div>
@@ -97,7 +101,7 @@ export function AdPreviewCard({
             e.stopPropagation();
             onZoom();
           }}
-          aria-label={`Ver ${label} en grande`}
+          aria-label={t("Ver {label} en grande", { label })}
           className="absolute left-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100 focus:opacity-100"
         >
           <svg
@@ -139,7 +143,9 @@ export function AdPreviewCard({
       <div className="flex items-center justify-between px-3 pb-2">
         <span className="text-xs text-muted">{label}</span>
         {selected && (
-          <span className="text-xs font-medium text-orange">Seleccionada</span>
+          <span className="text-xs font-medium text-orange">
+            {t("Seleccionada")}
+          </span>
         )}
       </div>
     </div>

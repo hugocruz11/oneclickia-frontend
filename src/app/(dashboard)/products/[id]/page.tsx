@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Spinner } from "@/components/ui/Spinner";
 import { api, ApiError } from "@/lib/api";
 import type { Product } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
 
 // ─── Step model ───────────────────────────────────────────────────
 
@@ -86,6 +87,7 @@ function resumeStep(state: WizardState): number {
 
 export default function EditProductPage() {
   const router = useRouter();
+  const t = useT();
   const params = useParams<{ id: string }>();
   const productId = params.id;
 
@@ -187,7 +189,7 @@ export default function EditProductPage() {
           href="/products"
           className="text-xs text-muted hover:text-orange"
         >
-          ← Volver a productos
+          {t("← Volver a productos")}
         </Link>
       </div>
 
@@ -195,7 +197,7 @@ export default function EditProductPage() {
 
       <Card padding="lg">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted">
-          Paso {step} de {TOTAL_STEPS}
+          {t("Paso {step} de {total}", { step, total: TOTAL_STEPS })}
         </span>
 
         {step === 1 && (
@@ -281,10 +283,11 @@ function FormShell({
 }
 
 function ErrorBox({ error }: { error: string }) {
+  const t = useT();
   if (!error) return null;
   return (
     <div className="rounded-md border border-error/20 bg-error/10 p-3">
-      <p className="text-sm text-error">{error}</p>
+      <p className="text-sm text-error">{t(error)}</p>
     </div>
   );
 }
@@ -298,11 +301,13 @@ function StepFooter({
   saving: boolean;
   primaryLabel: string;
 }) {
+  const t = useT();
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sand pt-5">
       {onBack ? (
         <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-          ← Atrás
+          {t("← Atrás")}
         </Button>
       ) : (
         <span />
@@ -323,6 +328,8 @@ function ProgressBar({
   total: number;
   onClickStep: (step: number) => void;
 }) {
+  const t = useT();
+
   return (
     <div className="flex items-center gap-2">
       {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
@@ -334,7 +341,7 @@ function ProgressBar({
             n <= current ? "bg-orange" : "bg-sand"
           } ${n < current ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
           disabled={n > current}
-          aria-label={`Paso ${n}`}
+          aria-label={t("Paso {n}", { n })}
         />
       ))}
       <span className="text-xs font-medium text-muted">
@@ -369,6 +376,7 @@ function Step1({
   newImages: File[];
   setNewImages: (f: File[]) => void;
 }) {
+  const t = useT();
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
   const srcOf = (url: string) =>
     url.startsWith("http") ? url : `${apiBase}${url}`;
@@ -376,12 +384,12 @@ function Step1({
   return (
     <>
       <StepHeader
-        title="Básicos del producto"
-        subtitle="Confirma el nombre y las imágenes. Para cambiarlas, sube nuevas (reemplazan todas)."
+        title={t("Básicos del producto")}
+        subtitle={t("Confirma el nombre y las imágenes. Para cambiarlas, sube nuevas (reemplazan todas).")}
       />
       <FormShell onSubmit={onSubmit}>
         <Input
-          label="Nombre del producto *"
+          label={t("Nombre del producto *")}
           value={state.name}
           onChange={(e) => update("name", e.target.value)}
           required
@@ -390,7 +398,7 @@ function Step1({
         {imageUrls.length > 0 && newImages.length === 0 && (
           <div className="rounded-md border border-sand bg-cream p-4">
             <p className="mb-3 text-sm text-muted">
-              Imágenes actuales. Para reemplazarlas, sube nuevas abajo.
+              {t("Imágenes actuales. Para reemplazarlas, sube nuevas abajo.")}
             </p>
             <div className="grid grid-cols-3 gap-3">
               {imageUrls.map((url, i) => (
@@ -401,12 +409,12 @@ function Step1({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={srcOf(url)}
-                    alt={`Imagen ${i + 1}`}
+                    alt={t("Imagen {n}", { n: i + 1 })}
                     className="h-full w-full object-cover"
                   />
                   {i === 0 && (
                     <span className="absolute left-1 top-1 rounded bg-orange px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                      Principal
+                      {t("Principal")}
                     </span>
                   )}
                 </div>
@@ -417,159 +425,169 @@ function Step1({
 
         <MultiFileUpload
           label={
-            newImages.length ? "Nuevas imágenes" : "Reemplazar imágenes (opcional)"
+            newImages.length
+              ? t("Nuevas imágenes")
+              : t("Reemplazar imágenes (opcional)")
           }
           value={newImages}
           onChange={setNewImages}
           max={3}
-          helperText="Si subes imágenes aquí, sobrescriben las actuales al guardar."
+          helperText={t("Si subes imágenes aquí, sobrescriben las actuales al guardar.")}
         />
 
         <ErrorBox error={error} />
-        <StepFooter saving={saving} primaryLabel="Guardar y continuar →" />
+        <StepFooter saving={saving} primaryLabel={t("Guardar y continuar →")} />
       </FormShell>
     </>
   );
 }
 
 function Step2({ state, update, onSubmit, onBack, saving, error }: StepProps) {
+  const t = useT();
+
   return (
     <>
       <StepHeader
-        title="¿Qué es y de qué está hecho?"
-        subtitle="Atributos físicos, composición y anti-posicionamiento. Es la base material del producto."
+        title={t("¿Qué es y de qué está hecho?")}
+        subtitle={t("Atributos físicos, composición y anti-posicionamiento. Es la base material del producto.")}
       />
       <FormShell onSubmit={onSubmit}>
         <Textarea
-          label="1. ¿Qué es este producto? *"
-          placeholder='Ej: Jeans tiro alto. Denim stretch 98% algodón / 2% lycra. Tallas 26-38. Colores: negro, azul stone, gris pizarra, camel. Largo 30 y 32. Corte recto. Costuras en hilo mostaza.'
+          label={t("1. ¿Qué es este producto? *")}
+          placeholder={t('Ej: Jeans tiro alto. Denim stretch 98% algodón / 2% lycra. Tallas 26-38. Colores: negro, azul stone, gris pizarra, camel. Largo 30 y 32. Corte recto. Costuras en hilo mostaza.')}
           value={state.description}
           onChange={(e) => update("description", e.target.value)}
-          helperText="Tipo de objeto/servicio + atributos físicos: colores, tamaños, materiales, dimensiones, presentaciones."
+          helperText={t("Tipo de objeto/servicio + atributos físicos: colores, tamaños, materiales, dimensiones, presentaciones.")}
           rows={6}
         />
         <Textarea
-          label="2. ¿De qué está hecho o qué lo compone? *"
-          placeholder='Ej: Espuma HD-36 (soporte lumbar sin hundirse) + malla transpirable (no acalora la espalda en jornadas largas) + base aluminio 5 ruedas (gira 360° sin rayar el piso).'
+          label={t("2. ¿De qué está hecho o qué lo compone? *")}
+          placeholder={t('Ej: Espuma HD-36 (soporte lumbar sin hundirse) + malla transpirable (no acalora la espalda en jornadas largas) + base aluminio 5 ruedas (gira 360° sin rayar el piso).')}
           value={state.composition}
           onChange={(e) => update("composition", e.target.value)}
-          helperText="Materiales, ingredientes, tecnologías clave — cada uno con su función y el beneficio que da al usuario."
+          helperText={t("Materiales, ingredientes, tecnologías clave — cada uno con su función y el beneficio que da al usuario.")}
           rows={6}
         />
         <Textarea
-          label="3. ¿Qué NO es este producto? *"
-          placeholder='Ej: No es sustituto de comidas, no es para bajar de peso, no es un detox agresivo.'
+          label={t("3. ¿Qué NO es este producto? *")}
+          placeholder={t('Ej: No es sustituto de comidas, no es para bajar de peso, no es un detox agresivo.')}
           value={state.notProduct}
           onChange={(e) => update("notProduct", e.target.value)}
-          helperText="El anti-posicionamiento del producto es el copy más diferenciador."
+          helperText={t("El anti-posicionamiento del producto es el copy más diferenciador.")}
           rows={4}
         />
         <ErrorBox error={error} />
-        <StepFooter onBack={onBack} saving={saving} primaryLabel="Guardar y continuar →" />
+        <StepFooter onBack={onBack} saving={saving} primaryLabel={t("Guardar y continuar →")} />
       </FormShell>
     </>
   );
 }
 
 function Step3({ state, update, onSubmit, onBack, saving, error }: StepProps) {
+  const t = useT();
+
   return (
     <>
       <StepHeader
-        title="USP y mecanismo"
-        subtitle="La propuesta única y por qué funciona el producto. Aquí vive el corazón del anuncio."
+        title={t("USP y mecanismo")}
+        subtitle={t("La propuesta única y por qué funciona el producto. Aquí vive el corazón del anuncio.")}
       />
       <FormShell onSubmit={onSubmit}>
         <Textarea
-          label="4. Features → beneficio funcional → beneficio emocional *"
-          placeholder='Ej: Pesa 400g → Caminas 8h sin dolor de espalda → Llegar al destino con energía, no agotada.'
+          label={t("4. Features → beneficio funcional → beneficio emocional *")}
+          placeholder={t('Ej: Pesa 400g → Caminas 8h sin dolor de espalda → Llegar al destino con energía, no agotada.')}
           value={state.featuresBenefits}
           onChange={(e) => update("featuresBenefits", e.target.value)}
-          helperText="Las 5 características más importantes. Formato: Característica → Funcional → Emocional. Incluye beneficio de identidad (en quién se convierte el usuario)."
+          helperText={t("Las 5 características más importantes. Formato: Característica → Funcional → Emocional. Incluye beneficio de identidad (en quién se convierte el usuario).")}
           rows={8}
         />
         <Textarea
-          label="5. USP del producto *"
-          placeholder='Ej: El único zapato que se ve elegante y no destruye tus pies en 8 horas de pie. Filosófica: elegancia y comodidad no son opuestos. Funcional: suela de amortiguación 3 capas. Emocional: llegar a casa sin sentir los pies. Hook: "Elegante. Sin dolor." Subtítulo: "El zapato que los médicos usan cuando nadie los mira."'
+          label={t("5. USP del producto *")}
+          placeholder={t('Ej: El único zapato que se ve elegante y no destruye tus pies en 8 horas de pie. Filosófica: elegancia y comodidad no son opuestos. Funcional: suela de amortiguación 3 capas. Emocional: llegar a casa sin sentir los pies. Hook: "Elegante. Sin dolor." Subtítulo: "El zapato que los médicos usan cuando nadie los mira."')}
           value={state.usp}
           onChange={(e) => update("usp", e.target.value)}
-          helperText="USP en una oración + 3 capas (filosófica, funcional, emocional) + 3 formatos: hook 3-5 palabras, subtítulo landing 8-15 palabras, body 40-60 palabras."
+          helperText={t("USP en una oración + 3 capas (filosófica, funcional, emocional) + 3 formatos: hook 3-5 palabras, subtítulo landing 8-15 palabras, body 40-60 palabras.")}
           rows={8}
         />
         <Textarea
-          label="6. ¿Por qué funciona este producto? *"
-          placeholder='Ej: Simple: "La mayoría de colchones crea puntos de presión que te despiertan. Este los redistribuye." Técnico: "La espuma viscoelástica detecta puntos de tensión y los absorbe uniformemente." Narrativo: "Llevamos décadas durmiendo como nos dijeron. Nosotros preguntamos: ¿y si el colchón se adaptara al cuerpo?"'
+          label={t("6. ¿Por qué funciona este producto? *")}
+          placeholder={t('Ej: Simple: "La mayoría de colchones crea puntos de presión que te despiertan. Este los redistribuye." Técnico: "La espuma viscoelástica detecta puntos de tensión y los absorbe uniformemente." Narrativo: "Llevamos décadas durmiendo como nos dijeron. Nosotros preguntamos: ¿y si el colchón se adaptara al cuerpo?"')}
           value={state.mechanism}
           onChange={(e) => update("mechanism", e.target.value)}
-          helperText="Mecanismo en 3 niveles: Simple (2 frases para hook), Técnico (landing/email), Narrativo (brand video / founder story)."
+          helperText={t("Mecanismo en 3 niveles: Simple (2 frases para hook), Técnico (landing/email), Narrativo (brand video / founder story).")}
           rows={6}
         />
         <ErrorBox error={error} />
-        <StepFooter onBack={onBack} saving={saving} primaryLabel="Guardar y continuar →" />
+        <StepFooter onBack={onBack} saving={saving} primaryLabel={t("Guardar y continuar →")} />
       </FormShell>
     </>
   );
 }
 
 function Step4({ state, update, onSubmit, onBack, saving, error }: StepProps) {
+  const t = useT();
+
   return (
     <>
       <StepHeader
-        title="Uso y precio"
-        subtitle="Cómo se vive el producto y cómo se justifica lo que cuesta."
+        title={t("Uso y precio")}
+        subtitle={t("Cómo se vive el producto y cómo se justifica lo que cuesta.")}
       />
       <FormShell onSubmit={onSubmit}>
         <Textarea
-          label="7. ¿Cómo se usa, se lleva puesto o se experimenta? *"
-          placeholder='Ej: Primario: noche, 20 min de ritual propio después de acostar a los hijos. Enciende con cerillos, no encendedor. Dura 50 horas. Secundario: decoración en cenas. Situacional: regalo de cumpleaños, regalo corporativo. Estacional: Día de la Madre, Navidad.'
+          label={t("7. ¿Cómo se usa, se lleva puesto o se experimenta? *")}
+          placeholder={t('Ej: Primario: noche, 20 min de ritual propio después de acostar a los hijos. Enciende con cerillos, no encendedor. Dura 50 horas. Secundario: decoración en cenas. Situacional: regalo de cumpleaños, regalo corporativo. Estacional: Día de la Madre, Navidad.')}
           value={state.usageRitual}
           onChange={(e) => update("usageRitual", e.target.value)}
-          helperText="Ritual completo: momento del día, frecuencia, pasos, tiempo. Incluye casos de uso secundarios, situacionales y de regalo."
+          helperText={t("Ritual completo: momento del día, frecuencia, pasos, tiempo. Incluye casos de uso secundarios, situacionales y de regalo.")}
           rows={6}
         />
         <Textarea
-          label="8. ¿Cuánto cuesta y cómo se justifica el precio? *"
-          placeholder='Ej: $380.000 / 5 años / 365 días = $208 por día. Reframe 1 vs. fast fashion: dura 5 años, no 1 temporada. Reframe 2 cotidiano: menos que el café del mes. Reframe 3 inversión: primera impresión en entrevistas. Reframe 4 costo de no tenerla: comprar algo de emergencia en el aeropuerto. Garantía: cambio gratis 30 días.'
+          label={t("8. ¿Cuánto cuesta y cómo se justifica el precio? *")}
+          placeholder={t('Ej: $380.000 / 5 años / 365 días = $208 por día. Reframe 1 vs. fast fashion: dura 5 años, no 1 temporada. Reframe 2 cotidiano: menos que el café del mes. Reframe 3 inversión: primera impresión en entrevistas. Reframe 4 costo de no tenerla: comprar algo de emergencia en el aeropuerto. Garantía: cambio gratis 30 días.')}
           value={state.priceJustification}
           onChange={(e) => update("priceJustification", e.target.value)}
-          helperText="Precio desagregado (por uso/día/porción) + 4 reframes + garantía o política de devolución."
+          helperText={t("Precio desagregado (por uso/día/porción) + 4 reframes + garantía o política de devolución.")}
           rows={6}
         />
         <ErrorBox error={error} />
-        <StepFooter onBack={onBack} saving={saving} primaryLabel="Guardar y continuar →" />
+        <StepFooter onBack={onBack} saving={saving} primaryLabel={t("Guardar y continuar →")} />
       </FormShell>
     </>
   );
 }
 
 function Step5({ state, update, onSubmit, onBack, saving, error }: StepProps) {
+  const t = useT();
+
   return (
     <>
       <StepHeader
-        title="Cliente y voz"
-        subtitle="Quién compra el producto y con qué palabras habla de su problema. Aquí está el copy más poderoso."
+        title={t("Cliente y voz")}
+        subtitle={t("Quién compra el producto y con qué palabras habla de su problema. Aquí está el copy más poderoso.")}
       />
       <FormShell onSubmit={onSubmit}>
         <Textarea
-          label="9. ¿Quién compra este producto? Avatar completo *"
-          placeholder='Ej: Andrés, 34, Bogotá, ingeniero remoto, $5.5M/mes. JTBD funcional: no terminar el día con dolor. Emocional: sentir oficina seria en casa. Social: que sus clientes vean profesionalismo. Trigger: lleva 3 semanas con dolor. FEEL antes: "llego a las 3pm destrozado". FEEL después: "termino el día con energía". BELIEVE antes: "la silla no importa tanto". BELIEVE después: "el entorno de trabajo es parte del rendimiento".'
+          label={t("9. ¿Quién compra este producto? Avatar completo *")}
+          placeholder={t('Ej: Andrés, 34, Bogotá, ingeniero remoto, $5.5M/mes. JTBD funcional: no terminar el día con dolor. Emocional: sentir oficina seria en casa. Social: que sus clientes vean profesionalismo. Trigger: lleva 3 semanas con dolor. FEEL antes: "llego a las 3pm destrozado". FEEL después: "termino el día con energía". BELIEVE antes: "la silla no importa tanto". BELIEVE después: "el entorno de trabajo es parte del rendimiento".')}
           value={state.customerAvatar}
           onChange={(e) => update("customerAvatar", e.target.value)}
-          helperText="Avatar (nombre mental, edad, ciudad, ingresos, ocupación) + JTBD (funcional, emocional, social) + 3 triggers que detonan la compra + Before/After en 5 dimensiones (HAVE, FEEL, STATUS, CAN DO, BELIEVE)."
+          helperText={t("Avatar (nombre mental, edad, ciudad, ingresos, ocupación) + JTBD (funcional, emocional, social) + 3 triggers que detonan la compra + Before/After en 5 dimensiones (HAVE, FEEL, STATUS, CAN DO, BELIEVE).")}
           rows={10}
         />
         <Textarea
-          label="10. ¿Qué dicen los clientes sobre este producto? *"
-          placeholder='Ej: "llevo 3 meses usándolos trabajando de pie y ya no llego destruido a casa". Objeción: "$280.000 es mucho para un zapato" → Contraargumento: es el costo de 1 sesión de fisioterapia. Proof point: garantía 2 años. Google: "zapatos para trabajar de pie sin dolor", "calzado formal cómodo hombre Colombia".'
+          label={t("10. ¿Qué dicen los clientes sobre este producto? *")}
+          placeholder={t('Ej: "llevo 3 meses usándolos trabajando de pie y ya no llego destruido a casa". Objeción: "$280.000 es mucho para un zapato" → Contraargumento: es el costo de 1 sesión de fisioterapia. Proof point: garantía 2 años. Google: "zapatos para trabajar de pie sin dolor", "calzado formal cómodo hombre Colombia".')}
           value={state.customerVoice}
           onChange={(e) => update("customerVoice", e.target.value)}
-          helperText="8 frases textuales entre comillas (sin editar — usa palabras exactas de reviews, DMs, conversaciones). Principales objeciones + contraargumento + proof point. Búsquedas en Google cuando tienen el problema."
+          helperText={t("8 frases textuales entre comillas (sin editar — usa palabras exactas de reviews, DMs, conversaciones). Principales objeciones + contraargumento + proof point. Búsquedas en Google cuando tienen el problema.")}
           rows={10}
         />
         <ErrorBox error={error} />
         <StepFooter
           onBack={onBack}
           saving={saving}
-          primaryLabel="Terminar"
+          primaryLabel={t("Terminar")}
         />
       </FormShell>
     </>

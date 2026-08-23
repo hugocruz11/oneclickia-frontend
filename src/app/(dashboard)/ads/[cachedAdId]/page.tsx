@@ -9,17 +9,25 @@ import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { Icon } from "@/components/ui/Icon";
 import type { CachedAd } from "@/lib/types";
+import { useI18n } from "@/contexts/I18nContext";
+import type { TranslateFn } from "@/i18n/translate";
 
-function formatDuration(days: number | null): string | null {
+function formatDuration(days: number | null, t: TranslateFn): string | null {
   if (!days) return null;
   if (days >= 365)
-    return `${Math.floor(days / 365)} año${Math.floor(days / 365) > 1 ? "s" : ""} y ${Math.floor((days % 365) / 30)} meses`;
-  if (days >= 30) return `${Math.floor(days / 30)} meses`;
-  return `${days} días`;
+    return Math.floor(days / 365) === 1
+      ? t("1 año y {months} meses", { months: Math.floor((days % 365) / 30) })
+      : t("{years} años y {months} meses", {
+          years: Math.floor(days / 365),
+          months: Math.floor((days % 365) / 30),
+        });
+  if (days >= 30) return t("{months} meses", { months: Math.floor(days / 30) });
+  return t("{days} días", { days });
 }
 
 export default function AdDetailPage() {
   const { cachedAdId } = useParams<{ cachedAdId: string }>();
+  const { t, localeTag } = useI18n();
   const [ad, setAd] = useState<CachedAd | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -46,15 +54,15 @@ export default function AdDetailPage() {
   if (error || !ad) {
     return (
       <Card>
-        <p className="text-error">{error}</p>
+        <p className="text-error">{t(error)}</p>
         <Link href="/ads/search" className="mt-4 inline-block">
-          <Button variant="ghost" size="sm">Volver a buscar</Button>
+          <Button variant="ghost" size="sm">{t("Volver a buscar")}</Button>
         </Link>
       </Card>
     );
   }
 
-  const duration = formatDuration(ad.runningDurationDays);
+  const duration = formatDuration(ad.runningDurationDays, t);
 
   return (
     <div className="max-w-4xl">
@@ -62,7 +70,7 @@ export default function AdDetailPage() {
         href="/ads/search"
         className="text-sm text-muted hover:text-ink transition-colors"
       >
-        ← Volver a resultados
+        {t("← Volver a resultados")}
       </Link>
 
       <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -71,7 +79,7 @@ export default function AdDetailPage() {
           {ad.imageUrl ? (
             <img
               src={ad.imageUrl}
-              alt={ad.headline || "Ad"}
+              alt={ad.headline || t("Anuncio")}
               className="w-full rounded-lg border border-sand"
             />
           ) : (
@@ -90,7 +98,7 @@ export default function AdDetailPage() {
               </p>
             )}
             <h1 className="mt-1 text-xl font-semibold text-ink">
-              {ad.headline || "Sin título"}
+              {ad.headline || t("Sin título")}
             </h1>
           </div>
 
@@ -102,7 +110,7 @@ export default function AdDetailPage() {
             {ad.isLive && (
               <Badge variant="success">
                 <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-success" />
-                Live
+                {t("Live")}
               </Badge>
             )}
             {ad.marketTarget && (
@@ -119,7 +127,7 @@ export default function AdDetailPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-                    Tiempo activo
+                    {t("Tiempo activo")}
                   </h3>
                   <p className="mt-1 text-lg font-semibold text-success">
                     {duration}
@@ -127,9 +135,9 @@ export default function AdDetailPage() {
                 </div>
                 {ad.startedRunningAt && (
                   <div className="text-right">
-                    <p className="text-xs text-muted">Desde</p>
+                    <p className="text-xs text-muted">{t("Desde")}</p>
                     <p className="text-sm text-charcoal">
-                      {new Date(ad.startedRunningAt).toLocaleDateString("es", {
+                      {new Date(ad.startedRunningAt).toLocaleDateString(localeTag, {
                         day: "numeric",
                         month: "short",
                         year: "numeric",
@@ -145,7 +153,7 @@ export default function AdDetailPage() {
           {ad.description && (
             <Card padding="sm">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Texto del anuncio
+                {t("Texto del anuncio")}
               </h3>
               <p className="mt-1 text-sm text-charcoal">{ad.description}</p>
             </Card>
@@ -155,7 +163,7 @@ export default function AdDetailPage() {
           {(ad.ctaTitle || ad.linkUrl) && (
             <Card padding="sm">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Call to Action
+                {t("Call to Action")}
               </h3>
               <div className="mt-2 flex items-center gap-2">
                 {ad.ctaTitle && (
@@ -179,12 +187,12 @@ export default function AdDetailPage() {
             ad.productCategory) && (
             <Card padding="sm">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Clasificación
+                {t("Clasificación")}
               </h3>
               <div className="mt-2 flex flex-col gap-2">
                 {ad.niches && ad.niches.length > 0 && (
                   <div>
-                    <p className="text-xs text-muted">Nichos</p>
+                    <p className="text-xs text-muted">{t("Nichos")}</p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {ad.niches.map((n) => (
                         <Badge key={n} variant="orange">{n}</Badge>
@@ -194,7 +202,7 @@ export default function AdDetailPage() {
                 )}
                 {ad.categories && ad.categories.length > 0 && (
                   <div>
-                    <p className="text-xs text-muted">Categorías</p>
+                    <p className="text-xs text-muted">{t("Categorías")}</p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {ad.categories.map((c) => (
                         <Badge key={c} variant="default">{c}</Badge>
@@ -204,7 +212,9 @@ export default function AdDetailPage() {
                 )}
                 {ad.productCategory && (
                   <div>
-                    <p className="text-xs text-muted">Categoría de producto</p>
+                    <p className="text-xs text-muted">
+                      {t("Categoría de producto")}
+                    </p>
                     <Badge variant="default">{ad.productCategory}</Badge>
                   </div>
                 )}
@@ -215,7 +225,7 @@ export default function AdDetailPage() {
           {/* Languages */}
           {ad.languages && ad.languages.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted">Idiomas:</span>
+              <span className="text-xs text-muted">{t("Idiomas:")}</span>
               {ad.languages.map((l) => (
                 <Badge key={l} variant="muted">{l}</Badge>
               ))}
@@ -226,7 +236,7 @@ export default function AdDetailPage() {
           <div className="mt-auto pt-4">
             <Link href={`/ads/${ad.id}/adapt`}>
               <Button size="lg" className="w-full">
-                Adaptar copy a mi marca
+                {t("Adaptar copy a mi marca")}
               </Button>
             </Link>
           </div>

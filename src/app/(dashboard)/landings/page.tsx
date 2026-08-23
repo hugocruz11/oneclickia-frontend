@@ -11,6 +11,7 @@ import { Icon } from "@/components/ui/Icon";
 import { useCredits } from "@/contexts/CreditsContext";
 import { api, ApiError } from "@/lib/api";
 import { landingsApi, type Landing } from "@/lib/landings";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface ShopifyProduct {
   id: string;
@@ -24,6 +25,7 @@ const inputClass =
 export default function LandingsPage() {
   const router = useRouter();
   const { refresh, enabled: creditsEnabled } = useCredits();
+  const { t, localeTag } = useI18n();
   const [landings, setLandings] = useState<Landing[]>([]);
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
   const [appProducts, setAppProducts] = useState<
@@ -60,7 +62,11 @@ export default function LandingsPage() {
   }, []);
 
   async function handleDelete(id: string, name: string) {
-    if (!window.confirm(`¿Eliminar la landing "${name}"? No se puede deshacer.`)) {
+    if (
+      !window.confirm(
+        t("¿Eliminar la landing “{name}”? No se puede deshacer.", { name }),
+      )
+    ) {
       return;
     }
     setError("");
@@ -115,51 +121,54 @@ export default function LandingsPage() {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="text-2xl font-semibold text-ink">Landing pages</h1>
+      <h1 className="text-2xl font-semibold text-ink">{t("Landing pages")}</h1>
       <p className="mt-1 text-sm text-muted">
-        Crea una landing por avatar para tus campañas. Se publican bajo el
-        dominio de tu tienda Shopify (App Proxy).
+        {t(
+          "Crea una landing por avatar para tus campañas. Se publican bajo el dominio de tu tienda Shopify (App Proxy).",
+        )}
       </p>
 
       {error && (
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
       <Card className="mt-6">
-        <h2 className="text-sm font-semibold text-ink">Nueva landing</h2>
+        <h2 className="text-sm font-semibold text-ink">{t("Nueva landing")}</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           <div>
             <label className="text-xs font-medium text-charcoal">
-              Slug (URL)
+              {t("Slug (URL)")}
             </label>
             <input
               className={inputClass}
-              placeholder="salud-intestinal"
+              placeholder={t("salud-intestinal")}
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-charcoal">Nombre</label>
+            <label className="text-xs font-medium text-charcoal">
+              {t("Nombre")}
+            </label>
             <input
               className={inputClass}
-              placeholder="Salud intestinal"
+              placeholder={t("Salud intestinal")}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
           <div>
             <label className="text-xs font-medium text-charcoal">
-              Producto Shopify (checkout)
+              {t("Producto Shopify (checkout)")}
             </label>
             <select
               className={inputClass}
               value={productHandle}
               onChange={(e) => setProductHandle(e.target.value)}
             >
-              <option value="">— Sin producto —</option>
+              <option value="">{t("— Sin producto —")}</option>
               {products.map((p) => (
                 <option key={p.id} value={p.handle}>
                   {p.title}
@@ -169,17 +178,17 @@ export default function LandingsPage() {
           </div>
           <div>
             <label className="text-xs font-medium text-charcoal">
-              Producto de la app (para el copy)
+              {t("Producto de la app (para el copy)")}
             </label>
             <select
               className={inputClass}
               value={appProductId}
               onChange={(e) => setAppProductId(e.target.value)}
             >
-              <option value="">— Ninguno —</option>
+              <option value="">{t("— Ninguno —")}</option>
               {appProducts.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name || "(sin nombre)"}
+                  {p.name || t("(sin nombre)")}
                 </option>
               ))}
             </select>
@@ -187,12 +196,12 @@ export default function LandingsPage() {
         </div>
         <div className="mt-3">
           <label className="text-xs font-medium text-charcoal">
-            Avatar / ángulo (a quién le vendes)
+            {t("Avatar / ángulo (a quién le vendes)")}
           </label>
           <textarea
             className={inputClass}
             rows={2}
-            placeholder="Ej: mujeres con problemas de digestión, cansadas de los polvos verdes de mal sabor"
+            placeholder={t("Ej: mujeres con problemas de digestión, cansadas de los polvos verdes de mal sabor")}
             value={avatar}
             onChange={(e) => setAvatar(e.target.value)}
           />
@@ -200,26 +209,26 @@ export default function LandingsPage() {
         <div className="mt-3">
           <Button onClick={handleCreate} loading={creating}>
             {creating ? (
-              "Creando y generando…"
+              t("Creando y generando…")
             ) : (
               <>
                 <Icon name="sparkles" size={16} className="mr-1.5" />
-                Crear y generar con IA
+                {t("Crear y generar con IA")}
               </>
             )}
           </Button>
           <p className="mt-2 text-xs text-muted">
-            La IA diseña la landing completa con la identidad de tu marca
-            {creditsEnabled ? " (15 créditos)" : ""}.
+            {t("La IA diseña la landing completa con la identidad de tu marca")}
+            {creditsEnabled ? t(" (15 créditos)") : ""}.
             {products.length === 0 &&
-              " Conecta tu tienda en “Tienda Shopify” para elegir un producto."}
+              t(" Conecta tu tienda en “Tienda Shopify” para elegir un producto.")}
           </p>
         </div>
       </Card>
 
       <div className="mt-6 grid gap-3">
         {landings.length === 0 ? (
-          <p className="text-sm text-muted">Aún no tienes landings.</p>
+          <p className="text-sm text-muted">{t("Aún no tienes landings.")}</p>
         ) : (
           landings.map((l) => (
             <Card key={l.id} className="flex items-center justify-between">
@@ -229,7 +238,7 @@ export default function LandingsPage() {
                     {l.title || l.slug}
                   </h3>
                   <Badge variant={l.status === "PUBLISHED" ? "success" : "muted"}>
-                    {l.status === "PUBLISHED" ? "Publicada" : "Borrador"}
+                    {l.status === "PUBLISHED" ? t("Publicada") : t("Borrador")}
                   </Badge>
                 </div>
                 <p className="mt-1 text-xs text-muted">
@@ -238,16 +247,24 @@ export default function LandingsPage() {
                 </p>
                 <p className="mt-1 flex flex-wrap items-center gap-x-1 text-xs text-muted">
                   <Icon name="eye" size={13} className="text-slate-500" />
-                  {l.views.toLocaleString("es")} vistas ·
+                  {t("{count} vistas", {
+                    count: l.views.toLocaleString(localeTag),
+                  })}{" "}
+                  ·
                   <Icon name="mouse-pointer" size={13} className="text-slate-500" />
-                  {l.clicks.toLocaleString("es")} clics
-                  {l.views > 0 && ` · ${((l.clicks / l.views) * 100).toFixed(1)}% CTR`}
+                  {t("{count} clics", {
+                    count: l.clicks.toLocaleString(localeTag),
+                  })}
+                  {l.views > 0 &&
+                    t(" · {pct}% CTR", {
+                      pct: ((l.clicks / l.views) * 100).toFixed(1),
+                    })}
                 </p>
               </div>
               <div className="flex items-center gap-1">
                 <Link href={`/landings/${l.id}`}>
                   <Button variant="ghost" size="sm">
-                    Editar
+                    {t("Editar")}
                   </Button>
                 </Link>
                 <button
@@ -255,7 +272,7 @@ export default function LandingsPage() {
                   onClick={() => handleDelete(l.id, l.title || l.slug)}
                   className="rounded-md px-3 py-1.5 text-sm font-medium text-error hover:bg-error/10"
                 >
-                  Eliminar
+                  {t("Eliminar")}
                 </button>
               </div>
             </Card>

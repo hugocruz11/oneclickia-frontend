@@ -14,7 +14,11 @@ import {
   type BillingPeriod,
 } from "@/lib/billing";
 import { CREDITS_ENABLED } from "@/contexts/CreditsContext";
+import { useI18n } from "@/contexts/I18nContext";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 
+// Los textos en español de estas tablas son también sus claves de
+// traducción: se pasan por `t()` al renderizar (ver src/i18n).
 const FEATURES: { icon: IconName; color: string; title: string; body: string }[] = [
   {
     icon: "search",
@@ -107,6 +111,7 @@ const TRUST: { icon: IconName; text: string }[] = [
 
 export default function LandingPage() {
   const router = useRouter();
+  const { t, localeTag } = useI18n();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [period, setPeriod] = useState<BillingPeriod>("MONTHLY");
   // Avoid a flash of the landing for already-authenticated users.
@@ -134,36 +139,37 @@ export default function LandingPage() {
       <header className="flex h-16 items-center justify-between px-6 lg:px-10">
         <span className="text-lg font-semibold text-ink">OneClickIA</span>
         <div className="flex items-center gap-3">
+          <LocaleSwitcher />
           <Link href="/login">
             <Button variant="ghost" size="sm">
-              Iniciar sesión
+              {t("Iniciar sesión")}
             </Button>
           </Link>
           <Link href="/register">
-            <Button size="sm">Crear cuenta</Button>
+            <Button size="sm">{t("Crear cuenta")}</Button>
           </Link>
         </div>
       </header>
 
       {/* Hero */}
       <section className="mx-auto max-w-3xl px-6 pt-16 pb-12 text-center lg:pt-24">
-        <Badge variant="orange">Campañas de Meta Ads con IA</Badge>
+        <Badge variant="orange">{t("Campañas de Meta Ads con IA")}</Badge>
         <h1 className="mt-4 text-4xl font-bold leading-tight text-ink lg:text-5xl">
-          Crea campañas publicitarias en minutos, no en días
+          {t("Crea campañas publicitarias en minutos, no en días")}
         </h1>
         <p className="mt-4 text-lg text-muted">
-          OneClickIA encuentra anuncios y videos ganadores, genera tus copys,
-          imágenes y guiones con inteligencia artificial, y deja tu campaña
-          lista para publicar en Meta.
+          {t(
+            "OneClickIA encuentra anuncios y videos ganadores, genera tus copys, imágenes y guiones con inteligencia artificial, y deja tu campaña lista para publicar en Meta.",
+          )}
         </p>
         <div className="mt-8 flex justify-center gap-3">
           <Link href="/register">
-            <Button size="lg">Empezar gratis</Button>
+            <Button size="lg">{t("Empezar gratis")}</Button>
           </Link>
           {CREDITS_ENABLED && (
             <Link href="#planes">
               <Button variant="ghost" size="lg">
-                Ver planes
+                {t("Ver planes")}
               </Button>
             </Link>
           )}
@@ -175,8 +181,8 @@ export default function LandingPage() {
         {FEATURES.map((f) => (
           <Card key={f.title}>
             <Icon name={f.icon} size={28} className={f.color} />
-            <h3 className="mt-3 font-semibold text-ink">{f.title}</h3>
-            <p className="mt-1 text-sm text-muted">{f.body}</p>
+            <h3 className="mt-3 font-semibold text-ink">{t(f.title)}</h3>
+            <p className="mt-1 text-sm text-muted">{t(f.body)}</p>
           </Card>
         ))}
       </section>
@@ -184,19 +190,20 @@ export default function LandingPage() {
       {/* Social proof */}
       <section className="mx-auto max-w-5xl px-6 pb-16">
         <h2 className="text-center text-2xl font-semibold text-ink">
-          Marcas que crean campañas en minutos
+          {t("Marcas que crean campañas en minutos")}
         </h2>
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          {TESTIMONIALS.map((t) => (
-            <Card key={t.name} className="flex flex-col">
-              <div className="text-orange" aria-label="5 de 5 estrellas">
+          {/* `item` y no `t`: `t` es la función de traducción de este scope. */}
+          {TESTIMONIALS.map((item) => (
+            <Card key={item.name} className="flex flex-col">
+              <div className="text-orange" aria-label={t("5 de 5 estrellas")}>
                 ★★★★★
               </div>
               <p className="mt-2 flex-1 text-sm text-charcoal">
-                “{t.quote}”
+                “{t(item.quote)}”
               </p>
-              <p className="mt-3 text-sm font-semibold text-ink">{t.name}</p>
-              <p className="text-xs text-muted">{t.role}</p>
+              <p className="mt-3 text-sm font-semibold text-ink">{item.name}</p>
+              <p className="text-xs text-muted">{t(item.role)}</p>
             </Card>
           ))}
         </div>
@@ -206,10 +213,10 @@ export default function LandingPage() {
       {CREDITS_ENABLED && (
       <section id="planes" className="mx-auto max-w-5xl px-6 pb-20">
         <h2 className="text-center text-2xl font-semibold text-ink">
-          Planes para cada etapa
+          {t("Planes para cada etapa")}
         </h2>
         <p className="mt-2 text-center text-sm text-muted">
-          Los créditos se consumen al generar con IA. Publicar en Meta es gratis.
+          {t("Los créditos se consumen al generar con IA. Publicar en Meta es gratis.")}
         </p>
 
         {/* Monthly / Annual toggle */}
@@ -222,7 +229,7 @@ export default function LandingPage() {
                 period === "MONTHLY" ? "bg-ink text-white" : "text-muted"
               }`}
             >
-              Mensual
+              {t("Mensual")}
             </button>
             <button
               type="button"
@@ -231,7 +238,7 @@ export default function LandingPage() {
                 period === "ANNUAL" ? "bg-ink text-white" : "text-muted"
               }`}
             >
-              Anual
+              {t("Anual")}
               {annualDiscountPct > 0 && (
                 <span className="ml-1 text-orange">−{annualDiscountPct}%</span>
               )}
@@ -263,45 +270,49 @@ export default function LandingPage() {
               >
                 {highlight && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-orange px-3 py-0.5 text-xs font-semibold text-white shadow">
-                    ★ Más elegido
+                    {t("★ Más elegido")}
                   </span>
                 )}
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-ink">{plan.name}</h3>
-                  {highlight && <Badge variant="orange">Popular</Badge>}
+                  {highlight && <Badge variant="orange">{t("Popular")}</Badge>}
                 </div>
 
                 <div className="mt-3">
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-extrabold tracking-tight text-ink">
-                      {formatUsd(perMonthUsdCents)}
+                      {formatUsd(perMonthUsdCents, t)}
                     </span>
                     {!isFree && (
-                      <span className="text-sm text-muted">USD/mes</span>
+                      <span className="text-sm text-muted">{t("USD/mes")}</span>
                     )}
                   </div>
                   {!isFree && isAnnual && annualSavingsUsdCents > 0 && (
                     <div className="mt-1 flex flex-wrap items-center gap-2">
                       <span className="text-sm text-muted line-through">
-                        {formatUsd(plan.priceUsdCents)}
+                        {formatUsd(plan.priceUsdCents, t)}
                       </span>
                       <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success-text">
-                        Ahorras {formatUsd(annualSavingsUsdCents)}/año
+                        {t("Ahorras {amount}/año", {
+                          amount: formatUsd(annualSavingsUsdCents, t),
+                        })}
                       </span>
                     </div>
                   )}
                   {!isFree && isAnnual && (
                     <p className="mt-1 text-xs text-muted">
-                      {formatUsd(plan.annualPriceUsdCents)} USD facturado al año
+                      {t("{amount} USD facturado al año", {
+                        amount: formatUsd(plan.annualPriceUsdCents, t),
+                      })}
                     </p>
                   )}
                 </div>
 
                 <div className="mt-4 rounded-md bg-sand-light px-3 py-2 text-center">
                   <span className="text-lg font-bold text-ink">
-                    {plan.monthlyCredits.toLocaleString("es")}
+                    {plan.monthlyCredits.toLocaleString(localeTag)}
                   </span>
-                  <span className="text-sm text-muted"> créditos/mes</span>
+                  <span className="text-sm text-muted"> {t("créditos/mes")}</span>
                 </div>
 
                 <ul className="mt-4 flex-1 space-y-2">
@@ -313,7 +324,7 @@ export default function LandingPage() {
                       <span className="mt-0.5 flex h-4 w-4 flex-none items-center justify-center rounded-full bg-orange/15 text-[10px] font-bold text-orange">
                         ✓
                       </span>
-                      {feat}
+                      {t(feat)}
                     </li>
                   ))}
                 </ul>
@@ -323,12 +334,14 @@ export default function LandingPage() {
                     className="w-full"
                     variant={highlight ? "primary" : "ghost"}
                   >
-                    {isFree ? "Crear cuenta gratis" : `Empezar con ${plan.name}`}
+                    {isFree
+                      ? t("Crear cuenta gratis")
+                      : t("Empezar con {plan}", { plan: plan.name })}
                   </Button>
                 </Link>
                 {!isFree && (
                   <p className="mt-2 text-center text-[11px] text-muted">
-                    Sin permanencia · cancela cuando quieras
+                    {t("Sin permanencia · cancela cuando quieras")}
                   </p>
                 )}
               </Card>
@@ -341,35 +354,35 @@ export default function LandingPage() {
           <Icon name="check" size={20} className="flex-none text-success-text" />
           <p className="text-sm text-charcoal">
             <span className="font-semibold text-ink">
-              Empieza gratis, sin tarjeta de crédito.
+              {t("Empieza gratis, sin tarjeta de crédito.")}
             </span>{" "}
-            Prueba la plataforma con créditos gratis y cancela cuando quieras.
+            {t("Prueba la plataforma con créditos gratis y cancela cuando quieras.")}
           </p>
         </div>
 
         {/* Trust bar */}
         <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-          {TRUST.map((t) => (
+          {TRUST.map((item) => (
             <span
-              key={t.text}
+              key={item.text}
               className="inline-flex items-center gap-1.5 text-xs text-muted"
             >
-              <Icon name={t.icon} size={16} className="text-orange" />
-              {t.text}
+              <Icon name={item.icon} size={16} className="text-orange" />
+              {t(item.text)}
             </span>
           ))}
         </div>
 
         {/* Feature comparison table */}
         <h3 className="mt-14 text-center text-lg font-semibold text-ink">
-          Compara los planes
+          {t("Compara los planes")}
         </h3>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-sand">
                 <th className="py-3 pr-4 text-left font-medium text-muted">
-                  Incluye
+                  {t("Incluye")}
                 </th>
                 {plans.map((p) => (
                   <th
@@ -385,19 +398,21 @@ export default function LandingPage() {
             </thead>
             <tbody>
               <tr className="border-b border-sand/60">
-                <td className="py-3 pr-4 text-charcoal">Créditos por mes</td>
+                <td className="py-3 pr-4 text-charcoal">
+                  {t("Créditos por mes")}
+                </td>
                 {plans.map((p) => (
                   <td
                     key={p.tier}
                     className="px-3 py-3 text-center font-semibold text-ink"
                   >
-                    {p.monthlyCredits.toLocaleString("es")}
+                    {p.monthlyCredits.toLocaleString(localeTag)}
                   </td>
                 ))}
               </tr>
               {COMPARE.map((row) => (
                 <tr key={row.label} className="border-b border-sand/60">
-                  <td className="py-3 pr-4 text-charcoal">{row.label}</td>
+                  <td className="py-3 pr-4 text-charcoal">{t(row.label)}</td>
                   {plans.map((p) => {
                     const v = row.values[p.tier];
                     return (
@@ -425,10 +440,10 @@ export default function LandingPage() {
       <footer className="mt-auto border-t border-sand px-6 py-6 text-center text-sm text-muted">
         <div className="flex justify-center gap-4">
           <Link href="/privacy" className="hover:text-ink">
-            Privacidad
+            {t("Privacidad")}
           </Link>
           <Link href="/terms" className="hover:text-ink">
-            Términos
+            {t("Términos")}
           </Link>
         </div>
         <p className="mt-2">© {new Date().getFullYear()} OneClickIA</p>

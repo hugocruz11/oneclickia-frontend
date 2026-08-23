@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
 import { api, ApiError } from "@/lib/api";
+import { useT } from "@/contexts/I18nContext";
 
 interface MetaStatus {
   connected: boolean;
@@ -15,6 +16,7 @@ interface MetaStatus {
 }
 
 export function MetaConnectionPanel() {
+  const t = useT();
   const [status, setStatus] = useState<MetaStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
@@ -77,12 +79,12 @@ export function MetaConnectionPanel() {
   return (
     <div>
       <p className="text-sm text-muted">
-        Conecta tu cuenta de Meta para publicar campañas publicitarias.
+        {t("Conecta tu cuenta de Meta para publicar campañas publicitarias.")}
       </p>
 
       {error && (
         <div role="alert" className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
@@ -91,22 +93,22 @@ export function MetaConnectionPanel() {
           <div>
             <div className="flex items-center gap-3">
               <h2 className="text-lg font-semibold text-ink">
-                Cuenta de Meta
+                {t("Cuenta de Meta")}
               </h2>
               <Badge variant={status?.connected ? "success" : "muted"}>
-                {status?.connected ? "Conectado" : "Desconectado"}
+                {status?.connected ? t("Conectado") : t("Desconectado")}
               </Badge>
             </div>
 
             {status?.connected && status.accountData && (
               <div className="mt-3 flex flex-col gap-1">
                 <p className="text-sm text-charcoal">
-                  <span className="font-medium text-ink">Nombre:</span>{" "}
+                  <span className="font-medium text-ink">{t("Nombre:")}</span>{" "}
                   {status.accountData.name}
                 </p>
                 {status.accountData.email && (
                   <p className="text-sm text-charcoal">
-                    <span className="font-medium text-ink">Email:</span>{" "}
+                    <span className="font-medium text-ink">{t("Email:")}</span>{" "}
                     {status.accountData.email}
                   </p>
                 )}
@@ -126,11 +128,11 @@ export function MetaConnectionPanel() {
                 loading={disconnecting}
                 size="sm"
               >
-                Desconectar
+                {t("Desconectar")}
               </Button>
             ) : (
               <Button onClick={handleConnect} loading={connecting}>
-                Conectar Meta
+                {t("Conectar Meta")}
               </Button>
             )}
           </div>
@@ -140,12 +142,12 @@ export function MetaConnectionPanel() {
       {!status?.connected && (
         <Card className="mt-4">
           <h3 className="text-sm font-semibold text-ink">
-            ¿Por qué conectar Meta?
+            {t("¿Por qué conectar Meta?")}
           </h3>
           <ul className="mt-2 flex flex-col gap-2 text-sm text-charcoal">
-            <li>Publica campañas directamente desde OneClickIA</li>
-            <li>Gestiona tus anuncios sin salir de la plataforma</li>
-            <li>Activa y pausa campañas con un solo clic</li>
+            <li>{t("Publica campañas directamente desde OneClickIA")}</li>
+            <li>{t("Gestiona tus anuncios sin salir de la plataforma")}</li>
+            <li>{t("Activa y pausa campañas con un solo clic")}</li>
           </ul>
         </Card>
       )}

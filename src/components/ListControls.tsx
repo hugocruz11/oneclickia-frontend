@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { useT } from "@/contexts/I18nContext";
 
 export type StatusValue = "all" | "active" | "paused";
 
@@ -14,6 +15,7 @@ export type DateRange =
 // Preset por defecto (coincide con lo que mostraba Meta por defecto).
 export const DEFAULT_RANGE: DateRange = { kind: "preset", preset: "last_30d" };
 
+// `label` es el texto en español y a la vez su clave de traducción.
 const DATE_PRESETS: { value: string; label: string }[] = [
   { value: "today", label: "Hoy" },
   { value: "yesterday", label: "Ayer" },
@@ -52,6 +54,7 @@ export function DateRangePicker({
   value: DateRange;
   onChange: (r: DateRange) => void;
 }) {
+  const t = useT();
   const isCustom = value.kind === "custom";
   const [since, setSince] = useState(isCustom ? value.since : "");
   const [until, setUntil] = useState(isCustom ? value.until : "");
@@ -81,10 +84,10 @@ export function DateRangePicker({
       >
         {DATE_PRESETS.map((p) => (
           <option key={p.value} value={p.value}>
-            {p.label}
+            {t(p.label)}
           </option>
         ))}
-        <option value="custom">Personalizado…</option>
+        <option value="custom">{t("Personalizado…")}</option>
       </select>
 
       {isCustom && (
@@ -101,7 +104,7 @@ export function DateRangePicker({
             }}
             className={inputCls}
           />
-          <span className="text-sm text-muted">a</span>
+          <span className="text-sm text-muted">{t("a")}</span>
           <input
             type="date"
             value={until}
@@ -133,10 +136,11 @@ export function StatusFilter({
   onChange: (v: StatusValue) => void;
   counts?: Record<StatusValue, number>;
 }) {
+  const t = useT();
   const options: { value: StatusValue; label: string }[] = [
-    { value: "active", label: "Activas" },
-    { value: "paused", label: "Pausadas" },
-    { value: "all", label: "Todas" },
+    { value: "active", label: t("Activas") },
+    { value: "paused", label: t("Pausadas") },
+    { value: "all", label: t("Todas") },
   ];
   return (
     <div className="flex flex-wrap gap-1">
@@ -166,18 +170,19 @@ export function StatusFilter({
 export function SearchInput({
   value,
   onChange,
-  placeholder = "Buscar…",
+  placeholder,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
 }) {
+  const t = useT();
   return (
     <input
       type="text"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
+      placeholder={placeholder ?? t("Buscar…")}
       className="w-full rounded-lg border border-sand bg-cream px-3 py-1.5 text-sm text-ink placeholder:text-muted focus:border-orange focus:outline-none sm:w-64"
     />
   );
@@ -198,6 +203,7 @@ export function Pagination({
   pageSize: number;
   onPageChange: (page: number) => void;
 }) {
+  const t = useT();
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   if (totalItems === 0) return null;
   const from = page * pageSize + 1;
@@ -205,7 +211,7 @@ export function Pagination({
   return (
     <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
       <span className="text-muted">
-        {from}–{to} de {totalItems}
+        {t("{from}–{to} de {total}", { from, to, total: totalItems })}
       </span>
       <div className="flex items-center gap-2">
         <Button
@@ -214,10 +220,13 @@ export function Pagination({
           disabled={page <= 0}
           onClick={() => onPageChange(page - 1)}
         >
-          ← Anterior
+          {t("← Anterior")}
         </Button>
         <span className="text-muted">
-          Página {page + 1} de {totalPages}
+          {t("Página {page} de {total}", {
+            page: page + 1,
+            total: totalPages,
+          })}
         </span>
         <Button
           size="sm"
@@ -225,7 +234,7 @@ export function Pagination({
           disabled={page >= totalPages - 1}
           onClick={() => onPageChange(page + 1)}
         >
-          Siguiente →
+          {t("Siguiente →")}
         </Button>
       </div>
     </div>

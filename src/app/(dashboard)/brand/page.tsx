@@ -12,9 +12,12 @@ import { Spinner } from "@/components/ui/Spinner";
 import { FileUpload } from "@/components/ui/FileUpload";
 import { api, ApiError } from "@/lib/api";
 import type { Brand, PricePositioning } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
+import type { TranslateFn } from "@/i18n/translate";
 
 const API_HOST = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
+// Los textos en español son también sus claves de traducción (ver src/i18n).
 const PRICE_POSITIONING_LABELS: Record<PricePositioning, string> = {
   VALUE: "Value (económico)",
   MID_MARKET: "Mid-market (medio)",
@@ -23,13 +26,18 @@ const PRICE_POSITIONING_LABELS: Record<PricePositioning, string> = {
   ULTRA_PREMIUM: "Ultra premium",
 };
 
-const PRICE_POSITIONING_OPTIONS: { value: PricePositioning | ""; label: string }[] = [
-  { value: "", label: "Sin definir" },
-  ...(Object.keys(PRICE_POSITIONING_LABELS) as PricePositioning[]).map((v) => ({
-    value: v,
-    label: PRICE_POSITIONING_LABELS[v],
-  })),
-];
+// Las opciones se construyen en render porque sus etiquetas dependen del
+// idioma activo.
+function pricePositioningOptions(
+  t: TranslateFn,
+): { value: PricePositioning | ""; label: string }[] {
+  return [
+    { value: "", label: t("Sin definir") },
+    ...(Object.keys(PRICE_POSITIONING_LABELS) as PricePositioning[]).map(
+      (v) => ({ value: v, label: t(PRICE_POSITIONING_LABELS[v]) }),
+    ),
+  ];
+}
 
 export default function BrandPage() {
   return (
@@ -46,6 +54,7 @@ export default function BrandPage() {
 }
 
 function BrandPageContent() {
+  const t = useT();
   const searchParams = useSearchParams();
   const fromOnboarding = searchParams.get("from") === "onboarding";
 
@@ -184,7 +193,7 @@ function BrandPageContent() {
   if (!brand) {
     return (
       <Card>
-        <p className="text-error">{error || "No se encontró la marca."}</p>
+        <p className="text-error">{t(error || "No se encontró la marca.")}</p>
       </Card>
     );
   }
@@ -193,26 +202,29 @@ function BrandPageContent() {
     <div className="max-w-3xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-ink">Mi Marca</h1>
+          <h1 className="text-2xl font-semibold text-ink">{t("Mi Marca")}</h1>
           <p className="mt-1 text-sm text-muted">
-            Información completa de tu marca: identidad básica, las 12 preguntas del diagnóstico
-            y los análisis automáticos del sitio web y logo.
+            {t(
+              "Información completa de tu marca: identidad básica, las 12 preguntas del diagnóstico y los análisis automáticos del sitio web y logo.",
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {saved && <span className="text-sm text-success">Guardado</span>}
+          {saved && (
+            <span className="text-sm text-success">{t("Guardado")}</span>
+          )}
           {editing ? (
             <>
               <Button variant="ghost" size="sm" onClick={handleCancel}>
-                Cancelar
+                {t("Cancelar")}
               </Button>
               <Button size="sm" onClick={handleSave} loading={saving}>
-                Guardar
+                {t("Guardar")}
               </Button>
             </>
           ) : (
             <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-              Editar
+              {t("Editar")}
             </Button>
           )}
         </div>
@@ -221,18 +233,19 @@ function BrandPageContent() {
       {fromOnboarding && (
         <div className="mt-4 rounded-md border border-orange/20 bg-orange/10 p-4">
           <p className="text-sm font-medium text-ink">
-            Revisa la información de tu marca
+            {t("Revisa la información de tu marca")}
           </p>
           <p className="mt-1 text-sm text-muted">
-            Esto es lo que captamos del onboarding. Si algo no está bien, puedes editarlo
-            antes de empezar a crear campañas.
+            {t(
+              "Esto es lo que captamos del onboarding. Si algo no está bien, puedes editarlo antes de empezar a crear campañas.",
+            )}
           </p>
           <div className="mt-3 flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-              Editar información
+              {t("Editar información")}
             </Button>
             <Link href="/ads/search">
-              <Button size="sm">Todo bien, continuar</Button>
+              <Button size="sm">{t("Todo bien, continuar")}</Button>
             </Link>
           </div>
         </div>
@@ -240,7 +253,7 @@ function BrandPageContent() {
 
       {error && (
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
@@ -252,7 +265,7 @@ function BrandPageContent() {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={`${API_HOST}${brand.logoUrl}`}
-                alt="Logo"
+                alt={t("Logo")}
                 className="h-16 w-16 rounded-md border border-sand object-contain"
               />
             )}
@@ -260,28 +273,28 @@ function BrandPageContent() {
               {editing ? (
                 <div className="flex flex-col gap-3">
                   <FileUpload
-                    label="Logo"
+                    label={t("Logo")}
                     value={logoFile}
                     onChange={setLogoFile}
                     helperText={
                       brand.logoUrl && !logoFile
-                        ? "Ya tienes un logo. Sube uno nuevo para reemplazarlo."
-                        : "PNG, JPG o WEBP (max 5MB)."
+                        ? t("Ya tienes un logo. Sube uno nuevo para reemplazarlo.")
+                        : t("PNG, JPG o WEBP (max 5MB).")
                     }
                   />
                   <Input
-                    label="Nombre"
+                    label={t("Nombre")}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                   />
                   <Input
-                    label="Sitio web"
+                    label={t("Sitio web")}
                     type="url"
                     value={websiteUrl}
                     onChange={(e) => setWebsiteUrl(e.target.value)}
                   />
                   <Input
-                    label="Instagram"
+                    label={t("Instagram")}
                     type="url"
                     value={instagramUrl}
                     onChange={(e) => setInstagramUrl(e.target.value)}
@@ -290,7 +303,7 @@ function BrandPageContent() {
               ) : (
                 <>
                   <h2 className="text-lg font-semibold text-ink">
-                    {brand.name || "Sin nombre"}
+                    {brand.name || t("Sin nombre")}
                   </h2>
                   {brand.websiteUrl && (
                     <p className="text-sm text-muted">{brand.websiteUrl}</p>
@@ -305,10 +318,10 @@ function BrandPageContent() {
         </Card>
 
         {/* ── BLOQUE 1: Identidad básica (Q1-3) ── */}
-        <SectionHeader title="Identidad de la marca" />
+        <SectionHeader title={t("Identidad de la marca")} />
 
         <FieldCard
-          title="1. Nombre, año, país y canal de venta"
+          title={t("1. Nombre, año, país y canal de venta")}
           value={brand.identityContext}
           editing={editing}
           rows={4}
@@ -316,7 +329,7 @@ function BrandPageContent() {
           onChange={setIdentityContext}
         />
         <FieldCard
-          title="2. Mercados actuales y mercados meta"
+          title={t("2. Mercados actuales y mercados meta")}
           value={brand.markets}
           editing={editing}
           rows={4}
@@ -324,7 +337,7 @@ function BrandPageContent() {
           onChange={setMarkets}
         />
         <FieldCard
-          title="3. Misión: por qué existe tu marca"
+          title={t("3. Misión: por qué existe tu marca")}
           value={brand.mission}
           editing={editing}
           rows={4}
@@ -333,10 +346,10 @@ function BrandPageContent() {
         />
 
         {/* ── BLOQUE 2: Personalidad y tono (Q4-7) ── */}
-        <SectionHeader title="Personalidad y tono" />
+        <SectionHeader title={t("Personalidad y tono")} />
 
         <FieldCard
-          title="4. Persona de marca"
+          title={t("4. Persona de marca")}
           value={brand.brandPersona}
           editing={editing}
           rows={5}
@@ -344,7 +357,7 @@ function BrandPageContent() {
           onChange={setBrandPersona}
         />
         <FieldCard
-          title="5. Tono de voz"
+          title={t("5. Tono de voz")}
           value={brand.toneOfVoice}
           editing={editing}
           rows={5}
@@ -352,7 +365,7 @@ function BrandPageContent() {
           onChange={setToneOfVoice}
         />
         <FieldCard
-          title="6. Prohibiciones de comunicación"
+          title={t("6. Prohibiciones de comunicación")}
           value={brand.communicationProhibitions}
           editing={editing}
           rows={5}
@@ -360,7 +373,7 @@ function BrandPageContent() {
           onChange={setCommunicationProhibitions}
         />
         <FieldCard
-          title="7. Marcas que admira y qué replicaría"
+          title={t("7. Marcas que admira y qué replicaría")}
           value={brand.admiredBrands}
           editing={editing}
           rows={4}
@@ -369,10 +382,10 @@ function BrandPageContent() {
         />
 
         {/* ── BLOQUE 3: Filosofía (Q8) ── */}
-        <SectionHeader title="Filosofía" />
+        <SectionHeader title={t("Filosofía")} />
 
         <FieldCard
-          title="8. Creencia central / anti-narrativa"
+          title={t("8. Creencia central / anti-narrativa")}
           value={brand.coreBelief}
           editing={editing}
           rows={5}
@@ -381,10 +394,10 @@ function BrandPageContent() {
         />
 
         {/* ── BLOQUE 4: Identidad visual (Q9) ── */}
-        <SectionHeader title="Identidad visual" />
+        <SectionHeader title={t("Identidad visual")} />
 
         <FieldCard
-          title="9. Colores, tipografías, estética, referencias"
+          title={t("9. Colores, tipografías, estética, referencias")}
           value={brand.visualIdentity}
           editing={editing}
           rows={6}
@@ -393,25 +406,25 @@ function BrandPageContent() {
         />
 
         {/* ── BLOQUE 5: Posicionamiento competitivo (Q10-12) ── */}
-        <SectionHeader title="Posicionamiento competitivo" />
+        <SectionHeader title={t("Posicionamiento competitivo")} />
 
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            10. Rango de precio y percepción
+            {t("10. Rango de precio y percepción")}
           </h3>
           {editing ? (
             <div className="mt-2 flex flex-col gap-3">
               <Select
-                label="Tier"
+                label={t("Tier")}
                 value={pricePositioning}
                 onChange={(e) =>
                   setPricePositioning(e.target.value as PricePositioning | "")
                 }
-                options={PRICE_POSITIONING_OPTIONS}
+                options={pricePositioningOptions(t)}
               />
               <Textarea
                 rows={4}
-                placeholder="Qué comunica ese posicionamiento..."
+                placeholder={t("Qué comunica ese posicionamiento...")}
                 value={positioningStatement}
                 onChange={(e) => setPositioningStatement(e.target.value)}
               />
@@ -420,20 +433,21 @@ function BrandPageContent() {
             <div className="mt-2 flex flex-col gap-2">
               {brand.pricePositioning ? (
                 <span className="inline-flex w-fit items-center rounded-sm border border-orange/20 bg-orange/10 px-2 py-0.5 text-xs font-semibold text-orange">
-                  {PRICE_POSITIONING_LABELS[brand.pricePositioning]}
+                  {t(PRICE_POSITIONING_LABELS[brand.pricePositioning])}
                 </span>
               ) : (
-                <p className="text-sm text-muted">Sin definir el tier.</p>
+                <p className="text-sm text-muted">{t("Sin definir el tier.")}</p>
               )}
               <p className="text-sm text-charcoal">
-                {brand.positioningStatement || "Sin descripción del posicionamiento."}
+                {brand.positioningStatement ||
+                  t("Sin descripción del posicionamiento.")}
               </p>
             </div>
           )}
         </Card>
 
         <FieldCard
-          title="11. Competidores directos y diferenciación"
+          title={t("11. Competidores directos y diferenciación")}
           value={brand.competitors}
           editing={editing}
           rows={6}
@@ -441,7 +455,7 @@ function BrandPageContent() {
           onChange={setCompetitors}
         />
         <FieldCard
-          title="12a. En qué es mejor tu marca"
+          title={t("12a. En qué es mejor tu marca")}
           value={brand.competitiveEdge}
           editing={editing}
           rows={4}
@@ -449,7 +463,7 @@ function BrandPageContent() {
           onChange={setCompetitiveEdge}
         />
         <FieldCard
-          title="12b. Hueco de mercado que ocupa"
+          title={t("12b. Hueco de mercado que ocupa")}
           value={brand.marketGap}
           editing={editing}
           rows={4}
@@ -458,11 +472,11 @@ function BrandPageContent() {
         />
 
         {/* ── Análisis automáticos + visuales ── */}
-        <SectionHeader title="Análisis automáticos (extraídos con IA)" />
+        <SectionHeader title={t("Análisis automáticos (extraídos con IA)")} />
 
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Resumen del sitio web
+            {t("Resumen del sitio web")}
           </h3>
           {editing ? (
             <Textarea
@@ -473,14 +487,14 @@ function BrandPageContent() {
             />
           ) : (
             <p className="mt-2 whitespace-pre-line text-sm text-charcoal">
-              {brand.webSummary || "Sin resumen."}
+              {brand.webSummary || t("Sin resumen.")}
             </p>
           )}
         </Card>
 
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Análisis del logo
+            {t("Análisis del logo")}
           </h3>
           {editing ? (
             <Textarea
@@ -491,14 +505,14 @@ function BrandPageContent() {
             />
           ) : (
             <p className="mt-2 whitespace-pre-line text-sm text-charcoal">
-              {brand.logoAnalysis || "Sin análisis."}
+              {brand.logoAnalysis || t("Sin análisis.")}
             </p>
           )}
         </Card>
 
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Resumen de Instagram
+            {t("Resumen de Instagram")}
           </h3>
           {editing ? (
             <Textarea
@@ -509,14 +523,14 @@ function BrandPageContent() {
             />
           ) : (
             <p className="mt-2 whitespace-pre-line text-sm text-charcoal">
-              {brand.instagramSummary || "Sin resumen."}
+              {brand.instagramSummary || t("Sin resumen.")}
             </p>
           )}
         </Card>
 
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Colores de la marca
+            {t("Colores de la marca")}
           </h3>
           {editing ? (
             <div className="mt-3 flex flex-col gap-3">
@@ -540,7 +554,7 @@ function BrandPageContent() {
                       updated[i] = e.target.value;
                       setPrimaryColors(updated);
                     }}
-                    placeholder="#000000"
+                    placeholder={t("#000000")}
                     maxLength={7}
                     className="w-24 rounded-md border border-sand bg-cream px-2 py-1.5 font-mono text-sm text-ink placeholder:text-muted focus:border-orange focus:outline-none focus:ring-1 focus:ring-orange"
                   />
@@ -560,7 +574,7 @@ function BrandPageContent() {
                 onClick={() => setPrimaryColors([...primaryColors, "#000000"])}
                 className="self-start text-sm text-orange hover:text-orange-hover"
               >
-                + Agregar color
+                {t("+ Agregar color")}
               </button>
             </div>
           ) : (
@@ -576,7 +590,9 @@ function BrandPageContent() {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted">Sin colores definidos.</p>
+                <p className="text-sm text-muted">
+                  {t("Sin colores definidos.")}
+                </p>
               )}
             </div>
           )}
@@ -585,11 +601,12 @@ function BrandPageContent() {
         {/* Sources (debug-ish footer) */}
         <Card>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Fuentes de datos
+            {t("Fuentes de datos")}
           </h3>
           <p className="mt-1 text-xs text-muted">
-            Indica si cada campo provino del onboarding (form), del análisis automático
-            de la web (web) o del logo (manual).
+            {t(
+              "Indica si cada campo provino del onboarding (form), del análisis automático de la web (web) o del logo (manual).",
+            )}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {Object.entries(brand.sources || {}).map(([key, value]) => (
@@ -632,6 +649,8 @@ function FieldCard({
   inputValue: string;
   onChange: (v: string) => void;
 }) {
+  const t = useT();
+
   return (
     <Card>
       <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
@@ -646,7 +665,7 @@ function FieldCard({
         />
       ) : (
         <p className="mt-2 whitespace-pre-line text-sm text-charcoal">
-          {value || "Sin responder."}
+          {value || t("Sin responder.")}
         </p>
       )}
     </Card>

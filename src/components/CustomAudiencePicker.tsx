@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { MetaCustomAudience } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
 
 interface CustomAudiencePickerProps {
   adAccountId: string;
@@ -16,6 +17,7 @@ export function CustomAudiencePicker({
   selected,
   onChange,
 }: CustomAudiencePickerProps) {
+  const t = useT();
   const [audiences, setAudiences] = useState<MetaCustomAudience[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -34,6 +36,9 @@ export function CustomAudiencePicker({
         `/connections/meta/ad-accounts/${adAccountId}/custom-audiences`,
       )
       .then((res) => setAudiences(res.audiences))
+      // El error se guarda en español y se traduce al pintarlo, para que el
+      // efecto no dependa del idioma activo (si no, cambiar de idioma
+      // relanzaría la petición).
       .catch(() => setError("No se pudieron cargar los públicos."))
       .finally(() => setLoading(false));
   }, [adAccountId]);
@@ -65,8 +70,8 @@ export function CustomAudiencePicker({
   return (
     <div ref={containerRef} className="relative">
       <label className="mb-1 block text-sm font-medium text-ink">
-        Públicos personalizados{" "}
-        <span className="font-normal text-muted">(opcional)</span>
+        {t("Públicos personalizados")}{" "}
+        <span className="font-normal text-muted">({t("opcional")})</span>
       </label>
 
       {selectedAudiences.length > 0 && (
@@ -96,12 +101,16 @@ export function CustomAudiencePicker({
         className="w-full rounded-md border border-sand bg-cream px-3 py-2 text-left text-sm text-ink hover:border-orange disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading
-          ? "Cargando..."
+          ? t("Cargando...")
           : audiences.length === 0
-            ? "No hay públicos en esta cuenta"
+            ? t("No hay públicos en esta cuenta")
             : selected.length === 0
-              ? "Seleccionar públicos..."
-              : `${selected.length} público${selected.length > 1 ? "s" : ""} seleccionado${selected.length > 1 ? "s" : ""}`}
+              ? t("Seleccionar públicos...")
+              : selected.length === 1
+                ? t("1 público seleccionado")
+                : t("{count} públicos seleccionados", {
+                    count: selected.length,
+                  })}
       </button>
 
       {open && available.length > 0 && (
@@ -136,11 +145,11 @@ export function CustomAudiencePicker({
         </ul>
       )}
 
-      {error && <p className="mt-1 text-xs text-error">{error}</p>}
+      {error && <p className="mt-1 text-xs text-error">{t(error)}</p>}
       <p className="mt-1 text-xs text-muted">
-        ¿Necesitas crear uno?{" "}
+        {t("¿Necesitas crear uno?")}{" "}
         <Link href="/meta/audiences" className="text-orange hover:underline">
-          Ir a Públicos
+          {t("Ir a Públicos")}
         </Link>
       </p>
     </div>

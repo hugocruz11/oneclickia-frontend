@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/Icon";
 import { AdCard } from "@/components/AdCard";
 import { api } from "@/lib/api";
 import type { CachedAd } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
 
 type Filter = "all" | "images" | "videos";
 
@@ -32,6 +33,7 @@ function formatDuration(secs: number | null): string {
 }
 
 export default function FavoritesPage() {
+  const t = useT();
   const [ads, setAds] = useState<CachedAd[]>([]);
   const [videos, setVideos] = useState<VideoAd[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,16 +76,16 @@ export default function FavoritesPage() {
 
   return (
     <div className="max-w-5xl">
-      <h1 className="text-2xl font-semibold text-ink">Favoritos</h1>
+      <h1 className="text-2xl font-semibold text-ink">{t("Favoritos")}</h1>
       <p className="mt-1 text-sm text-muted">
-        Los anuncios y videos que guardaste para inspirarte más tarde.
+        {t("Los anuncios y videos que guardaste para inspirarte más tarde.")}
       </p>
 
       {/* Filter tabs */}
       <div className="mt-4 flex gap-2">
         <FilterTab
           active={filter === "all"}
-          label={`Todos (${ads.length + videos.length})`}
+          label={t("Todos ({count})", { count: ads.length + videos.length })}
           onClick={() => setFilter("all")}
         />
         <FilterTab
@@ -91,7 +93,7 @@ export default function FavoritesPage() {
           label={
             <>
               <Icon name="image" size={15} className="text-indigo-500" />
-              Imágenes ({ads.length})
+              {t("Imágenes ({count})", { count: ads.length })}
             </>
           }
           onClick={() => setFilter("images")}
@@ -101,7 +103,7 @@ export default function FavoritesPage() {
           label={
             <>
               <Icon name="video" size={15} className="text-rose-500" />
-              Videos ({videos.length})
+              {t("Videos ({count})", { count: videos.length })}
             </>
           }
           onClick={() => setFilter("videos")}
@@ -110,7 +112,7 @@ export default function FavoritesPage() {
 
       {error && (
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
@@ -124,19 +126,19 @@ export default function FavoritesPage() {
         <Card className="mt-6 text-center">
           <Icon name="heart" size={36} fill="currentColor" className="mx-auto text-red-500" />
           <p className="mt-2 text-sm font-medium text-ink">
-            Aún no tienes favoritos en esta categoría.
+            {t("Aún no tienes favoritos en esta categoría.")}
           </p>
           <p className="mt-1 text-sm text-muted">
-            Busca anuncios o videos y toca el corazón para guardarlos aquí.
+            {t("Busca anuncios o videos y toca el corazón para guardarlos aquí.")}
           </p>
           <div className="mt-4 flex justify-center gap-2">
             <Link href="/ads/search">
               <Button size="sm" variant="ghost">
-                Buscar imágenes
+                {t("Buscar imágenes")}
               </Button>
             </Link>
             <Link href="/ads/videos">
-              <Button size="sm">Buscar videos</Button>
+              <Button size="sm">{t("Buscar videos")}</Button>
             </Link>
           </div>
         </Card>
@@ -147,7 +149,7 @@ export default function FavoritesPage() {
           {filter === "all" && (
             <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-muted">
               <Icon name="image" size={15} className="text-indigo-500" />
-              Imágenes
+              {t("Imágenes")}
             </h2>
           )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -170,7 +172,7 @@ export default function FavoritesPage() {
           {filter === "all" && (
             <h2 className="mb-3 mt-6 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-muted">
               <Icon name="video" size={15} className="text-rose-500" />
-              Videos
+              {t("Videos")}
             </h2>
           )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -219,6 +221,8 @@ function FavoriteVideoCard({
   video: VideoAd;
   onRemove: () => void;
 }) {
+  const t = useT();
+
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-lg border border-sand bg-white transition-colors hover:border-orange/40">
       <Link href={`/ads/videos/${video.id}`}>
@@ -226,7 +230,7 @@ function FavoriteVideoCard({
           {video.thumbnailUrl ? (
             <img
               src={video.thumbnailUrl}
-              alt={video.headline || video.brandName || "Video"}
+              alt={video.headline || video.brandName || t("Video")}
               className="h-full w-full object-cover transition-transform group-hover:scale-105"
             />
           ) : (
@@ -270,8 +274,8 @@ function FavoriteVideoCard({
           e.stopPropagation();
           onRemove();
         }}
-        aria-label="Quitar de favoritos"
-        title="Quitar de favoritos"
+        aria-label={t("Quitar de favoritos")}
+        title={t("Quitar de favoritos")}
         className="absolute top-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 backdrop-blur transition-colors hover:bg-black/70"
       >
         <Icon name="heart" size={18} fill="currentColor" className="text-red-500" />

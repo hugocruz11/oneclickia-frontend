@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { CopyVariant, SavedCopy } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
 
 interface CopyVariantPickerProps {
   adaptationId: string;
@@ -24,6 +25,7 @@ export function CopyVariantPicker({
   productId,
   hideDescription = false,
 }: CopyVariantPickerProps) {
+  const t = useT();
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draft, setDraft] = useState<CopyVariant | null>(null);
   const [saving, setSaving] = useState(false);
@@ -136,12 +138,12 @@ export function CopyVariantPicker({
           >
             <div className="flex items-start justify-between gap-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Variante {i + 1}
+                {t("Variante {n}", { n: i + 1 })}
               </span>
               <div className="flex items-center gap-3">
                 {isSelected && !isEditing && (
                   <span className="text-xs font-semibold text-orange">
-                    Seleccionada
+                    {t("Seleccionada")}
                   </span>
                 )}
                 {!isEditing && (
@@ -160,10 +162,10 @@ export function CopyVariantPicker({
                       }`}
                     >
                       {savingIndex === i
-                        ? "Guardando..."
+                        ? t("Guardando...")
                         : isSaved
-                          ? "Guardado ✓"
-                          : "Guardar"}
+                          ? t("Guardado ✓")
+                          : t("Guardar")}
                     </button>
                     <button
                       type="button"
@@ -173,7 +175,7 @@ export function CopyVariantPicker({
                       }}
                       className="text-xs font-medium text-muted hover:text-orange transition-colors"
                     >
-                      Editar
+                      {t("Editar")}
                     </button>
                   </>
                 )}
@@ -187,7 +189,7 @@ export function CopyVariantPicker({
               >
                 <div>
                   <label className="text-xs font-medium uppercase text-muted">
-                    Headline
+                    {t("Headline")}
                   </label>
                   <input
                     type="text"
@@ -201,7 +203,7 @@ export function CopyVariantPicker({
                 {!hideDescription && (
                   <div>
                     <label className="text-xs font-medium uppercase text-muted">
-                      Descripción
+                      {t("Descripción")}
                     </label>
                     <textarea
                       value={draft.description ?? ""}
@@ -215,7 +217,7 @@ export function CopyVariantPicker({
                 )}
                 <div>
                   <label className="text-xs font-medium uppercase text-muted">
-                    CTA
+                    {t("CTA")}
                   </label>
                   <input
                     type="text"
@@ -226,7 +228,7 @@ export function CopyVariantPicker({
                     className="mt-1 w-full rounded-md border border-sand bg-cream px-3 py-2 text-ink focus:border-orange focus:outline-none"
                   />
                 </div>
-                {error && <p className="text-xs text-error">{error}</p>}
+                {error && <p className="text-xs text-error">{t(error)}</p>}
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -234,7 +236,7 @@ export function CopyVariantPicker({
                     disabled={saving}
                     className="rounded-md bg-orange px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                   >
-                    {saving ? "Guardando..." : "Guardar cambios"}
+                    {saving ? t("Guardando...") : t("Guardar cambios")}
                   </button>
                   <button
                     type="button"
@@ -242,7 +244,7 @@ export function CopyVariantPicker({
                     disabled={saving}
                     className="rounded-md border border-sand px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-muted disabled:opacity-50"
                   >
-                    Cancelar
+                    {t("Cancelar")}
                   </button>
                 </div>
               </div>
@@ -274,7 +276,7 @@ export function CopyVariantPicker({
         );
       })}
       {error && editingIndex === null && (
-        <p className="text-xs text-error">{error}</p>
+        <p className="text-xs text-error">{t(error)}</p>
       )}
     </div>
   );

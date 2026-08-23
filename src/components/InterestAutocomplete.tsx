@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import type { MetaInterest } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
 
 interface InterestAutocompleteProps {
   selected: { id: string; name: string }[];
@@ -13,6 +14,7 @@ export function InterestAutocomplete({
   selected,
   onChange,
 }: InterestAutocompleteProps) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<MetaInterest[]>([]);
   const [open, setOpen] = useState(false);
@@ -80,7 +82,7 @@ export function InterestAutocomplete({
   return (
     <div ref={containerRef} className="relative">
       <label className="mb-1 block text-sm font-medium text-ink">
-        Intereses
+        {t("Intereses")}
       </label>
 
       {selected.length > 0 && (
@@ -107,12 +109,12 @@ export function InterestAutocomplete({
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar intereses..."
+        placeholder={t("Buscar intereses...")}
         className="w-full rounded-md border border-sand bg-cream px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-orange focus:outline-none focus:ring-1 focus:ring-orange"
       />
 
       {loading && (
-        <p className="mt-1 text-xs text-muted">Buscando...</p>
+        <p className="mt-1 text-xs text-muted">{t("Buscando...")}</p>
       )}
 
       {open && results.length > 0 && (
@@ -135,7 +137,7 @@ export function InterestAutocomplete({
       )}
 
       <p className="mt-1 text-xs text-muted">
-        Escribe al menos 2 caracteres para buscar.
+        {t("Escribe al menos 2 caracteres para buscar.")}
       </p>
     </div>
   );

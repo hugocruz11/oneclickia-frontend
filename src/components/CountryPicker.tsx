@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/contexts/I18nContext";
 
+// `name` es el texto en español y a la vez la clave de traducción.
 const COUNTRIES = [
   { code: "CO", name: "Colombia" },
   { code: "MX", name: "México" },
@@ -31,6 +33,7 @@ interface CountryPickerProps {
 }
 
 export function CountryPicker({ selected, onChange }: CountryPickerProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   function toggle(code: string) {
@@ -44,7 +47,7 @@ export function CountryPicker({ selected, onChange }: CountryPickerProps) {
   return (
     <div>
       <label className="mb-1 block text-sm font-medium text-ink">
-        Países objetivo
+        {t("Países objetivo")}
       </label>
 
       {selected.length > 0 && (
@@ -56,7 +59,7 @@ export function CountryPicker({ selected, onChange }: CountryPickerProps) {
                 key={code}
                 className="inline-flex items-center gap-1 rounded-sm border border-sand bg-sand-light px-2 py-0.5 text-xs font-medium text-ink"
               >
-                {country?.name || code}
+                {country ? t(country.name) : code}
                 <button
                   type="button"
                   onClick={() => toggle(code)}
@@ -76,8 +79,10 @@ export function CountryPicker({ selected, onChange }: CountryPickerProps) {
         className="w-full rounded-md border border-sand bg-cream px-3 py-2 text-left text-sm text-muted hover:border-orange/50 focus:border-orange focus:outline-none focus:ring-1 focus:ring-orange"
       >
         {selected.length === 0
-          ? "Seleccionar países..."
-          : `${selected.length} país${selected.length > 1 ? "es" : ""} seleccionado${selected.length > 1 ? "s" : ""}`}
+          ? t("Seleccionar países...")
+          : selected.length === 1
+            ? t("1 país seleccionado")
+            : t("{count} países seleccionados", { count: selected.length })}
       </button>
 
       {open && (
@@ -93,7 +98,7 @@ export function CountryPicker({ selected, onChange }: CountryPickerProps) {
                 onChange={() => toggle(country.code)}
                 className="accent-orange"
               />
-              {country.name}
+              {t(country.name)}
             </label>
           ))}
         </div>

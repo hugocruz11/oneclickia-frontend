@@ -12,6 +12,7 @@ import { AdCard } from "@/components/AdCard";
 import { api, ApiError } from "@/lib/api";
 import { scoreAds } from "@/lib/ad-scoring";
 import type { CachedAd, AdsSearchResponse, Brand } from "@/lib/types";
+import { useT } from "@/contexts/I18nContext";
 
 const STORAGE_KEY = "ads_search_state";
 const HISTORY_KEY = "ads_search_history";
@@ -61,6 +62,7 @@ function loadSearch(): SearchState | null {
 }
 
 export default function AdsSearchPage() {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [order, setOrder] = useState("longest_running");
   const [limit, setLimit] = useState(6);
@@ -196,9 +198,9 @@ export default function AdsSearchPage() {
 
   return (
     <div className="max-w-5xl">
-      <h1 className="text-2xl font-semibold text-ink">Buscar Ads</h1>
+      <h1 className="text-2xl font-semibold text-ink">{t("Buscar Ads")}</h1>
       <p className="mt-1 text-sm text-muted">
-        Encuentra anuncios ganadores para inspirar tu campaña.
+        {t("Encuentra anuncios ganadores para inspirar tu campaña.")}
       </p>
 
       <Card className="mt-6">
@@ -206,7 +208,7 @@ export default function AdsSearchPage() {
           <div className="flex gap-4">
             <div className="relative flex-1">
               <Input
-                placeholder="Ej: suplementos naturales, ropa deportiva, café artesanal..."
+                placeholder={t("Ej: suplementos naturales, ropa deportiva, café artesanal...")}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onFocus={() => history.length > 0 && setShowHistory(true)}
@@ -248,27 +250,27 @@ export default function AdsSearchPage() {
               )}
             </div>
             <Button type="submit" loading={loading}>
-              Buscar
+              {t("Buscar")}
             </Button>
           </div>
 
           <div className="flex flex-col gap-4 sm:flex-row">
             <div className="w-full sm:w-48">
               <Select
-                label="Ordenar por"
+                label={t("Ordenar por")}
                 value={order}
                 onChange={(e) => setOrder(e.target.value)}
                 options={[
-                  { value: "longest_running", label: "Mayor duración" },
-                  { value: "newest", label: "Más recientes" },
-                  { value: "oldest", label: "Más antiguos" },
-                  { value: "most_relevant", label: "Más relevantes" },
+                  { value: "longest_running", label: t("Mayor duración") },
+                  { value: "newest", label: t("Más recientes") },
+                  { value: "oldest", label: t("Más antiguos") },
+                  { value: "most_relevant", label: t("Más relevantes") },
                 ]}
               />
             </div>
             <div className="w-full sm:w-32">
               <Select
-                label="Resultados"
+                label={t("Resultados")}
                 value={String(limit)}
                 onChange={(e) => setLimit(Number(e.target.value))}
                 options={[
@@ -288,16 +290,17 @@ export default function AdsSearchPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div>
               <p className="text-sm font-semibold text-ink">
-                ¿Prefieres crear tu propio anuncio?
+                {t("¿Prefieres crear tu propio anuncio?")}
               </p>
               <p className="text-xs text-muted">
-                Sube tus propias imágenes de referencia y describe exactamente lo
-                que necesitas.
+                {t(
+                  "Sube tus propias imágenes de referencia y describe exactamente lo que necesitas.",
+                )}
               </p>
             </div>
             <Link href="/ads/custom" className="shrink-0">
               <Button size="sm" variant="ghost">
-                Crear personalizado
+                {t("Crear personalizado")}
               </Button>
             </Link>
           </div>
@@ -306,7 +309,7 @@ export default function AdsSearchPage() {
 
       {error && (
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       )}
 
@@ -344,7 +347,7 @@ export default function AdsSearchPage() {
                 onClick={handleLoadMore}
                 loading={loadingMore}
               >
-                Cargar más
+                {t("Cargar más")}
               </Button>
             </div>
           )}
@@ -355,19 +358,20 @@ export default function AdsSearchPage() {
         <div className="mt-12 text-center">
           <Icon name="search" size={36} className="mx-auto text-sky-500" />
           <p className="mt-2 text-sm text-muted">
-            No se encontraron anuncios para esa búsqueda.
+            {t("No se encontraron anuncios para esa búsqueda.")}
           </p>
           <Card className="mt-6 text-left">
             <p className="text-sm font-semibold text-ink">
-              ¿No encuentras lo que buscas?
+              {t("¿No encuentras lo que buscas?")}
             </p>
             <p className="mt-1 text-sm text-muted">
-              Crea tu propio anuncio desde cero. Sube una imagen de referencia,
-              tu producto y describe lo que necesitas.
+              {t(
+                "Crea tu propio anuncio desde cero. Sube una imagen de referencia, tu producto y describe lo que necesitas.",
+              )}
             </p>
             <Link href="/ads/custom">
               <Button className="mt-3" size="sm">
-                Crear anuncio personalizado
+                {t("Crear anuncio personalizado")}
               </Button>
             </Link>
           </Card>

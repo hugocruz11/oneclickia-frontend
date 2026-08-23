@@ -17,6 +17,8 @@ import {
   type StatusValue,
   type DateRange,
 } from "@/components/ListControls";
+import { useI18n, useT } from "@/contexts/I18nContext";
+import type { TranslateFn } from "@/i18n/translate";
 
 interface CampaignInsight {
   campaignId: string;
@@ -108,6 +110,7 @@ interface DashboardData {
 
 type DrillLevel = "campaigns" | "adsets" | "ads";
 
+// Los textos en español son también sus claves de traducción (ver src/i18n).
 const STATUS_MAP: Record<string, { label: string; variant: "success" | "muted" | "error" | "warning" | "default" }> = {
   ACTIVE: { label: "Activa", variant: "success" },
   PAUSED: { label: "Pausada", variant: "muted" },
@@ -154,9 +157,9 @@ function fmtRoas(roas: number | null): string {
   return `${roas.toFixed(2)}x`;
 }
 
-function fmtCpa(cpa: number | null): string {
+function fmtCpa(cpa: number | null, localeTag = "es-CO"): string {
   if (cpa == null) return "—";
-  return formatMoney(cpa);
+  return formatMoney(cpa, localeTag);
 }
 
 const HEALTH_COLORS = {
@@ -171,36 +174,47 @@ const HEALTH_BG = {
   error: "bg-error/10 border-error/20",
 };
 
-function formatNum(n: number): string {
+// `localeTag` decide el separador de miles/decimales; por defecto español.
+function formatNum(n: number, localeTag = "es-CO"): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString("es");
+  return n.toLocaleString(localeTag);
 }
 
-function formatMoney(n: number): string {
-  return `$${n.toLocaleString("es", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function formatMoney(n: number, localeTag = "es-CO"): string {
+  return `$${n.toLocaleString(localeTag, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 // Versión compacta para las tarjetas de resumen, donde los montos en
 // pesos (COP) son tan largos que se desbordan del recuadro. La tabla
 // sigue usando formatMoney() con el detalle completo.
-function formatMoneyCompact(n: number): string {
+function formatMoneyCompact(n: number, localeTag = "es-CO"): string {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 10_000) return `$${(n / 1_000).toFixed(1)}K`;
-  return formatMoney(n);
+  return formatMoney(n, localeTag);
 }
 
+// Los textos en español son también sus claves de traducción (ver src/i18n).
 const LEVEL_LABELS: Record<EntityLevel, { entity: string; pause: string; activate: string }> = {
   campaign: { entity: "la campaña", pause: "Pausar campaña", activate: "Reactivar campaña" },
   adset: { entity: "el grupo de anuncios", pause: "Pausar grupo", activate: "Reactivar grupo" },
   ad: { entity: "el anuncio", pause: "Pausar anuncio", activate: "Reactivar anuncio" },
 };
 
-function getSuggestions(e: EntityMetrics): Suggestion[] {
+function getSuggestions(
+  e: EntityMetrics,
+  t: TranslateFn,
+  localeTag: string,
+): Suggestion[] {
   const out: Suggestion[] = [];
   const isActive = e.status === "ACTIVE";
   const hasData = e.impressions > 0;
   const L = LEVEL_LABELS[e.level];
+  const entity = t(L.entity);
+  const money = (n: number) => formatMoney(n, localeTag);
   const canEditBudget = e.level !== "ad"; // ads never carry their own budget
 
   // 0 clicks but spending → pause urgently
@@ -208,8 +222,11 @@ function getSuggestions(e: EntityMetrics): Suggestion[] {
     out.push({
       type: "pause",
       severity: "error",
-      title: "Pausar urgente",
-      description: `Llevas ${formatMoney(e.spend)} sin un solo clic. Pausa ${L.entity} y revisa segmentación/creativo antes de seguir gastando.`,
+      title: t("Pausar urgente"),
+      description: t(
+        "Llevas {spend} sin un solo clic. Pausa {entity} y revisa segmentación/creativo antes de seguir gastando.",
+        { spend: money(e.spend), entity },
+      ),
     });
     return out;
   }
@@ -219,15 +236,21 @@ function getSuggestions(e: EntityMetrics): Suggestion[] {
     out.push({
       type: "refreshCreatives",
       severity: "error",
-      title: "Refresca los creativos",
-      description: `Frecuencia de ${e.frequency.toFixed(1)} indica fatiga de audiencia. Cambia la imagen o el copy para evitar quemar la audiencia.`,
+      title: t("Refresca los creativos"),
+      description: t(
+        "Frecuencia de {freq} indica fatiga de audiencia. Cambia la imagen o el copy para evitar quemar la audiencia.",
+        { freq: e.frequency.toFixed(1) },
+      ),
     });
     if (isActive) {
       out.push({
         type: "pause",
         severity: "warning",
-        title: "Pausar mientras refrescas",
-        description: `Considera pausar ${L.entity} hasta tener creativos nuevos para no seguir gastando con CTR caído.`,
+        title: t("Pausar mientras refrescas"),
+        description: t(
+          "Considera pausar {entity} hasta tener creativos nuevos para no seguir gastando con CTR caído.",
+          { entity },
+        ),
       });
     }
   }
@@ -237,16 +260,22 @@ function getSuggestions(e: EntityMetrics): Suggestion[] {
     out.push({
       type: "pause",
       severity: "warning",
-      title: "CTR bajo",
-      description: `CTR de ${e.ctr.toFixed(2)}% es bajo. Pausa o reduce presupuesto y revisa el creativo/audiencia.`,
+      title: t("CTR bajo"),
+      description: t(
+        "CTR de {ctr}% es bajo. Pausa o reduce presupuesto y revisa el creativo/audiencia.",
+        { ctr: e.ctr.toFixed(2) },
+      ),
     });
     if (canEditBudget && e.dailyBudget && e.dailyBudget > 5) {
       const suggested = Math.max(5, Math.round(e.dailyBudget * 0.6));
       out.push({
         type: "lowerBudget",
         severity: "warning",
-        title: `Bajar presupuesto a ${formatMoney(suggested)}`,
-        description: `Reducir el gasto diario un 40% mientras pruebas variantes. (Actual: ${formatMoney(e.dailyBudget)}/día)`,
+        title: t("Bajar presupuesto a {amount}", { amount: money(suggested) }),
+        description: t(
+          "Reducir el gasto diario un 40% mientras pruebas variantes. (Actual: {current}/día)",
+          { current: money(e.dailyBudget) },
+        ),
         suggestedBudget: suggested,
       });
     }
@@ -266,8 +295,15 @@ function getSuggestions(e: EntityMetrics): Suggestion[] {
     out.push({
       type: "raiseBudget",
       severity: "success",
-      title: `Subir presupuesto a ${formatMoney(suggested)}`,
-      description: `CTR ${e.ctr.toFixed(2)}% y frecuencia ${e.frequency.toFixed(1)} indican que rinde y aún hay margen. Sube +20% para escalar sin sobrecargar. (Actual: ${formatMoney(e.dailyBudget)}/día)`,
+      title: t("Subir presupuesto a {amount}", { amount: money(suggested) }),
+      description: t(
+        "CTR {ctr}% y frecuencia {freq} indican que rinde y aún hay margen. Sube +20% para escalar sin sobrecargar. (Actual: {current}/día)",
+        {
+          ctr: e.ctr.toFixed(2),
+          freq: e.frequency.toFixed(1),
+          current: money(e.dailyBudget),
+        },
+      ),
       suggestedBudget: suggested,
     });
   }
@@ -277,8 +313,15 @@ function getSuggestions(e: EntityMetrics): Suggestion[] {
     out.push({
       type: "activate",
       severity: "success",
-      title: L.activate,
-      description: `${e.name} estaba pausado con CTR ${e.ctr.toFixed(2)}% y frecuencia ${e.frequency.toFixed(1)}. Vale la pena reactivarlo.`,
+      title: t(L.activate),
+      description: t(
+        "{name} estaba pausado con CTR {ctr}% y frecuencia {freq}. Vale la pena reactivarlo.",
+        {
+          name: e.name,
+          ctr: e.ctr.toFixed(2),
+          freq: e.frequency.toFixed(1),
+        },
+      ),
     });
   }
 
@@ -409,6 +452,7 @@ function SortableTh({
 }
 
 export default function AnalyticsPage() {
+  const { t, localeTag } = useI18n();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -599,7 +643,7 @@ export default function AnalyticsPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-16">
         <Spinner size="lg" />
-        <p className="text-sm text-muted">Cargando métricas de Meta Ads...</p>
+        <p className="text-sm text-muted">{t("Cargando métricas de Meta Ads...")}</p>
       </div>
     );
   }
@@ -609,7 +653,7 @@ export default function AnalyticsPage() {
       <div className="max-w-2xl">
         <h1 className="text-2xl font-semibold text-ink">Analytics</h1>
         <div className="mt-4 rounded-md border border-error/20 bg-error/10 p-3">
-          <p className="text-sm text-error">{error}</p>
+          <p className="text-sm text-error">{t(error)}</p>
         </div>
       </div>
     );
@@ -619,11 +663,13 @@ export default function AnalyticsPage() {
     return (
       <div className="max-w-2xl">
         <h1 className="text-2xl font-semibold text-ink">Analytics</h1>
-        <p className="mt-1 text-sm text-muted">Métricas de tus campañas publicitarias.</p>
+        <p className="mt-1 text-sm text-muted">
+          {t("Métricas de tus campañas publicitarias.")}
+        </p>
         <div className="mt-12 text-center">
           <Icon name="chart" size={36} className="mx-auto text-blue-500" />
           <p className="mt-2 text-sm text-muted">
-            Aún no hay datos. Publica una campaña para ver métricas.
+            {t("Aún no hay datos. Publica una campaña para ver métricas.")}
           </p>
         </div>
       </div>
@@ -701,39 +747,39 @@ export default function AnalyticsPage() {
         <div>
           <h1 className="text-2xl font-semibold text-ink">Analytics</h1>
           <p className="mt-1 text-sm text-muted">
-            Rendimiento de tus campañas en Meta Ads.
+            {t("Rendimiento de tus campañas en Meta Ads.")}
           </p>
         </div>
         <div className="flex flex-col gap-1 sm:items-end">
           <DateRangePicker value={range} onChange={setRange} />
           {loading && (
-            <span className="text-xs text-muted">Actualizando…</span>
+            <span className="text-xs text-muted">{t("Actualizando…")}</span>
           )}
         </div>
       </div>
 
       {/* Summary cards */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-        <SummaryCard label="Gasto total" value={formatMoneyCompact(viewTotals.spend)} />
-        <SummaryCard label="Impresiones" value={formatNum(viewTotals.impressions)} />
-        <SummaryCard label="Alcance" value={formatNum(viewTotals.reach)} />
+        <SummaryCard label={t("Gasto total")} value={formatMoneyCompact(viewTotals.spend, localeTag)} />
+        <SummaryCard label={t("Impresiones")} value={formatNum(viewTotals.impressions, localeTag)} />
+        <SummaryCard label={t("Alcance")} value={formatNum(viewTotals.reach, localeTag)} />
         <SummaryCard
-          label="CTR promedio"
+          label={t("CTR promedio")}
           value={`${avgCtr.toFixed(2)}%`}
           health={ctrHealth(avgCtr)}
         />
         <SummaryCard
-          label="CPC promedio"
-          value={formatMoneyCompact(avgCpc)}
+          label={t("CPC promedio")}
+          value={formatMoneyCompact(avgCpc, localeTag)}
           health={cpcHealth(avgCpc)}
         />
         <SummaryCard
-          label="CPA promedio"
-          value={overallCpa != null ? formatMoneyCompact(overallCpa) : "—"}
+          label={t("CPA promedio")}
+          value={overallCpa != null ? formatMoneyCompact(overallCpa, localeTag) : "—"}
           health={overallCpa != null ? cpaHealth(overallCpa) : undefined}
         />
         <SummaryCard
-          label="ROAS global"
+          label={t("ROAS global")}
           value={fmtRoas(overallRoas)}
           health={overallRoas != null ? roasHealth(overallRoas) : undefined}
         />
@@ -741,9 +787,11 @@ export default function AnalyticsPage() {
 
       {isFiltered && (
         <p className="mt-2 text-xs text-muted">
-          Totales de {filteredCampaigns.length} campaña
-          {filteredCampaigns.length === 1 ? "" : "s"} filtrada
-          {filteredCampaigns.length === 1 ? "" : "s"}.
+          {filteredCampaigns.length === 1
+            ? t("Totales de 1 campaña filtrada.")
+            : t("Totales de {count} campañas filtradas.", {
+                count: filteredCampaigns.length,
+              })}
         </p>
       )}
 
@@ -758,7 +806,7 @@ export default function AnalyticsPage() {
               : "text-orange hover:text-orange/80 cursor-pointer"
           }`}
         >
-          Campañas
+          {t("Campañas")}
         </button>
         {selectedCampaign && (
           <>
@@ -792,7 +840,7 @@ export default function AnalyticsPage() {
         <Card className="mt-4 overflow-x-auto">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-              Detalle por campaña
+              {t("Detalle por campaña")}
             </h3>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <StatusFilter
@@ -809,40 +857,40 @@ export default function AnalyticsPage() {
                   setQuery(v);
                   setPage(0);
                 }}
-                placeholder="Buscar campaña…"
+                placeholder={t("Buscar campaña…")}
               />
             </div>
           </div>
 
           {actionError && (
             <div className="mt-3 rounded-md border border-error/20 bg-error/10 p-3">
-              <p className="text-sm text-error">{actionError}</p>
+              <p className="text-sm text-error">{t(actionError)}</p>
             </div>
           )}
 
           <table className="mt-4 w-full text-left text-sm">
             <thead>
               <tr className="border-b border-sand text-xs font-semibold uppercase tracking-wide text-muted">
-                <SortableTh label="Campaña" colKey="name" activeKey={sortKey} dir={sortDir} onSort={handleSort} align="left" />
-                <SortableTh label="Gasto" colKey="spend" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                <SortableTh label="Impresiones" colKey="impressions" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                <SortableTh label="Clics" colKey="clicks" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                <SortableTh label="CTR" colKey="ctr" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                <SortableTh label="CPC" colKey="cpc" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                <SortableTh label="CPM" colKey="cpm" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                <SortableTh label="Freq." colKey="frequency" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                <SortableTh label="CPA" colKey="cpa" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                <SortableTh label="ROAS" colKey="roas" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
-                <th className="pb-3 pr-4 text-right">Veredicto</th>
-                <th className="pb-3 text-right">Sugerencias</th>
+                <SortableTh label={t("Campaña")} colKey="name" activeKey={sortKey} dir={sortDir} onSort={handleSort} align="left" />
+                <SortableTh label={t("Gasto")} colKey="spend" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label={t("Impresiones")} colKey="impressions" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label={t("Clics")} colKey="clicks" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label={t("CTR")} colKey="ctr" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label={t("CPC")} colKey="cpc" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label={t("CPM")} colKey="cpm" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label={t("Freq.")} colKey="frequency" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label={t("CPA")} colKey="cpa" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <SortableTh label={t("ROAS")} colKey="roas" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                <th className="pb-3 pr-4 text-right">{t("Veredicto")}</th>
+                <th className="pb-3 text-right">{t("Sugerencias")}</th>
               </tr>
             </thead>
             <tbody>
               {pagedCampaigns.map((c) => {
                 const statusInfo = STATUS_MAP[c.status] || { label: c.status, variant: "default" as const };
-                const verdict = getVerdict(c);
+                const verdict = getVerdict(c, t);
                 const entity = campaignToEntity(c);
-                const suggestions = getSuggestions(entity);
+                const suggestions = getSuggestions(entity, t, localeTag);
                 const isExpanded = expandedSuggestions === c.campaignId;
                 return (
                   <Fragment key={c.campaignId}>
@@ -855,26 +903,26 @@ export default function AnalyticsPage() {
                           <span className="font-medium text-orange hover:text-orange/80 line-clamp-1">
                             {c.campaignName}
                           </span>
-                          <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                          <Badge variant={statusInfo.variant}>{t(statusInfo.label)}</Badge>
                         </div>
                       </td>
                       <td className="py-3 pr-4 text-right font-medium text-ink">
-                        {formatMoney(c.spend)}
+                        {formatMoney(c.spend, localeTag)}
                       </td>
                       <td className="py-3 pr-4 text-right text-charcoal">
-                        {formatNum(c.impressions)}
+                        {formatNum(c.impressions, localeTag)}
                       </td>
                       <td className="py-3 pr-4 text-right text-charcoal">
-                        {formatNum(c.clicks)}
+                        {formatNum(c.clicks, localeTag)}
                       </td>
                       <td className={`py-3 pr-4 text-right font-semibold ${HEALTH_COLORS[ctrHealth(c.ctr)]}`}>
                         {c.ctr.toFixed(2)}%
                       </td>
                       <td className={`py-3 pr-4 text-right font-semibold ${HEALTH_COLORS[cpcHealth(c.cpc)]}`}>
-                        {formatMoney(c.cpc)}
+                        {formatMoney(c.cpc, localeTag)}
                       </td>
                       <td className="py-3 pr-4 text-right text-charcoal">
-                        {formatMoney(c.cpm)}
+                        {formatMoney(c.cpm, localeTag)}
                       </td>
                       <td className={`py-3 pr-4 text-right font-semibold ${HEALTH_COLORS[freqHealth(c.frequency)]}`}>
                         {c.frequency.toFixed(1)}
@@ -884,7 +932,7 @@ export default function AnalyticsPage() {
                           c.cpa != null ? HEALTH_COLORS[cpaHealth(c.cpa)] : "text-muted"
                         }`}
                       >
-                        {fmtCpa(c.cpa)}
+                        {fmtCpa(c.cpa, localeTag)}
                       </td>
                       <td
                         className={`py-3 pr-4 text-right font-semibold ${
@@ -901,7 +949,7 @@ export default function AnalyticsPage() {
                             {verdict.icon} {verdict.label}
                           </span>
                         ) : (
-                          <Badge variant="muted">Sin gasto</Badge>
+                          <Badge variant="muted">{t("Sin gasto")}</Badge>
                         )}
                       </td>
                       <td className="py-3 text-right">
@@ -936,7 +984,7 @@ export default function AnalyticsPage() {
 
           {filteredCampaigns.length === 0 && (
             <p className="mt-6 text-center text-sm text-muted">
-              No hay campañas que coincidan con el filtro.
+              {t("No hay campañas que coincidan con el filtro.")}
             </p>
           )}
 
@@ -952,45 +1000,49 @@ export default function AnalyticsPage() {
       {drillLevel === "adsets" && (
         <Card className="mt-4 overflow-x-auto">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Grupos de anuncios
+            {t("Grupos de anuncios")}
           </h3>
 
           {drillLoading ? (
             <div className="mt-4 flex items-center gap-3 py-6">
               <Spinner size="sm" />
-              <p className="text-sm text-muted">Cargando grupos de anuncios...</p>
+              <p className="text-sm text-muted">
+                {t("Cargando grupos de anuncios...")}
+              </p>
             </div>
           ) : adSets.length === 0 ? (
-            <p className="mt-4 text-sm text-muted">No se encontraron grupos de anuncios.</p>
+            <p className="mt-4 text-sm text-muted">
+              {t("No se encontraron grupos de anuncios.")}
+            </p>
           ) : (
             <>
               {actionError && (
                 <div className="mt-3 rounded-md border border-error/20 bg-error/10 p-3">
-                  <p className="text-sm text-error">{actionError}</p>
+                  <p className="text-sm text-error">{t(actionError)}</p>
                 </div>
               )}
               <table className="mt-4 w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-sand text-xs font-semibold uppercase tracking-wide text-muted">
-                    <th className="pb-3 pr-4">Grupo de anuncios</th>
-                    <th className="pb-3 pr-4 text-right">Presup.</th>
-                    <th className="pb-3 pr-4 text-right">Gasto</th>
-                    <th className="pb-3 pr-4 text-right">Impresiones</th>
-                    <th className="pb-3 pr-4 text-right">Clics</th>
-                    <th className="pb-3 pr-4 text-right">CTR</th>
-                    <th className="pb-3 pr-4 text-right">CPC</th>
-                    <th className="pb-3 pr-4 text-right">CPM</th>
-                    <th className="pb-3 pr-4 text-right">Freq.</th>
-                    <th className="pb-3 pr-4 text-right">CPA</th>
-                    <th className="pb-3 pr-4 text-right">ROAS</th>
-                    <th className="pb-3 text-right">Sugerencias</th>
+                    <th className="pb-3 pr-4">{t("Grupo de anuncios")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Presup.")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Gasto")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Impresiones")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Clics")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("CTR")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("CPC")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("CPM")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Freq.")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("CPA")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("ROAS")}</th>
+                    <th className="pb-3 text-right">{t("Sugerencias")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {adSets.map((a) => {
                     const statusInfo = STATUS_MAP[a.status] || { label: a.status, variant: "default" as const };
                     const entity = adSetToEntity(a);
-                    const suggestions = getSuggestions(entity);
+                    const suggestions = getSuggestions(entity, t, localeTag);
                     const isExpanded = expandedSuggestions === a.adSetId;
                     return (
                       <Fragment key={a.adSetId}>
@@ -1003,29 +1055,33 @@ export default function AnalyticsPage() {
                               <span className="font-medium text-orange hover:text-orange/80 line-clamp-1">
                                 {a.adSetName}
                               </span>
-                              <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                              <Badge variant={statusInfo.variant}>{t(statusInfo.label)}</Badge>
                             </div>
                           </td>
                           <td className="py-3 pr-4 text-right text-charcoal">
-                            {a.dailyBudget != null ? `${formatMoney(a.dailyBudget)}/día` : "—"}
+                            {a.dailyBudget != null
+                              ? t("{amount}/día", {
+                                  amount: formatMoney(a.dailyBudget, localeTag),
+                                })
+                              : "—"}
                           </td>
                           <td className="py-3 pr-4 text-right font-medium text-ink">
-                            {formatMoney(a.spend)}
+                            {formatMoney(a.spend, localeTag)}
                           </td>
                           <td className="py-3 pr-4 text-right text-charcoal">
-                            {formatNum(a.impressions)}
+                            {formatNum(a.impressions, localeTag)}
                           </td>
                           <td className="py-3 pr-4 text-right text-charcoal">
-                            {formatNum(a.clicks)}
+                            {formatNum(a.clicks, localeTag)}
                           </td>
                           <td className={`py-3 pr-4 text-right font-semibold ${HEALTH_COLORS[ctrHealth(a.ctr)]}`}>
                             {a.ctr.toFixed(2)}%
                           </td>
                           <td className={`py-3 pr-4 text-right font-semibold ${HEALTH_COLORS[cpcHealth(a.cpc)]}`}>
-                            {formatMoney(a.cpc)}
+                            {formatMoney(a.cpc, localeTag)}
                           </td>
                           <td className="py-3 pr-4 text-right text-charcoal">
-                            {formatMoney(a.cpm)}
+                            {formatMoney(a.cpm, localeTag)}
                           </td>
                           <td className={`py-3 pr-4 text-right font-semibold ${HEALTH_COLORS[freqHealth(a.frequency)]}`}>
                             {a.frequency.toFixed(1)}
@@ -1035,7 +1091,7 @@ export default function AnalyticsPage() {
                               a.cpa != null ? HEALTH_COLORS[cpaHealth(a.cpa)] : "text-muted"
                             }`}
                           >
-                            {fmtCpa(a.cpa)}
+                            {fmtCpa(a.cpa, localeTag)}
                           </td>
                           <td
                             className={`py-3 pr-4 text-right font-semibold ${
@@ -1081,44 +1137,46 @@ export default function AnalyticsPage() {
       {drillLevel === "ads" && (
         <Card className="mt-4 overflow-x-auto">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Anuncios
+            {t("Anuncios")}
           </h3>
 
           {drillLoading ? (
             <div className="mt-4 flex items-center gap-3 py-6">
               <Spinner size="sm" />
-              <p className="text-sm text-muted">Cargando anuncios...</p>
+              <p className="text-sm text-muted">{t("Cargando anuncios...")}</p>
             </div>
           ) : ads.length === 0 ? (
-            <p className="mt-4 text-sm text-muted">No se encontraron anuncios.</p>
+            <p className="mt-4 text-sm text-muted">
+              {t("No se encontraron anuncios.")}
+            </p>
           ) : (
             <>
               {actionError && (
                 <div className="mt-3 rounded-md border border-error/20 bg-error/10 p-3">
-                  <p className="text-sm text-error">{actionError}</p>
+                  <p className="text-sm text-error">{t(actionError)}</p>
                 </div>
               )}
               <table className="mt-4 w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-sand text-xs font-semibold uppercase tracking-wide text-muted">
-                    <th className="pb-3 pr-4">Anuncio</th>
-                    <th className="pb-3 pr-4 text-right">Gasto</th>
-                    <th className="pb-3 pr-4 text-right">Impresiones</th>
-                    <th className="pb-3 pr-4 text-right">Clics</th>
-                    <th className="pb-3 pr-4 text-right">CTR</th>
-                    <th className="pb-3 pr-4 text-right">CPC</th>
-                    <th className="pb-3 pr-4 text-right">CPM</th>
-                    <th className="pb-3 pr-4 text-right">Freq.</th>
-                    <th className="pb-3 pr-4 text-right">CPA</th>
-                    <th className="pb-3 pr-4 text-right">ROAS</th>
-                    <th className="pb-3 text-right">Sugerencias</th>
+                    <th className="pb-3 pr-4">{t("Anuncio")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Gasto")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Impresiones")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Clics")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("CTR")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("CPC")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("CPM")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("Freq.")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("CPA")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("ROAS")}</th>
+                    <th className="pb-3 text-right">{t("Sugerencias")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {ads.map((ad) => {
                     const statusInfo = STATUS_MAP[ad.status] || { label: ad.status, variant: "default" as const };
                     const entity = adToEntity(ad);
-                    const suggestions = getSuggestions(entity);
+                    const suggestions = getSuggestions(entity, t, localeTag);
                     const isExpanded = expandedSuggestions === ad.adId;
                     return (
                       <Fragment key={ad.adId}>
@@ -1128,26 +1186,26 @@ export default function AnalyticsPage() {
                               <span className="font-medium text-ink line-clamp-1">
                                 {ad.adName}
                               </span>
-                              <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                              <Badge variant={statusInfo.variant}>{t(statusInfo.label)}</Badge>
                             </div>
                           </td>
                           <td className="py-3 pr-4 text-right font-medium text-ink">
-                            {formatMoney(ad.spend)}
+                            {formatMoney(ad.spend, localeTag)}
                           </td>
                           <td className="py-3 pr-4 text-right text-charcoal">
-                            {formatNum(ad.impressions)}
+                            {formatNum(ad.impressions, localeTag)}
                           </td>
                           <td className="py-3 pr-4 text-right text-charcoal">
-                            {formatNum(ad.clicks)}
+                            {formatNum(ad.clicks, localeTag)}
                           </td>
                           <td className={`py-3 pr-4 text-right font-semibold ${HEALTH_COLORS[ctrHealth(ad.ctr)]}`}>
                             {ad.ctr.toFixed(2)}%
                           </td>
                           <td className={`py-3 pr-4 text-right font-semibold ${HEALTH_COLORS[cpcHealth(ad.cpc)]}`}>
-                            {formatMoney(ad.cpc)}
+                            {formatMoney(ad.cpc, localeTag)}
                           </td>
                           <td className="py-3 pr-4 text-right text-charcoal">
-                            {formatMoney(ad.cpm)}
+                            {formatMoney(ad.cpm, localeTag)}
                           </td>
                           <td className={`py-3 pr-4 text-right font-semibold ${HEALTH_COLORS[freqHealth(ad.frequency)]}`}>
                             {ad.frequency.toFixed(1)}
@@ -1157,7 +1215,7 @@ export default function AnalyticsPage() {
                               ad.cpa != null ? HEALTH_COLORS[cpaHealth(ad.cpa)] : "text-muted"
                             }`}
                           >
-                            {fmtCpa(ad.cpa)}
+                            {fmtCpa(ad.cpa, localeTag)}
                           </td>
                           <td
                             className={`py-3 pr-4 text-right font-semibold ${
@@ -1203,10 +1261,30 @@ export default function AnalyticsPage() {
       {/* Legend — only on campaigns view */}
       {drillLevel === "campaigns" && (
         <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted">
-          <span>CTR: <span className="text-success">≥2% excelente</span> · <span className="text-warning">1-2% aceptable</span> · <span className="text-error">&lt;1% mejorar</span></span>
-          <span>Freq: <span className="text-success">≤2 ok</span> · <span className="text-warning">2-3.5 atención</span> · <span className="text-error">&gt;3.5 fatiga</span></span>
-          <span>CPA: <span className="text-success">≤$20 bueno</span> · <span className="text-warning">$20-50 medio</span> · <span className="text-error">&gt;$50 caro</span></span>
-          <span>ROAS: <span className="text-success">≥3x premium</span> · <span className="text-warning">1.5-3x sostiene</span> · <span className="text-error">&lt;1.5x pierde</span></span>
+          <span>
+            {t("CTR:")}{" "}
+            <span className="text-success">{t("≥2% excelente")}</span> ·{" "}
+            <span className="text-warning">{t("1-2% aceptable")}</span> ·{" "}
+            <span className="text-error">{t("<1% mejorar")}</span>
+          </span>
+          <span>
+            {t("Freq:")}{" "}
+            <span className="text-success">{t("≤2 ok")}</span> ·{" "}
+            <span className="text-warning">{t("2-3.5 atención")}</span> ·{" "}
+            <span className="text-error">{t(">3.5 fatiga")}</span>
+          </span>
+          <span>
+            {t("CPA:")}{" "}
+            <span className="text-success">{t("≤$20 bueno")}</span> ·{" "}
+            <span className="text-warning">{t("$20-50 medio")}</span> ·{" "}
+            <span className="text-error">{t(">$50 caro")}</span>
+          </span>
+          <span>
+            {t("ROAS:")}{" "}
+            <span className="text-success">{t("≥3x premium")}</span> ·{" "}
+            <span className="text-warning">{t("1.5-3x sostiene")}</span> ·{" "}
+            <span className="text-error">{t("<1.5x pierde")}</span>
+          </span>
         </div>
       )}
     </div>
@@ -1242,7 +1320,10 @@ function SummaryCard({
 
 /* ── Verdict logic ── */
 
-function getVerdict(c: CampaignInsight): {
+function getVerdict(
+  c: CampaignInsight,
+  t: TranslateFn,
+): {
   label: string;
   icon: string;
   health: "success" | "warning" | "error";
@@ -1258,9 +1339,11 @@ function getVerdict(c: CampaignInsight): {
   if (c.frequency <= 2) score += 30;
   else if (c.frequency <= 3.5) score += 15;
 
-  if (score >= 70) return { label: "Funciona", icon: "✓", health: "success" };
-  if (score >= 35) return { label: "Revisar", icon: "~", health: "warning" };
-  return { label: "Mejorar", icon: "✗", health: "error" };
+  if (score >= 70)
+    return { label: t("Funciona"), icon: "✓", health: "success" };
+  if (score >= 35)
+    return { label: t("Revisar"), icon: "~", health: "warning" };
+  return { label: t("Mejorar"), icon: "✗", health: "error" };
 }
 
 /* ── Suggestions cell (badge that toggles the expanded row) ── */
@@ -1311,12 +1394,14 @@ function SuggestionsExpandedRow({
   onStatusChange: (status: "ACTIVE" | "PAUSED") => void;
   onBudgetChange: (newBudget: number) => void;
 }) {
+  const t = useT();
+
   return (
     <tr className="border-b border-sand/50 bg-cream">
       <td colSpan={colSpan} className="px-4 py-4">
         <div className="flex flex-col gap-3">
           <h4 className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Sugerencias para {entity.name}
+            {t("Sugerencias para {name}", { name: entity.name })}
           </h4>
           {suggestions.map((s, idx) => {
             const actionKey =
@@ -1349,11 +1434,19 @@ function SuggestionsExpandedRow({
                       disabled={actionLoading !== null}
                       onApply={() => {
                         if (s.type === "pause") {
-                          if (window.confirm(`¿Pausar "${entity.name}"?`)) {
+                          if (
+                            window.confirm(
+                              t("¿Pausar “{name}”?", { name: entity.name }),
+                            )
+                          ) {
                             onStatusChange("PAUSED");
                           }
                         } else if (s.type === "activate") {
-                          if (window.confirm(`¿Reactivar "${entity.name}"?`)) {
+                          if (
+                            window.confirm(
+                              t("¿Reactivar “{name}”?", { name: entity.name }),
+                            )
+                          ) {
                             onStatusChange("ACTIVE");
                           }
                         } else if (
@@ -1362,13 +1455,15 @@ function SuggestionsExpandedRow({
                           s.suggestedBudget
                         ) {
                           const input = window.prompt(
-                            `Nuevo presupuesto diario para "${entity.name}" (USD):`,
+                            t("Nuevo presupuesto diario para “{name}” (USD):", {
+                              name: entity.name,
+                            }),
                             String(s.suggestedBudget),
                           );
                           if (!input) return;
                           const value = Number(input);
                           if (!Number.isFinite(value) || value <= 0) {
-                            alert("Valor inválido.");
+                            alert(t("Valor inválido."));
                             return;
                           }
                           onBudgetChange(value);
@@ -1399,11 +1494,12 @@ function SuggestionActionButton({
   disabled: boolean;
   onApply: () => void;
 }) {
+  const t = useT();
   const labels: Record<SuggestionType, string> = {
-    raiseBudget: "Subir presupuesto",
-    lowerBudget: "Bajar presupuesto",
-    pause: "Pausar",
-    activate: "Reactivar",
+    raiseBudget: t("Subir presupuesto"),
+    lowerBudget: t("Bajar presupuesto"),
+    pause: t("Pausar"),
+    activate: t("Reactivar"),
     refreshCreatives: "",
   };
   const label = labels[suggestion.type];
