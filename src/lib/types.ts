@@ -77,7 +77,6 @@ export interface MetaAdAccount {
   name: string;
   currency: string;
   account_status: number;
-  business_name?: string;
 }
 
 export interface MetaPage {
