@@ -7,6 +7,8 @@ import { useCredits } from "@/contexts/CreditsContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { Icon } from "@/components/ui/Icon";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
+import { NotificationBell } from "@/components/projects/NotificationBell";
+import { OrgSwitcher } from "@/components/projects/OrgSwitcher";
 
 // onMenuClick: abre el drawer de navegación en móvil. La hamburguesa solo
 // se muestra por debajo de `md` (en desktop el sidebar es fijo).
@@ -48,6 +50,8 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
             <span className="hidden text-muted sm:inline">{t("créditos")}</span>
           </Link>
         )}
+        <OrgSwitcher />
+        <NotificationBell />
         <LocaleSwitcher compact />
         <button
           onClick={toggle}

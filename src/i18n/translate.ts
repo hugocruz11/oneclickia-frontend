@@ -9,6 +9,7 @@
 
 import { DEFAULT_LOCALE, type Locale } from "./config";
 import { en } from "./messages/en";
+import { enProjects } from "./messages/en-projects";
 
 export type Dictionary = Record<string, string>;
 
@@ -17,7 +18,8 @@ export type TranslateVars = Record<string, string | number>;
 const DICTIONARIES: Record<Locale, Dictionary | null> = {
   // El español es el idioma fuente: la clave se devuelve tal cual.
   es: null,
-  en,
+  // Módulo de proyectos: el diccionario base tiene prioridad.
+  en: { ...enProjects, ...en },
 };
 
 const INTERPOLATION = /\{(\w+)\}/g;
