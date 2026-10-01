@@ -489,9 +489,9 @@ function MemberEditor({
           <div className="flex flex-col gap-2">
             {absences.map((a, i) => (
               <div key={i} className="flex flex-wrap items-center gap-2">
-                <input type="date" className={`${input} w-40`} value={a.from} onChange={(e) => setAbsences((x) => x.map((y, j) => (j === i ? { ...y, from: e.target.value } : y)))} aria-label={t("Desde")} />
-                <input type="date" className={`${input} w-40`} value={a.to} onChange={(e) => setAbsences((x) => x.map((y, j) => (j === i ? { ...y, to: e.target.value } : y)))} aria-label={t("Hasta")} />
-                <input className={`${input} flex-1`} value={a.reason} placeholder={t("Motivo (opcional)")} onChange={(e) => setAbsences((x) => x.map((y, j) => (j === i ? { ...y, reason: e.target.value } : y)))} />
+                <input type="date" className={`${input} !w-40`} value={a.from} onChange={(e) => setAbsences((x) => x.map((y, j) => (j === i ? { ...y, from: e.target.value } : y)))} aria-label={t("Desde")} />
+                <input type="date" className={`${input} !w-40`} value={a.to} onChange={(e) => setAbsences((x) => x.map((y, j) => (j === i ? { ...y, to: e.target.value } : y)))} aria-label={t("Hasta")} />
+                <input className={`${input} !w-auto min-w-0 flex-1`} value={a.reason} placeholder={t("Motivo (opcional)")} onChange={(e) => setAbsences((x) => x.map((y, j) => (j === i ? { ...y, reason: e.target.value } : y)))} />
                 <button type="button" aria-label={t("Quitar")} className="text-muted hover:text-error" onClick={() => setAbsences((x) => x.filter((_, j) => j !== i))}>
                   <Icon name="trash" size={16} />
                 </button>

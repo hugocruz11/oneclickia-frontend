@@ -16,6 +16,9 @@ import {
 import { errorMessage, PRIORITY_CLASS, PRIORITY_LABEL } from "./labels";
 import { PromptDialog } from "./Modal";
 
+// Sin w-full: para inputs que comparten fila.
+const field =
+  "rounded-md border border-sand bg-white px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-orange focus:outline-none";
 const input =
   "w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-orange focus:outline-none";
 
@@ -206,7 +209,7 @@ export function PlanEditor({
             ))}
             <li className="flex items-center gap-2 px-3 py-2">
               <input
-                className={`${input} flex-1`}
+                className={`${field} min-w-0 flex-1`}
                 placeholder={t("Nueva tarea…")}
                 value={quickTask[phase.id]?.title ?? ""}
                 onChange={(e) =>
@@ -214,7 +217,8 @@ export function PlanEditor({
                 }
               />
               <input
-                className={`${input} w-20`}
+                className={`${field} w-24 shrink-0`}
+                title={t("Horas estimadas")}
                 type="number"
                 min="0.5"
                 step="0.5"
@@ -224,6 +228,7 @@ export function PlanEditor({
                   setQuickTask((q) => ({ ...q, [phase.id]: { title: q[phase.id]?.title ?? "", hours: e.target.value } }))
                 }
               />
+              <span className="text-xs text-muted">h</span>
               <Button
                 size="sm"
                 variant="ghost"
