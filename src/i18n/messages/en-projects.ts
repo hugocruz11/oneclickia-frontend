@@ -11,6 +11,9 @@ export const enProjects: Dictionary = {
   Organización: "Organization",
   "Organización activa": "Active organization",
   Personal: "Personal",
+  "No se pudo cargar tu organización.": "Your organization could not be loaded.",
+  "Verifica que el servidor esté actualizado e inténtalo de nuevo.":
+    "Make sure the server is up to date and try again.",
 
   // ─── Estados, prioridades, roles ───
   "Por hacer": "To do",
