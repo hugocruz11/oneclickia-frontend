@@ -11,6 +11,10 @@ const AUTH_PATHS = ["/login", "/register"];
 // to the dashboard.
 const PUBLIC_LEGAL_PATHS = ["/privacy", "/terms"];
 
+// Invitation links (projects module): must open with or without session —
+// logged-out people preview the invite, logged-in people accept it.
+const INVITE_PATHS = ["/invite"];
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("oneclickia_token")?.value;
@@ -33,7 +37,8 @@ export function proxy(request: NextRequest) {
   // The marketing landing lives at "/" and must be visible to logged-out
   // visitors (the public pricing page / entry point).
   const isLanding = pathname === "/";
-  const isPublicPath = isAuthPath || isPublicLegal || isLanding;
+  const isInvite = INVITE_PATHS.some((p) => pathname.startsWith(p + "/"));
+  const isPublicPath = isAuthPath || isPublicLegal || isLanding || isInvite;
 
   // No token + protected route → redirect to login
   if (!token && !isPublicPath) {

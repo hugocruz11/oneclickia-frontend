@@ -6,18 +6,37 @@ import { CREDITS_ENABLED } from "@/contexts/CreditsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useT } from "@/contexts/I18nContext";
 import { Icon, type IconName } from "@/components/ui/Icon";
+import { useOrg } from "@/contexts/OrgContext";
+import type { OrgRole } from "@/lib/projects";
 
 // `color` conserva el color que tenían los emojis originales (cada ítem con
 // su tono distintivo). Son clases de texto Tailwind aplicadas al icono SVG.
 // `label` y `title` son a la vez el texto en español y su clave de
 // traducción: se pasan por `t()` al renderizar (ver src/i18n).
-type NavItem = { href: string; label: string; icon: IconName; color: string };
+// `orgRoles`: solo visible para esos roles de la organización activa
+// (módulo de proyectos).
+type NavItem = {
+  href: string;
+  label: string;
+  icon: IconName;
+  color: string;
+  orgRoles?: OrgRole[];
+};
 type NavGroup = { title: string; items: NavItem[] };
 
 // Menú agrupado por etapa del flujo: descubrir → crear → analizar → negocio.
 // Reduce la carga cognitiva de una lista plana de 13 ítems y refleja el
 // recorrido real del usuario.
 const navGroups: NavGroup[] = [
+  {
+    title: "Proyectos",
+    items: [
+      { href: "/projects", label: "Proyectos", icon: "folder", color: "text-orange" },
+      { href: "/my-tasks", label: "Mis tareas", icon: "check", color: "text-emerald-600" },
+      { href: "/workload", label: "Carga de trabajo", icon: "calendar", color: "text-teal-600", orgRoles: ["ADMIN", "LEADER"] },
+      { href: "/organization", label: "Organización", icon: "users", color: "text-purple-600", orgRoles: ["ADMIN"] },
+    ],
+  },
   {
     title: "Descubrir",
     items: [
@@ -85,7 +104,11 @@ function computeIsActive(href: string, pathname: string): boolean {
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { role: orgRole } = useOrg();
   const t = useT();
+
+  const visible = (item: NavItem) =>
+    !item.orgRoles || (orgRole !== null && item.orgRoles.includes(orgRole));
 
   // Oculta "Planes y créditos" cuando el sistema de créditos está apagado.
   const account = accountItems.filter(
@@ -130,7 +153,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               {t(group.title)}
             </p>
             <div className="flex flex-col gap-1">
-              {group.items.map(renderItem)}
+              {group.items.filter(visible).map(renderItem)}
             </div>
           </div>
         ))}

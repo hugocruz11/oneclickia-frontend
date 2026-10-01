@@ -10,6 +10,7 @@ import { api, ApiError } from "@/lib/api";
 import type { AuthResponse } from "@/lib/types";
 import type { PlanTier } from "@/lib/billing";
 import { useT } from "@/contexts/I18nContext";
+import { safeNextPath } from "@/lib/next-path";
 
 const PAID_TIERS: PlanTier[] = ["STARTER", "PRO", "BUSINESS"];
 
@@ -55,6 +56,12 @@ export default function RegisterPage() {
       // preselected. Subscribing happens on the
       // Mercado Pago checkout redirect, which /plans triggers automatically
       // for that plan. Otherwise go straight to onboarding.
+      // Invitation funnel: back to the invite page to accept it.
+      const nextPath = safeNextPath();
+      if (nextPath) {
+        window.location.href = nextPath;
+        return;
+      }
       const search = new URLSearchParams(window.location.search);
       const plan = search.get("plan") as PlanTier | null;
       if (plan && PAID_TIERS.includes(plan)) {
