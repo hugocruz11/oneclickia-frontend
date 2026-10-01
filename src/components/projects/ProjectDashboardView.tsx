@@ -3,8 +3,10 @@
 import { Card } from "@/components/ui/Card";
 import { useI18n } from "@/contexts/I18nContext";
 import { formatDay, type ProjectDashboard } from "@/lib/projects";
+import { DashboardCharts } from "./DashboardCharts";
 
-// Dashboard del proyecto: avance y señales de riesgo (sin ranking de personas).
+// Dashboard del proyecto (líderes y admins): indicadores, gráficas y
+// tareas que requieren atención. Sin ranking de personas.
 export function ProjectDashboardView({
   dashboard,
   onOpenTask,
@@ -16,11 +18,11 @@ export function ProjectDashboardView({
   const c = dashboard.counts;
   const kpis = [
     { label: "Avance", value: `${Math.round(dashboard.progress * 100)}%` },
-    { label: "Atrasadas", value: c.overdue, warn: c.overdue > 0 },
+    { label: "Iniciadas", value: c.started },
+    { label: "En progreso", value: c.inProgress },
+    { label: "En revisión", value: c.inReview },
     { label: "Bloqueadas", value: c.blocked, warn: c.blocked > 0 },
     { label: "En riesgo", value: c.atRisk, warn: c.atRisk > 0 },
-    { label: "En revisión", value: c.inReview },
-    { label: "Sin asignar", value: c.unassigned, warn: c.unassigned > 0 },
   ];
   return (
     <div className="flex flex-col gap-4">
@@ -28,7 +30,9 @@ export function ProjectDashboardView({
         {kpis.map((k) => (
           <Card key={k.label} padding="sm">
             <p className="text-xs text-muted">{t(k.label)}</p>
-            <p className={`text-2xl font-semibold ${k.warn ? "text-red-600" : "text-ink"}`}>{k.value}</p>
+            <p className={`text-2xl font-semibold tabular-nums ${k.warn ? "text-red-600" : "text-ink"}`}>
+              {k.value}
+            </p>
           </Card>
         ))}
       </div>
@@ -46,25 +50,9 @@ export function ProjectDashboardView({
             {t("Al ritmo y capacidad actuales, el proyecto terminaría después de su fecha límite.")}
           </p>
         )}
-        <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-sand-light">
-          {[
-            { n: c.done, cls: "bg-success" },
-            { n: c.inReview, cls: "bg-indigo-400" },
-            { n: c.inProgress, cls: "bg-orange" },
-            { n: c.todo, cls: "bg-sand" },
-          ].map((s, i) => (
-            <div key={i} className={s.cls} style={{ width: c.total ? `${(s.n / c.total) * 100}%` : 0 }} />
-          ))}
-        </div>
-        <p className="mt-1 text-xs text-muted">
-          {t("{done} hechas · {review} en revisión · {prog} en progreso · {todo} por hacer", {
-            done: c.done,
-            review: c.inReview,
-            prog: c.inProgress,
-            todo: c.todo,
-          })}
-        </p>
       </Card>
+
+      <DashboardCharts dashboard={dashboard} />
 
       <Card padding="sm">
         <p className="mb-2 text-sm font-semibold text-ink">{t("Tareas que requieren atención")}</p>

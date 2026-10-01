@@ -16,6 +16,20 @@
   --mv-success-text: #108c3d;
   --mv-error: #c13515;
   --mv-warning: #9b6829;
+
+  /* Data-viz (dashboard de proyectos). Validados con el validador de paleta:
+     ordinal = estados del flujo (claro→oscuro), s1/s2 = series, status fijos. */
+  --viz-ord-1: #86b6ef;
+  --viz-ord-2: #3987e5;
+  --viz-ord-3: #1c5cab;
+  --viz-ord-4: #0d366b;
+  --viz-s1: #2a78d6;
+  --viz-s2: #eb6834;
+  --viz-warning: #fab219;
+  --viz-serious: #ec835a;
+  --viz-critical: #d03b3b;
+  --viz-neutral: #b5b2aa;
+  --viz-grid: #eceae3;
 }
 
 /* ── Dark palette ── */
@@ -34,6 +48,15 @@
   --mv-success-text: #22d966;
   --mv-error: #f04a2a;
   --mv-warning: #d4952e;
+
+  --viz-ord-1: #184f95;
+  --viz-ord-2: #2a78d6;
+  --viz-ord-3: #6da7ec;
+  --viz-ord-4: #b7d3f6;
+  --viz-s1: #3987e5;
+  --viz-s2: #d95926;
+  --viz-neutral: #5a5955;
+  --viz-grid: #2a2928;
 }
 
 @theme inline {

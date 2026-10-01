@@ -146,6 +146,8 @@ export default function ProjectPage() {
   }
 
   const manager = project.canManage;
+  // Dashboard: solo líderes y admins de la organización.
+  const canSeeDashboard = orgRole === "ADMIN" || orgRole === "LEADER";
   const isActive = project.status === "ACTIVE" || project.status === "COMPLETED";
 
   function onMove(task: TaskCard, to: TaskStatus) {
@@ -328,7 +330,7 @@ export default function ProjectPage() {
       {(isActive || project.status === "ARCHIVED") && (
         <>
           <div className="flex flex-wrap items-center gap-4 border-b border-sand">
-            {TABS.map((tb) => (
+            {TABS.filter((tb) => tb.key !== "dashboard" || canSeeDashboard).map((tb) => (
               <button
                 key={tb.key}
                 type="button"
@@ -401,6 +403,7 @@ export default function ProjectPage() {
           )}
           {tab === "list" && <TaskListView tasks={filtered} onOpen={(x) => setOpenTask(x.id)} />}
           {tab === "dashboard" &&
+            canSeeDashboard &&
             (dashboard ? (
               <ProjectDashboardView dashboard={dashboard} onOpenTask={setOpenTask} />
             ) : (

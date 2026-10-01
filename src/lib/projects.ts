@@ -265,6 +265,7 @@ export interface ProjectDashboard {
   progress: number;
   counts: {
     total: number;
+    started: number;
     todo: number;
     inProgress: number;
     inReview: number;
@@ -275,6 +276,15 @@ export interface ProjectDashboard {
     unassigned: number;
   };
   late: boolean;
+  byPhase: {
+    phaseId: string;
+    name: string;
+    todo: number;
+    inProgress: number;
+    inReview: number;
+    done: number;
+  }[];
+  weekly: { week: string; started: number; completed: number }[];
   topAtRisk: {
     taskId: string;
     title: string;

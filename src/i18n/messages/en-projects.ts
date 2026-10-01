@@ -193,6 +193,23 @@ export const enProjects: Dictionary = {
   "{done} hechas · {review} en revisión · {prog} en progreso · {todo} por hacer":
     "{done} done · {review} in review · {prog} in progress · {todo} to do",
   "Tareas que requieren atención": "Tasks that need attention",
+  Iniciadas: "Started",
+  Terminadas: "Completed",
+  "Ver tabla": "View table",
+  "Ver gráfica": "View chart",
+  "Tareas por estado": "Tasks by status",
+  "{started} de {total} tareas ya se iniciaron": "{started} of {total} tasks have been started",
+  "Señales de riesgo": "Risk signals",
+  "Tareas abiertas que requieren atención": "Open tasks that need attention",
+  "Avance por fase": "Progress by phase",
+  "Tareas de cada fase según su estado": "Each phase's tasks by status",
+  "Sin fases.": "No phases.",
+  "Ritmo semanal": "Weekly pace",
+  "Tareas iniciadas y terminadas en las últimas 8 semanas": "Tasks started and completed over the last 8 weeks",
+  Semana: "Week",
+  "Semana del {d}": "Week of {d}",
+  "1 tarea": "1 task",
+  "{n} tareas": "{n} tasks",
   "Todo en orden por ahora.": "All good for now.",
 
   // ─── Tarjetas y listas ───
