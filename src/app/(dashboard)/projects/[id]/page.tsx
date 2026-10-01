@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { useI18n } from "@/contexts/I18nContext";
 import { useCredits } from "@/contexts/CreditsContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 import {
   displayName,
   formatDay,
@@ -58,6 +59,10 @@ export default function ProjectPage() {
   const { t, localeTag } = useI18n();
   const { refresh: refreshCredits } = useCredits();
   const { user } = useAuth();
+  const { role: orgRole } = useOrg();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteText, setDeleteText] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [members, setMembers] = useState<MemberProfile[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -160,6 +165,18 @@ export default function ProjectPage() {
     }
   }
 
+  async function deleteProject() {
+    setDeleting(true);
+    try {
+      await projectsApi.deletePermanently(id);
+      router.push("/projects");
+    } catch (err) {
+      setError(errorMessage(err, t));
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  }
+
   async function transferLeader(userId: string) {
     try {
       await projectsApi.transfer(id, userId);
@@ -216,7 +233,55 @@ export default function ProjectPage() {
             </Button>
           </div>
         )}
+        {orgRole === "ADMIN" && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="!text-error"
+            onClick={() => {
+              setDeleteText("");
+              setDeleteOpen(true);
+            }}
+          >
+            <Icon name="trash" size={14} className="mr-1" />
+            {t("Eliminar")}
+          </Button>
+        )}
       </div>
+
+      {deleteOpen && (
+        <Modal open onClose={() => setDeleteOpen(false)} title={t("Eliminar proyecto")}>
+          <div className="flex flex-col gap-3 text-sm">
+            <p className="text-ink">
+              {t("Se eliminarán definitivamente el proyecto, sus fases, tareas, comentarios, archivos e historial. Esta acción no se puede deshacer.")}
+            </p>
+            <label className="flex flex-col gap-1.5 text-charcoal">
+              {t("Escribe el nombre del proyecto para confirmar:")}
+              <span className="font-semibold text-ink">{project.title}</span>
+              <input
+                autoFocus
+                className="w-full rounded-md border border-sand bg-white px-3 py-2 text-sm text-ink focus:border-orange focus:outline-none"
+                value={deleteText}
+                onChange={(e) => setDeleteText(e.target.value)}
+              />
+            </label>
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setDeleteOpen(false)}>
+                {t("Cancelar")}
+              </Button>
+              <Button
+                size="sm"
+                variant="dark"
+                loading={deleting}
+                disabled={deleteText.trim() !== project.title.trim()}
+                onClick={deleteProject}
+              >
+                {t("Eliminar definitivamente")}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {error && (
         <p className="rounded-md bg-error/10 px-3 py-2 text-sm text-error" role="alert">

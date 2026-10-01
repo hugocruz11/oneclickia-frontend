@@ -162,6 +162,12 @@ export const enProjects: Dictionary = {
   "Transferir liderazgo": "Transfer leadership",
   "Transferir liderazgo…": "Transfer leadership…",
   Archivar: "Archive",
+  "Eliminar proyecto": "Delete project",
+  "Se eliminarán definitivamente el proyecto, sus fases, tareas, comentarios, archivos e historial. Esta acción no se puede deshacer.":
+    "The project and its phases, tasks, comments, files and history will be permanently deleted. This cannot be undone.",
+  "Escribe el nombre del proyecto para confirmar:": "Type the project name to confirm:",
+  "Eliminar definitivamente": "Delete permanently",
+  "Espera a que termine la generación del plan antes de eliminar.": "Wait for the plan generation to finish before deleting.",
   "¿Archivar este proyecto? Se liberará la capacidad de su equipo.": "Archive this project? Its team's capacity will be released.",
   "El líder está preparando el plan de este proyecto.": "The leader is preparing this project's plan.",
   Tablero: "Board",

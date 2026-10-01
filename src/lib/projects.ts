@@ -404,6 +404,8 @@ export const projectsApi = {
   update: (id: string, input: { title?: string; summary?: string; dueDate?: string | null }) =>
     api.patch<ProjectSummary>(`/projects/${id}`, input),
   archive: (id: string) => api.delete<void>(`/projects/${id}`),
+  /** Permanent delete (organization admins only). */
+  deletePermanently: (id: string) => api.delete<void>(`/projects/${id}/permanent`),
   transfer: (id: string, userId: string) =>
     api.post<void>(`/projects/${id}/leader`, { userId }),
   dashboard: (id: string) => api.get<ProjectDashboard>(`/projects/${id}/dashboard`),
