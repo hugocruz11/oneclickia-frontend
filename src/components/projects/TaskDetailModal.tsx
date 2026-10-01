@@ -476,7 +476,8 @@ export function TaskDetailModal({
                   {task.assignmentReason && (
                     <p className="mt-1 text-xs text-muted">{task.assignmentReason}</p>
                   )}
-                  {manager && editable && task.status !== "DONE" && (
+                  {/* Líder y participantes del proyecto pueden reasignar. */}
+                  {editable && task.status !== "DONE" && (
                     <div className="mt-2">
                       {candidates === null ? (
                         <button
@@ -484,7 +485,7 @@ export function TaskDetailModal({
                           className="text-xs font-semibold text-orange hover:underline"
                           onClick={loadCandidates}
                         >
-                          {t("Reasignar / ver sugerencias")}
+                          {task.assignee ? t("Cambiar responsable / ver sugerencias") : t("Asignar / ver sugerencias")}
                         </button>
                       ) : (
                         <div className="flex flex-col gap-2">

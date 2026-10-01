@@ -97,6 +97,10 @@ export function notificationText(n: AppNotification, t: TranslateFn): string {
       return count > 1
         ? t("Te asignaron {count} tareas en {project}", { count, project })
         : t("Te asignaron una tarea en {project}", { project });
+    case "TASK_REASSIGNED":
+      return p.toName
+        ? t("{by} reasignó “{task}” a {to}", { by: String(p.byName ?? ""), task, to: String(p.toName) })
+        : t("{by} dejó sin responsable “{task}”", { by: String(p.byName ?? ""), task });
     case "TASK_DUE_SOON":
       return n.count > 1
         ? t("{count} tareas vencen pronto en {project}", { count: n.count, project })
