@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { api, ApiError } from "@/lib/api";
 import type { AuthResponse } from "@/lib/types";
 import { useT } from "@/contexts/I18nContext";
+import { safeNextPath } from "@/lib/next-path";
 
 export default function LoginPage() {
   const t = useT();
@@ -93,6 +94,12 @@ async function completeLogin(token: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token }),
   });
+  // Invitation funnel: back to the invite page to accept it.
+  const nextPath = safeNextPath();
+  if (nextPath) {
+    window.location.href = nextPath;
+    return;
+  }
   // Decide entry point based on onboarding status. Use a full
   // navigation so the proxy picks up the fresh cookie immediately.
   let target = "/onboarding";

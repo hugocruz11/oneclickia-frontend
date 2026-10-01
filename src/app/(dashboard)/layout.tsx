@@ -1,5 +1,6 @@
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CreditsProvider } from "@/contexts/CreditsContext";
+import { OrgProvider } from "@/contexts/OrgContext";
 import { DashboardShell } from "@/components/DashboardShell";
 
 export default function DashboardLayout({
@@ -10,7 +11,9 @@ export default function DashboardLayout({
   return (
     <AuthProvider>
       <CreditsProvider>
-        <DashboardShell>{children}</DashboardShell>
+        <OrgProvider>
+          <DashboardShell>{children}</DashboardShell>
+        </OrgProvider>
       </CreditsProvider>
     </AuthProvider>
   );

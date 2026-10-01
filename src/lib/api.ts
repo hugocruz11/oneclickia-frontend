@@ -4,10 +4,30 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    /** Stable backend error code (projects module), e.g. "DEPENDENCY_CYCLE". */
+    public code?: string,
   ) {
     super(message);
     this.name = "ApiError";
   }
+}
+
+/** localStorage key of the active organization (projects module). */
+export const ORG_STORAGE_KEY = "oneclickia_org";
+
+export function apiUrl(path: string): string {
+  return `${API_BASE}${path}`;
+}
+
+/** Bearer + active org headers for raw fetches (downloads, SSE streams). */
+export function authHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const headers: Record<string, string> = {};
+  const token = localStorage.getItem("oneclickia_token");
+  const orgId = localStorage.getItem(ORG_STORAGE_KEY);
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (orgId) headers["X-Org-Id"] = orgId;
+  return headers;
 }
 
 class ApiClient {
@@ -29,6 +49,15 @@ class ApiClient {
 
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    // Active organization for the projects module (ignored elsewhere).
+    const orgId =
+      typeof window !== "undefined"
+        ? localStorage.getItem(ORG_STORAGE_KEY)
+        : null;
+    if (orgId && !headers["X-Org-Id"]) {
+      headers["X-Org-Id"] = orgId;
     }
 
     // Don't set Content-Type for FormData — browser sets boundary automatically
@@ -80,7 +109,11 @@ class ApiClient {
         window.location.href = "/login";
       }
 
-      throw new ApiError(res.status, message);
+      throw new ApiError(
+        res.status,
+        message,
+        typeof error.code === "string" ? error.code : undefined,
+      );
     }
 
     // Handle 204 No Content
