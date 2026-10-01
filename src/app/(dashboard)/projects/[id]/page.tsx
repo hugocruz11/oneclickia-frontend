@@ -32,6 +32,7 @@ import { KanbanBoard } from "@/components/projects/KanbanBoard";
 import { TaskListView } from "@/components/projects/TaskListView";
 import { TaskDetailModal, activityLabel } from "@/components/projects/TaskDetailModal";
 import { PlanEditor } from "@/components/projects/PlanEditor";
+import { NextTasksCard } from "@/components/projects/NextTasksCard";
 import { ProjectDashboardView } from "@/components/projects/ProjectDashboardView";
 import { Modal } from "@/components/projects/Modal";
 import { actionForMove, useTaskTransition } from "@/components/projects/useTaskTransition";
@@ -113,9 +114,11 @@ export default function ProjectPage() {
   }, [tab, id]);
   useEffect(loadSide, [loadSide]);
 
+  const [nextKey, setNextKey] = useState(0);
   const reloadAll = useCallback(() => {
     void load();
     loadSide();
+    setNextKey((k) => k + 1);
   }, [load, loadSide]);
 
   const transition = useTaskTransition(
@@ -385,6 +388,9 @@ export default function ProjectPage() {
             </div>
           )}
 
+          {(tab === "board" || tab === "list") && project.status === "ACTIVE" && (
+            <NextTasksCard projectId={project.id} refreshKey={nextKey} onOpen={setOpenTask} />
+          )}
           {tab === "board" && (
             <KanbanBoard
               tasks={filtered}

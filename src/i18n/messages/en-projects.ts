@@ -298,6 +298,17 @@ export const enProjects: Dictionary = {
   "cambió el líder del proyecto": "changed the project leader",
   "archivó el proyecto": "archived the project",
 
+  // ─── Siguiente tarea sugerida ───
+  "Sugerencia: empieza por": "Suggestion: start with",
+  "Después:": "Then:",
+  "Ya la empezaste": "You already started it",
+  "Está atrasada": "It's overdue",
+  "En riesgo de no llegar a la fecha": "At risk of missing its date",
+  "Desbloquea 1 tarea": "Unblocks 1 task",
+  "Desbloquea {n} tareas": "Unblocks {n} tasks",
+  "Prioridad alta": "High priority",
+  "Vence pronto ({d})": "Due soon ({d})",
+
   // ─── Mis tareas / Carga de trabajo ───
   "Vencen antes de": "Due before",
   "Incluir terminadas": "Include done",

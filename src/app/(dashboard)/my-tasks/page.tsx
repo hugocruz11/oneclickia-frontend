@@ -18,6 +18,7 @@ import { TaskListView } from "@/components/projects/TaskListView";
 import { TaskDetailModal } from "@/components/projects/TaskDetailModal";
 import { actionForMove, useTaskTransition } from "@/components/projects/useTaskTransition";
 import { errorMessage } from "@/components/projects/labels";
+import { NextTasksCard } from "@/components/projects/NextTasksCard";
 
 const input =
   "rounded-md border border-sand bg-white px-2 py-1.5 text-sm text-ink focus:border-orange focus:outline-none";
@@ -35,11 +36,15 @@ export default function MyTasksPage() {
   const [members, setMembers] = useState<MemberProfile[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [error, setError] = useState("");
+  const [nextKey, setNextKey] = useState(0);
 
   const load = useCallback(() => {
     tasksApi
       .mine({ includeDone: includeDone || view === "board" })
-      .then(setTasks)
+      .then((list) => {
+        setTasks(list);
+        setNextKey((k) => k + 1);
+      })
       .catch((err) => setError(errorMessage(err, t)));
   }, [includeDone, view, t]);
 
@@ -120,6 +125,12 @@ export default function MyTasksPage() {
       </div>
 
       {error && <p className="rounded-md bg-error/10 px-3 py-2 text-sm text-error">{error}</p>}
+
+      <NextTasksCard
+        projectId={projectId || undefined}
+        refreshKey={nextKey}
+        onOpen={setOpenTask}
+      />
 
       {tasks === null ? (
         <div className="flex justify-center py-12">

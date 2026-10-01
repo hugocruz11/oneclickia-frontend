@@ -467,6 +467,26 @@ export const tasksApi = {
     api.get<TaskCard[]>(`/me/tasks${qs(filter)}`),
 };
 
+export type NextReason =
+  | "IN_PROGRESS"
+  | "OVERDUE"
+  | "AT_RISK"
+  | "UNBLOCKS"
+  | "HIGH_PRIORITY"
+  | "DUE_SOON";
+
+export interface NextTaskSuggestion {
+  taskId: string;
+  reasons: NextReason[];
+  unblocksCount: number;
+  task: TaskCard;
+}
+
+export const nextTasksApi = {
+  get: (projectId?: string) =>
+    api.get<NextTaskSuggestion[]>(`/me/next-tasks${qs({ projectId })}`),
+};
+
 export const workloadApi = {
   get: (params: { from?: string; weeks?: number; projectId?: string[] } = {}) =>
     api.get<WorkloadGrid>(`/workload${qs(params)}`),
